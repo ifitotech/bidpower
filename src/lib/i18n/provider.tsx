@@ -15,8 +15,9 @@ import {
   type Dictionary,
   type Locale,
 } from "./index";
+import "@/lib/storage";
 
-const STORAGE_KEY = "contractoros-locale";
+const STORAGE_KEY = "harbor-locale";
 
 type I18nContextValue = {
   locale: Locale;

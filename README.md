@@ -1,6 +1,6 @@
 # Project Harbor
 
-> Project Harbor es el nuevo nombre de producto de ContractorOS. El repositorio, el paquete y las claves de `localStorage` conservan el nombre técnico `contractoros` para no romper despliegues ni datos existentes.
+> Project Harbor (antes ContractorOS). El código y el paquete ya usan el nombre nuevo; el repositorio de GitHub y el proyecto de Vercel se renombran desde sus paneles.
 
 Project Harbor es un sistema operativo SaaS, mobile-first, para empresas de servicios como electricidad, HVAC, plomería, remodelación y construcción.
 

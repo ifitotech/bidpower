@@ -16,8 +16,8 @@ export default function SettingsPage() {
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const [defaults, setDefaults] = useState({ tax: "0", quoteTerms: "Payment terms for customer quotes", invoiceTerms: "Payment due within 15 days", quotePrefix: "QT-", invoicePrefix: "INV-" });
-  useEffect(() => { const saved = localStorage.getItem("contractoros:settings-defaults"); if (saved) { try { setDefaults(JSON.parse(saved)); } catch {} } }, []);
-  function saveDefaults() { localStorage.setItem("contractoros:settings-defaults", JSON.stringify(defaults)); setMessage("Defaults saved for this device."); }
+  useEffect(() => { const saved = localStorage.getItem("harbor:settings-defaults"); if (saved) { try { setDefaults(JSON.parse(saved)); } catch {} } }, []);
+  function saveDefaults() { localStorage.setItem("harbor:settings-defaults", JSON.stringify(defaults)); setMessage("Defaults saved for this device."); }
 
   async function saveCompany(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

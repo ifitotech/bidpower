@@ -3,7 +3,7 @@
 -- Si ya aplicaste algunas migraciones antes, no lo uses: ejecuta solo las que falten.
 
 -- ===== supabase/migrations/20260728000000_initial_schema.sql =====
--- ContractorOS Initial Schema
+-- Project Harbor Initial Schema
 -- Multi-tenant SaaS foundation
 -- Run this in your Supabase SQL Editor
 
@@ -413,7 +413,7 @@ CREATE POLICY "Members can view projects"
 -- More policies will be added in later phases
 
 -- ===== supabase/migrations/20260728000001_rls_and_storage.sql =====
--- ContractorOS — RLS policies completas + Storage bucket
+-- Project Harbor — RLS policies completas + Storage bucket
 -- Ejecutar después de la migración inicial
 
 -- =====================================================
@@ -705,7 +705,7 @@ ALTER TABLE quotes DROP CONSTRAINT IF EXISTS quotes_quote_type_check;
 ALTER TABLE quotes ADD CONSTRAINT quotes_quote_type_check CHECK (quote_type IN ('service', 'materials', 'plan_estimate', 'complete'));
 
 -- ===== supabase/migrations/20260728000005_phase2_5_modules.sql =====
--- ContractorOS Phase 2-5 supporting modules
+-- Project Harbor Phase 2-5 supporting modules
 
 CREATE TABLE IF NOT EXISTS invoices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -827,7 +827,7 @@ CREATE POLICY "Members can view company time entries" ON time_entries FOR SELECT
 CREATE POLICY "Employees can manage own time entries" ON time_entries FOR ALL TO authenticated USING (company_id IN (SELECT get_user_company_ids()) AND user_id = auth.uid()) WITH CHECK (company_id IN (SELECT get_user_company_ids()) AND user_id = auth.uid());
 
 -- ===== supabase/migrations/20260729000006_supply_quotes_foundation.sql =====
--- ContractorOS - Supply Quotes foundation
+-- Project Harbor - Supply Quotes foundation
 -- Incremental migration. Does not replace or remove existing objects.
 
 -- Ensure the existing multi-tenant helper functions are available even when

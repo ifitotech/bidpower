@@ -2,8 +2,9 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-export type Theme = "light" | "dark" | "system";
-const STORAGE_KEY = "contractoros-theme";
+export type Theme = "light" | "dark" | "system";import "@/lib/storage";
+
+const STORAGE_KEY = "harbor-theme";
 
 const ThemeContext = createContext<{
   theme: Theme;

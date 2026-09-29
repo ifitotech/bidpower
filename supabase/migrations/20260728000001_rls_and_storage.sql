@@ -1,4 +1,4 @@
--- ContractorOS — RLS policies completas + Storage bucket
+-- Project Harbor — RLS policies completas + Storage bucket
 -- Ejecutar después de la migración inicial
 
 -- =====================================================
