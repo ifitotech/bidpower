@@ -56,7 +56,7 @@ export async function getDashboardMetrics(companyId: string) {
     .from("purchase_orders")
     .select("*", { count: "exact", head: true })
     .eq("company_id", companyId)
-    .eq("status", "pending_document");
+    .in("status", ["pending_document", "received"]);
 
   // Expenses this month
   const now = new Date();

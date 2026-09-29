@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260804000014_phase4_supplier_link.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260805000015_phase5_purchasing.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -107,3 +107,15 @@ las instrucciones para borrarlos están en la cabecera del script.
 - Una pregunta pone el Pricing Request en *Pregunta abierta* (espera al Owner); al responderla vuelve a esperar al supplier. Una respuesta lo pasa a *Respondió*.
 - Límites de esta versión: el supplier no sube el PDF él mismo (súbelo tú en su respuesta) ni ve archivos subidos, solo links; no hay límite de intentos por IP (el token tiene 256 bits); no hay avisos por correo.
 - Migración: `20260804000014_phase4_supplier_link.sql`.
+
+## 11. Compras / Purchase Orders (Fase 5)
+
+- **Desde una respuesta de supplier**: en el Pricing Request, botón *Crear Purchase Order* en la respuesta elegida. El PO copia las líneas con precio y disponibles (no las no disponibles), guarda el origen (línea del pedido y del catálogo) y usa el total del quote (o líneas + flete + impuesto). Un PO por respuesta.
+- **Compra rápida** (`/pos/new`): sigue igual (se compra y el recibo llega después).
+- **Aprobación**: dentro de tu límite el PO queda aprobado; por encima queda *Por aprobar* (espera al Owner/Manager, aparece en Inicio) en vez de bloquearse. Solo Owner/Manager aprueban o rechazan; nadie aprueba su propio PO. Tras aprobarse, solo Owner/Manager cambian monto o proveedor.
+- **Flujo**: por aprobar → aprobado → enviado (permiso *Enviar PO*; no se envía correo, se marca cuando lo compartes) → recibido → documento → completado. Estas reglas viven en la base de datos (`trg_enforce_po_rules`), no solo en la pantalla.
+- **Documento obligatorio**: recibo, invoice o packing slip (PDF/imagen, 10 MB). Sin documento no se puede completar.
+- **Costo real**: al completar (`complete_purchase_order`) se registra el costo real como gasto del proyecto (un solo gasto por PO). Owner/Manager completan cualquier PO; quien lo creó, solo si el costo real está dentro de su límite.
+- **Privacidad**: los documentos de un PO solo los ve quien puede ver ese PO.
+- Pendiente en esta fase: flujo de *excepción* sin documento (el estado existe pero no hay pantalla), correo al supplier y recepción parcial por línea.
+- Migración: `20260805000015_phase5_purchasing.sql`.

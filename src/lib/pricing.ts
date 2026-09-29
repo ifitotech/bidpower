@@ -14,7 +14,7 @@ export type Availability = (typeof AVAILABILITY)[number];
 /** Statuses the app moves a Pricing Request through. Others in the DB check list are reserved for later phases. */
 export const PRICING_STATUS_KEYS: Record<string, string> = {
   draft: "prStatusDraft", sent: "prStatusSent", question_open: "prStatusQuestion", responded: "prStatusResponded",
-  awarded: "prStatusAwarded", closed: "prStatusClosed", cancelled: "reqStatusCancelled",
+  awarded: "prStatusAwarded", converted_to_po: "prStatusPO", closed: "prStatusClosed", cancelled: "reqStatusCancelled",
 };
 
 export type PricingLink = { label: string; url: string };

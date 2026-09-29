@@ -428,12 +428,12 @@ export async function createPOAction(formData: FormData) {
       return { errorCode: "errProjectRequired" };
     }
 
-    // Permission and PO limit (also enforced by RLS). Above the limit the owner must create the PO;
-    // the approval workflow arrives with Purchasing (Phase 5).
+    // Permission and PO limit (also enforced by RLS). Over the limit the PO is still created,
+    // but it waits for Owner/Manager approval instead of being blocked.
     const perms = await getMyPermissions();
     const amount = formData.get("estimatedAmount") ? Number(formData.get("estimatedAmount")) : null;
     if (!perms.can_create_po) return { errorCode: "errPoNotAllowed" };
-    if (!poAllowed(perms, amount)) return { errorCode: "errPoOverLimit" };
+    const withinLimit = poAllowed(perms, amount);
 
     const po = await createPurchaseOrder(companyId, userId, {
       project_id: projectId,
@@ -441,7 +441,7 @@ export async function createPOAction(formData: FormData) {
       category: (formData.get("category") as string) || undefined,
       description: (formData.get("description") as string) || undefined,
       estimated_amount: Number(formData.get("estimatedAmount") || 0) || undefined,
-    });
+    }, withinLimit);
 
     await logActivity({
       companyId,
@@ -454,7 +454,7 @@ export async function createPOAction(formData: FormData) {
 
     revalidatePath("/pos");
     revalidatePath("/dashboard");
-    redirect("/pos");
+    redirect(`/pos/${po.id}`);
   } catch (err) {
     const message = err instanceof Error ? err.message : (err as { message?: string })?.message || "Error al crear PO";
     if (message.includes("NEXT_REDIRECT")) throw err;

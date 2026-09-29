@@ -2,7 +2,8 @@
 
 import { useI18n } from "@/lib/i18n/provider";
 import { Badge } from "@/components/ui/Badge";
-import { PO_STATUS_LABELS, PO_STATUS_COLORS } from "@/lib/po-status";
+import { PO_STATUS_KEYS, PO_STATUS_COLORS } from "@/lib/po-status";
+import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import type { POStatus, QuoteStatus, ProjectStatus } from "@/types/database";
 
 const quoteLabels: Record<string, string> = {
@@ -46,7 +47,9 @@ const projectColors: Record<string, "default" | "success" | "warning" | "danger"
 };
 
 export function POStatusBadge({ status }: { status: string }) {
-  const label = PO_STATUS_LABELS[status as POStatus] ?? status;
+  const { t } = useI18n();
+  const key = PO_STATUS_KEYS[status as POStatus] as keyof Dictionary | undefined;
+  const label = key ? t(key) : status;
   const variant = PO_STATUS_COLORS[status as POStatus] ?? "default";
   return <Badge variant={variant}>{label}</Badge>;
 }

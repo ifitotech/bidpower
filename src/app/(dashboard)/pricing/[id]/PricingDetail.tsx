@@ -5,6 +5,8 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Copy, ExternalLink, FileText, Paperclip } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
+import { usePermissions } from "@/lib/permissions-context";
+import { createPOFromResponseAction } from "@/app/(dashboard)/pos/actions";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { AVAILABILITY, PRICING_TYPES, bestPriceByLine } from "@/lib/pricing";
@@ -21,9 +23,10 @@ type Supplier = { id: string; name: string };
 const AVAIL_KEYS: Record<string, keyof Dictionary> = { available: "availAvailable", partial: "availPartial", unavailable: "availUnavailable" };
 const OPEN = ["draft", "sent", "question_open", "responded"];
 
-export default function PricingDetail({ request: r, suppliers, invitations = [], questions = [], canManage, pricesVisible }: { request: Request; suppliers: Supplier[]; invitations?: InvitationView[]; questions?: QuestionView[]; canManage: boolean; pricesVisible: boolean }) {
+export default function PricingDetail({ request: r, suppliers, invitations = [], questions = [], pos = [], canManage, pricesVisible }: { request: Request; suppliers: Supplier[]; pos?: { id: string; number: string; supplier_response_id: string | null }[]; invitations?: InvitationView[]; questions?: QuestionView[]; canManage: boolean; pricesVisible: boolean }) {
   const { t } = useI18n();
   const router = useRouter();
+  const { permissions } = usePermissions();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -118,6 +121,10 @@ export default function PricingDetail({ request: r, suppliers, invitations = [],
             return <div key={i.id} className="flex items-start gap-2 py-1.5"><span className="min-w-0 flex-1 break-words">{i.description}</span><span className="shrink-0 text-right"><span className={isBest ? "font-semibold text-green-700" : ""}>{money(l.unitPrice)}</span>{isBest && <span className="ml-1 text-[10px] font-semibold text-green-700">{t("bestPrice")}</span>}<span className="block text-xs text-slate-400">{[l.availability ? t(AVAIL_KEYS[l.availability]) : null, l.leadTime].filter(Boolean).join(" · ")}</span></span></div>; })}</div>
           {resp.notes && <p className="mt-2 whitespace-pre-wrap text-xs text-slate-500">{resp.notes}</p>}
           {r.attachments.filter((a) => a.response_id === resp.id).map((a) => <button key={a.id} type="button" onClick={() => openFile(a.id)} className="mt-2 flex min-h-9 items-center gap-2 text-sm text-brand-700"><FileText className="h-4 w-4" />{a.name}</button>)}
+          {(() => { const po = pos.find((x) => x.supplier_response_id === resp.id);
+            if (po) return <Link href={`/pos/${po.id}`} className="mt-3 flex min-h-11 items-center justify-center rounded-xl border border-brand-500 bg-brand-50 px-4 text-sm font-semibold text-brand-700">{t("poViewExisting", { number: po.number })}</Link>;
+            if (!permissions.can_create_po || !["submitted", "accepted"].includes(resp.status) || !r.project_id || ["closed", "cancelled"].includes(r.status)) return null;
+            return <button type="button" disabled={busy} onClick={async () => { setBusy(true); setError(null); const res = await createPOFromResponseAction(r.id, resp.id).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string; id?: string })); setBusy(false); if (res.errorCode) { setError(t(res.errorCode as keyof Dictionary)); return; } router.push(`/pos/${res.id}`); router.refresh(); }} className={`${btn} mt-3 w-full border border-brand-500 bg-brand-50 text-brand-700`}>{t("poCreateFromResponse")}</button>; })()}
           {canManage && isOpen && resp.status === "submitted" && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmAward"))) run(() => awardResponseAction(r.id, resp.id)); }} className={`${btn} mt-3 w-full bg-brand-600 text-white`}>{t("awardResponse")}</button>}
         </div>)}
       </div>}

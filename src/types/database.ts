@@ -25,6 +25,11 @@ export type QuoteStatus =
 
 export type POStatus =
   | "open"
+  | "pending_approval"
+  | "approved"
+  | "rejected"
+  | "sent"
+  | "received"
   | "pending_document"
   | "document_uploaded"
   | "pending_review"

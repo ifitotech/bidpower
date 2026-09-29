@@ -6,7 +6,7 @@ import { PRICING_STATUS_KEYS } from "@/lib/pricing";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 
 const COLORS: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
-  draft: "default", sent: "info", question_open: "warning", responded: "warning", awarded: "success", closed: "default", cancelled: "default",
+  draft: "default", sent: "info", question_open: "warning", responded: "warning", awarded: "success", converted_to_po: "success", closed: "default", cancelled: "default",
 };
 
 export function PricingStatusBadge({ status }: { status: string }) {
