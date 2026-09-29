@@ -50,7 +50,7 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
             <HardHat className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight">{t("appName")}</h1>
+            <p className="font-bold text-lg leading-tight">{t("appName")}</p>
             <p className="max-w-[9.5rem] truncate text-xs text-slate-500">{companyName}</p>
           </div>
         </div>
