@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Bidpower">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B1B3A"/><stop offset="1" stop-color="#173A7A"/></linearGradient>
+    <linearGradient id="trace" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#7DB4FF"/></linearGradient>
+  </defs>
+  <rect width="96" height="96" rx="24" fill="url(#bg)"/>
+  <g stroke="#3B6BC9" stroke-opacity=".45" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 30 H14 L20 24 H24"/><path d="M96 40 H84 L78 46"/><path d="M0 68 H12 L18 74 H24"/><path d="M96 78 H86 L82 82"/>
+  </g>
+  <path d="M32 22 V74 M32 22 H52 Q66 22 66 35 Q66 48 52 48 H32 M32 48 H56 Q72 48 72 61 Q72 74 56 74 H32" fill="none" stroke="url(#trace)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#0B1B3A" stroke="#F59E0B" stroke-width="3.5"><circle cx="32" cy="22" r="5.5"/><circle cx="32" cy="74" r="5.5"/><circle cx="72" cy="61" r="5.5"/></g>
+</svg>
