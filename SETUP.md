@@ -62,8 +62,6 @@ Abre http://localhost:3000/register y crea la primera empresa.
 2. Import en Vercel
 3. Añadir env vars
 4. Deploy
-EOF
-cd /home/workdir/artifacts && rm -f ContractorOS-Base.zip && zip -r ContractorOS-Base.zip contractoros -x "contractoros/node_modules/*" && ls -lh ContractorOS-Base.zip && find contractoros -type f | wc -l && find contractoros/src/app -name "page.tsx" | wc -l
 
 ## 7. Equipo y permisos (Fase 2)
 
