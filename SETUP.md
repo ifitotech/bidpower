@@ -72,3 +72,15 @@ Abre http://localhost:3000/register y crea la primera empresa.
 - Los empleados solo ven proyectos asignados; sin "ver costos" no reciben montos; sin "ver ganancia" no reciben ganancia.
 - Límite de PO: por encima del límite el PO no se puede crear (el Owner lo crea). El flujo de aprobación llega en Compras (Fase 5).
 - Una persona con cuenta en dos empresas ve la primera a la que se unió (no hay selector de empresa todavía).
+
+## 8. Prueba de humo (Fases 1 y 2)
+
+`scripts/smoke-phase1-2.js` recorre en un navegador real: registro, empresa, proyecto, refresco, logout/login,
+aislamiento entre empresas, invitación, permisos, asignación y desactivación (21 comprobaciones).
+
+```bash
+BASE_URL=https://TU-APP.vercel.app node scripts/smoke-phase1-2.js
+```
+
+Requiere Playwright + Chromium y "Confirm email" desactivado en Supabase Auth. Crea usuarios `@bidpower-smoke.test`;
+las instrucciones para borrarlos están en la cabecera del script.
