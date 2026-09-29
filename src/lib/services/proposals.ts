@@ -145,10 +145,3 @@ export async function declineChangeRequest(companyId: string, id: string) {
   if (!data || data.length === 0) throw new Error("not_open");
 }
 
-/** Home "needs attention": open change requests (a customer asked for a change, waiting on the owner). */
-export async function countCustomerAttention(companyId: string) {
-  const supabase = await createClient();
-  const { count, error } = await supabase.from("change_requests").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "open");
-  if (error) throw error;
-  return count ?? 0;
-}

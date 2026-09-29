@@ -208,12 +208,6 @@ export async function getPurchaseOrders(companyId: string, statusFilter?: string
   return data;
 }
 
-export async function countPOsPendingApproval(companyId: string) {
-  const supabase = await createClient();
-  const { count, error } = await supabase.from("purchase_orders").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "pending_approval");
-  if (error) throw error;
-  return count ?? 0;
-}
 
 export type PODetail = NonNullable<Awaited<ReturnType<typeof getPurchaseOrderById>>>;
 

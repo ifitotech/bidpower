@@ -10,6 +10,8 @@ import { useI18n } from "@/lib/i18n/provider";
 import { usePermissions } from "@/lib/permissions-context";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { setProjectAssignmentAction } from "@/app/(dashboard)/actions";
+import type { ProjectMoney, TimelineItem, WaitingItem } from "@/lib/services/project-control";
+import { ActivityPanel, MoneyPanel, WaitingPanel } from "./ProjectControl";
 
 type Project = {
   id: string; name: string; status: string; description?: string | null; address?: string | null; start_date?: string | null;
@@ -52,7 +54,7 @@ function ProjectTeam({ projectId, people }: { projectId: string; people: TeamPer
   </section>;
 }
 
-export default function ProjectDetailClient({ project: p, error, team = [], canManageTeam = false }: { project?: Project; error?: "errNoSupabase" | "errLoadProject"; team?: TeamPerson[]; canManageTeam?: boolean }) {
+export default function ProjectDetailClient({ project: p, error, team = [], canManageTeam = false, money = null, waiting = [], timeline = [] }: { project?: Project; error?: "errNoSupabase" | "errLoadProject"; team?: TeamPerson[]; canManageTeam?: boolean; money?: ProjectMoney | null; waiting?: WaitingItem[]; timeline?: TimelineItem[] }) {
   const { t, locale } = useI18n();
   const { isManagerOrAbove, permissions } = usePermissions();
   const back = <Link href="/projects" aria-label={t("projects")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100"><ArrowLeft className="h-4 w-4" /></Link>;
@@ -61,7 +63,6 @@ export default function ProjectDetailClient({ project: p, error, team = [], canM
     return <div className="mx-auto max-w-4xl p-4 md:p-8"><div className="mb-6">{back}</div>{error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{t(error)}</div>}</div>;
   }
 
-  const progress = p.budget_total > 0 ? Math.min(100, (p.spentTotal / p.budget_total) * 100) : 0;
   const tools = [
     ...(permissions.can_request_material || isManagerOrAbove ? [{ href: `/projects/${p.id}/materials`, label: t("materialRequests"), icon: Package }] : []),
     { href: "/expenses", label: t("expenses"), icon: Receipt },
@@ -103,19 +104,10 @@ export default function ProjectDetailClient({ project: p, error, team = [], canM
         {p.description && <div className="mt-4 border-t border-slate-100 pt-3"><p className="mb-1 text-xs font-semibold uppercase text-slate-400">{t("notes")}</p><p className="whitespace-pre-line text-sm text-slate-700">{p.description}</p></div>}
       </section>
 
-      {!costsHidden && <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="mb-3 font-semibold">{t("budgetVsExpenses")}</h2>
-        <div className="flex justify-between text-sm"><span className="text-slate-500">{t("budget")}</span><span className="font-medium">{formatCurrency(Number(p.budget_total))}</span></div>
-        <div className="mt-2 flex justify-between text-sm"><span className="text-slate-500">{t("spent")}</span><span className={`font-medium ${p.overBudget ? "text-red-600" : ""}`}>{formatCurrency(p.spentTotal)}</span></div>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${p.overBudget ? "bg-red-500" : "bg-brand-500"}`} style={{ width: `${progress}%` }} /></div>
-        <div className="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-          <div><p className="text-slate-400">{t("materials")}</p><p className="font-medium">{formatCurrency(Number(p.budget_materials))}</p></div>
-          <div><p className="text-slate-400">{t("labor")}</p><p className="font-medium">{formatCurrency(Number(p.budget_labor))}</p></div>
-          <div><p className="text-slate-400">{t("subcontractors")}</p><p className="font-medium">{formatCurrency(Number(p.budget_subcontractors))}</p></div>
-          <div><p className="text-slate-400">{t("other")}</p><p className="font-medium">{formatCurrency(Number(p.budget_other))}</p></div>
-        </div>
-      </section>}
+      {money && <MoneyPanel money={money} budgetSplit={[{ label: t("materials"), value: Number(p.budget_materials) }, { label: t("labor"), value: Number(p.budget_labor) }, { label: t("subcontractors"), value: Number(p.budget_subcontractors) }, { label: t("other"), value: Number(p.budget_other) }]} />}
     </div>
+
+    <div className="mt-4 grid gap-4 md:grid-cols-2"><WaitingPanel items={waiting} /><ActivityPanel items={timeline} /></div>
 
     <section className="mt-4">
       <h2 className="mb-2 font-semibold">{t("projectTools")}</h2>

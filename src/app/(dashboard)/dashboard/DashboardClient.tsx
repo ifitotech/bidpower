@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ChevronRight, Clock3, MapPin, Package, Plus, Receipt } from "lucide-react";
+import { AlertTriangle, ChevronRight, Clock3, MapPin, Plus, Receipt } from "lucide-react";
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { useI18n } from "@/lib/i18n/provider";
 import { APP_NAME } from "@/lib/constants";
 import { Logo } from "@/components/shared/Logo";
 import { usePermissions } from "@/lib/permissions-context";
+import { WaitingOn } from "@/components/shared/RequestStatusBadge";
+import type { Dictionary } from "@/lib/i18n/dictionaries/es";
+import type { AttentionItem } from "@/lib/services/project-control";
 
 type HomeProject = { id: string; name: string; status: string; address?: string | null; clientName?: string | null };
 
@@ -16,13 +19,15 @@ export default function DashboardClient({
   projects,
   totalProjects = projects.length,
   attention,
+  items = [],
   error,
 }: {
   firstName: string;
   companyName: string;
   projects: HomeProject[];
   totalProjects?: number;
-  attention: { invoices: number; quotes: number; purchaseOrders: number; materialRequests?: number; pricingResponded?: number; posToApprove?: number; customerChanges?: number };
+  attention: { invoices: number; quotes: number };
+  items?: AttentionItem[];
   error?: "errNoSupabase" | "errLoadProjects";
 }) {
   const { t } = useI18n();
@@ -32,11 +37,6 @@ export default function DashboardClient({
   const attentionItems = [
     { href: "/invoices", icon: <Receipt className="h-4 w-4" />, title: t("attentionInvoices"), count: attention.invoices },
     { href: "/quotes", icon: <Clock3 className="h-4 w-4" />, title: t("attentionQuotes"), count: attention.quotes },
-    { href: "/pos", icon: <AlertTriangle className="h-4 w-4" />, title: t("posWithoutDoc"), count: attention.purchaseOrders },
-    ...(isManagerOrAbove ? [{ href: "/materials/requests", icon: <Package className="h-4 w-4" />, title: t("requestsPendingAttention"), count: attention.materialRequests ?? 0 }] : []),
-    ...(isManagerOrAbove ? [{ href: "/pricing", icon: <Package className="h-4 w-4" />, title: t("awaitingPricingAttention"), count: attention.pricingResponded ?? 0 }] : []),
-    ...(isManagerOrAbove ? [{ href: "/pos", icon: <AlertTriangle className="h-4 w-4" />, title: t("posToApprove"), count: attention.posToApprove ?? 0 }] : []),
-    ...(isManagerOrAbove ? [{ href: "/quotes", icon: <Clock3 className="h-4 w-4" />, title: t("customerAttention"), count: attention.customerChanges ?? 0 }] : []),
   ].filter((item) => item.count > 0);
 
   return (
@@ -49,10 +49,17 @@ export default function DashboardClient({
 
       {error && <div role="alert" className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{t(error)}</div>}
 
-      {attentionItems.length > 0 && (
+      {(attentionItems.length > 0 || items.length > 0) && (
         <section className="mb-6">
           <h2 className="mb-2 text-sm font-bold">{t("needsAttention")}</h2>
-          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2 md:grid-cols-2">
+            {items.map((item) => (
+              <Link key={item.id} href={item.href} className={`flex min-w-0 items-center gap-3 rounded-xl border p-3 transition ${item.severity === "high" ? "border-amber-200 bg-amber-50/70 hover:border-amber-300" : "border-slate-200 bg-white hover:border-brand-300"}`}>
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${item.severity === "high" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"}`}><AlertTriangle className="h-4 w-4" /></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{t(item.titleKey as keyof Dictionary, item.params)}</span><span className="block text-xs text-slate-400">{t("waitingOn")}: <WaitingOn value={item.waitingOn} /></span></span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+              </Link>
+            ))}
             {attentionItems.map((item) => (
               <Link key={item.href} href={item.href} className="flex min-w-0 items-center gap-3 rounded-xl border border-amber-100 bg-amber-50/60 p-3 transition hover:border-amber-300">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">{item.icon}</span>
@@ -63,6 +70,7 @@ export default function DashboardClient({
           </div>
         </section>
       )}
+      {attentionItems.length === 0 && items.length === 0 && !error && projects.length > 0 && <p className="mb-6 text-sm text-slate-400">{t("attnNone")}</p>}
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">

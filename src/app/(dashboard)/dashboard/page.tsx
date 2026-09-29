@@ -1,32 +1,27 @@
-import { countPendingRequests } from "@/lib/services/material-requests";
-import { countAwaitingPricing } from "@/lib/services/pricing-requests";
-import { countCustomerAttention } from "@/lib/services/proposals";
-import { countPOsPendingApproval } from "@/lib/services/purchase-orders";
+import { getActionContext } from "@/lib/action-context";
 import { getCurrentMember, getCurrentProfile } from "@/lib/auth";
 import { getDashboardMetrics } from "@/lib/services/dashboard";
 import { getProjects } from "@/lib/services/projects";
+import { getNeedsAttention } from "@/lib/services/project-control";
 import DashboardClient from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return <DashboardClient error="errNoSupabase" firstName="" companyName="" projects={[]} attention={{ invoices: 0, quotes: 0, purchaseOrders: 0 }} />;
+    return <DashboardClient error="errNoSupabase" firstName="" companyName="" projects={[]} attention={{ invoices: 0, quotes: 0 }} items={[]} />;
   }
 
   try {
     const member = await getCurrentMember();
     if (!member?.company_id) throw new Error("no-company");
     const companyId = member.company_id as string;
-    const [profile, projects, metrics, pendingRequests, pricingResponded, posToApprove, customerChanges] = await Promise.all([
+    const [profile, projects, metrics, items] = await Promise.all([
       getCurrentProfile(),
       getProjects(companyId),
-      // Attention counts are optional context; the project list must still render without them.
+      // Attention data is optional context; the project list must still render without it.
       getDashboardMetrics(companyId).catch(() => null),
-      member.role === "owner" || member.role === "manager" ? countPendingRequests(companyId).catch(() => 0) : Promise.resolve(0),
-      member.role === "owner" || member.role === "manager" ? countAwaitingPricing(companyId).catch(() => 0) : Promise.resolve(0),
-      member.role === "owner" || member.role === "manager" ? countPOsPendingApproval(companyId).catch(() => 0) : Promise.resolve(0),
-      member.role === "owner" || member.role === "manager" ? countCustomerAttention(companyId).catch(() => 0) : Promise.resolve(0),
+      getActionContext().then((c) => getNeedsAttention(c)).catch(() => []),
     ]);
     const company = member.company as { name?: string } | null;
     const firstName = (profile?.fullName || profile?.email || "").split(/[\s@]/)[0];
@@ -36,18 +31,11 @@ export default async function DashboardPage() {
         companyName={company?.name ?? ""}
         projects={projects.slice(0, 6).map((p) => ({ id: p.id, name: p.name, status: p.status, address: p.address, clientName: p.client?.name ?? null }))}
         totalProjects={projects.length}
-        attention={{
-          invoices: metrics?.pendingInvoices ?? 0,
-          quotes: metrics?.pendingQuotes ?? 0,
-          purchaseOrders: metrics?.posWithoutDoc ?? 0,
-          materialRequests: pendingRequests,
-          pricingResponded,
-          posToApprove,
-          customerChanges,
-        }}
+        attention={{ invoices: metrics?.pendingInvoices ?? 0, quotes: metrics?.pendingQuotes ?? 0 }}
+        items={items}
       />
     );
   } catch {
-    return <DashboardClient error="errLoadProjects" firstName="" companyName="" projects={[]} attention={{ invoices: 0, quotes: 0, purchaseOrders: 0 }} />;
+    return <DashboardClient error="errLoadProjects" firstName="" companyName="" projects={[]} attention={{ invoices: 0, quotes: 0 }} items={[]} />;
   }
 }

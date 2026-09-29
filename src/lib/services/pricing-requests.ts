@@ -28,14 +28,6 @@ export async function getPricingRequests(companyId: string, projectId?: string) 
   return (data as unknown as RawRow[]).map(shape);
 }
 
-/** Open requests whose Bid Date is today or earlier than `days` from now (for Needs Attention later). */
-export async function countAwaitingPricing(companyId: string) {
-  const supabase = await createClient();
-  const { count, error } = await supabase.from("supply_quote_requests").select("id", { count: "exact", head: true })
-    .eq("company_id", companyId).eq("status", "responded");
-  if (error) throw error;
-  return count ?? 0;
-}
 
 export type PricingItem = {
   id: string; material_id: string | null; description: string; quantity: number; unit: string; category: string | null;

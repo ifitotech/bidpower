@@ -48,16 +48,6 @@ export async function getCompanyRequests(companyId: string, onlyStatus?: string)
   return (data as unknown as RawRequest[]).map(shape);
 }
 
-export async function countPendingRequests(companyId: string) {
-  const supabase = await createClient();
-  const { count, error } = await supabase
-    .from("material_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("company_id", companyId)
-    .eq("status", "requested");
-  if (error) throw error;
-  return count ?? 0;
-}
 
 export type RequestItemRow = {
   id: string; material_id: string | null; description: string; quantity: number; unit: string; category: string | null;

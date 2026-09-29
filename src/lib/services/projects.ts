@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { getProjectFinancials } from "@/lib/finance";
+import { COUNTED_EXPENSE_STATUSES, getProjectFinancials } from "@/lib/finance";
+
+/** Only approved/reimbursed expenses are real cost; drafts, rejected and cancelled ones are ignored. */
+const countedTotal = (expenses: { amount: number; status?: string }[] | null | undefined) =>
+  (expenses ?? []).filter((e) => !e.status || (COUNTED_EXPENSE_STATUSES as readonly string[]).includes(e.status)).reduce((sum, e) => sum + Number(e.amount), 0);
 import type { ProjectStatus } from "@/types/database";
 import { getMyPermissions } from "@/lib/auth";
 import type { Permissions } from "@/lib/permissions";
@@ -36,7 +40,7 @@ export async function getProjects(companyId: string) {
       `
       *,
       client:clients(id, name, contact_name),
-      expenses(amount)
+      expenses(amount, status)
     `
     )
     .eq("company_id", companyId)
@@ -46,10 +50,7 @@ export async function getProjects(companyId: string) {
   const perms = await getMyPermissions();
 
   return (projects ?? []).map((p) => {
-    const spentTotal = (p.expenses ?? []).reduce(
-      (sum: number, e: { amount: number }) => sum + Number(e.amount),
-      0
-    );
+    const spentTotal = countedTotal(p.expenses);
 
     const financials = getProjectFinancials({
       contractValue: Number(p.contract_value),
@@ -85,10 +86,7 @@ export async function getProjectById(projectId: string, companyId: string) {
   if (error) throw error;
   if (!data) return null;
 
-  const spentTotal = (data.expenses ?? []).reduce(
-    (sum: number, e: { amount: number }) => sum + Number(e.amount),
-    0
-  );
+  const spentTotal = countedTotal(data.expenses);
 
   const financials = getProjectFinancials({
     contractValue: Number(data.contract_value),

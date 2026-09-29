@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260806000016_phase6_customer.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260807000017_phase7_project_control.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -131,3 +131,16 @@ las instrucciones para borrarlos están en la cabecera del script.
 - **Decisión manual**: si el cliente respondió fuera de la app, se puede registrar (queda marcado como manual).
 - Pendiente: PDF/versión imprimible para el cliente en el enlace, avisos por correo y un límite de intentos por IP.
 - Migración: `20260806000016_phase6_customer.sql`.
+
+## 13. Control del proyecto y Needs Attention (Fase 7)
+
+- **Una sola fuente de números** (vista `project_cost_summary`, calculada al momento, nada duplicado):
+  - **Costo real** = gastos aprobados/reembolsados (los borradores, rechazados y cancelados no cuentan). Un PO completado ya es un gasto, así que no se cuenta dos veces.
+  - **Comprometido** = POs aprobados que aún no se completan (enviado, recibido, esperando documento…). Los POs *por aprobar* se muestran aparte y **no** se comprometen.
+  - **Costo proyectado** = real + comprometido. **Ganancia estimada** = valor del contrato − costo proyectado; es una estimación hasta que se completen los POs.
+  - El **valor del contrato** sube solo con lo que el cliente aprobó (Proposal y Change Orders).
+- En cada proyecto: panel de control (solo con permiso de *ver costos*; la ganancia solo con *ver ganancia*), **Esperando a** (todo lo pendiente agrupado por Owner / Empleado / Supplier / Cliente, con enlace) y **Actividad** (línea de tiempo armada con registros reales, sin montos; `project_timeline`).
+- **Needs Attention** en Inicio, según el rol: Owner/Manager ven pedidos por revisar, suppliers que respondieron o preguntaron, Bid Dates de hoy/mañana/vencidos, POs por aprobar o sin recibo, clientes que pidieron cambios, Proposals por vencer y proyectos sobre presupuesto; el Empleado ve lo que le devolvieron y los POs suyos sin documento.
+- Ambas vistas usan `security_invoker`: cada persona ve solo lo que ya podía ver por RLS.
+- `/reports` ahora es solo para Owner/Manager y cuenta solo gastos reales.
+- Migración: `20260807000017_phase7_project_control.sql`.
