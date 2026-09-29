@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260808000018_phase8_electrical_takeoff.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260809000019_expense_review_rules.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -154,3 +154,10 @@ las instrucciones para borrarlos están en la cabecera del script.
 - **Envío**: *Enviar como pedido de material* crea un Material Request (líneas de texto, nota PRELIMINAR) que sigue el flujo normal → Pricing Request → PO. Nunca lleva precios.
 - Pendiente: editar filas en su lugar (hoy se borra y se agrega), lectura asistida de planos (requiere proveedor de IA y verificación humana), exportar CSV/PDF.
 - Migración: `20260808000018_phase8_electrical_takeoff.sql`.
+
+## 15. Gastos, Proposals reales y prueba de extremo a extremo local
+
+- **Gastos** (`/expenses/new`): ahora son reales (proyecto, categoría de la empresa, monto, fecha, recibo). Antes la pantalla era una maqueta que no guardaba nada. El gasto de un Empleado queda **por aprobar** y **no cuenta** como costo real hasta que el Owner/Manager lo aprueba (regla en la base de datos, `20260809000019_expense_review_rules.sql`); los de Owner/Manager entran aprobados. Aparece en Inicio → Needs Attention.
+- **Proposals** (`/quotes`, `/quotes/new`): la lista y el formulario usaban datos de ejemplo (clientes "Juan Rivera"…) y no podían crear una Proposal real; ahora usan clientes y proyectos reales. "Supply & Purchase" ya no se mezcla con los quotes al cliente.
+- **Editar cliente** cargaba valores de ejemplo (habría sobrescrito datos reales); ahora parte del cliente guardado.
+- **Prueba local completa**: `scripts/e2e/` levanta Postgres + PostgREST real + las migraciones y ejecuta las fases 1–8 en un navegador (`up.sh`, `app.sh`, `flows.js`; ver su README). Encontró y corrigió, entre otros, la barra "Enviar pedido" tapada por la navegación móvil. No sustituye la prueba con el proyecto Supabase real.

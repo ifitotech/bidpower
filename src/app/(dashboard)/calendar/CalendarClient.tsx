@@ -8,10 +8,10 @@ import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 
 type Project = { id: string; name: string; status: string; start_date?: string | null; end_date?: string | null; client?: { name?: string } | null };
 export default function CalendarClient({ projects = [], demo = false }: { projects?: Project[]; demo?: boolean }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [view, setView] = useState("week");
   const [cursor, setCursor] = useState(new Date());
-  const month = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const month = cursor.toLocaleDateString(locale, { month: "long", year: "numeric", timeZone: "UTC" });
   const scheduled = projects.filter((p) => p.start_date);
   return <div className="p-4 md:p-8"><div className="flex flex-wrap items-center gap-3 mb-6"><div className="flex-1"><h1 className="text-xl font-bold flex items-center gap-2"><CalendarDays className="w-5 h-5 text-brand-600" />{t("calendar")}</h1><p className="text-sm text-slate-500">{month}</p></div><Link href="/projects/new" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white"><Plus className="w-4 h-4" />{t("newProject")}</Link></div>
     {demo && <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm text-blue-800">{t("demoMode")}: la agenda mostrará jobs reales cuando tengan fecha de inicio.</div>}

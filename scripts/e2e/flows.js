@@ -117,7 +117,6 @@ async function phase45(browser) {
   await o.reload();
   ok("pricing: response shows quote number and total", (await o.getByText(/Q-778/).count()) > 0);
   await o.getByRole("button", { name: /Adjudicar|Award/ }).first().click().catch(() => {});
-  o.once("dialog", (d) => d.accept());
   await o.waitForTimeout(800);
 
   // Purchase Order from the response
@@ -163,14 +162,187 @@ async function phase45(browser) {
   ok("po limit: owner approves", (await o.getByText(/Aprobado|Approved/).count()) > 0);
 }
 
+async function phaseExpense(browser) {
+  const o = state.owner;
+  const emp = state.emp;
+  await emp.goto(`${B}/expenses/new?projectId=${state.projectId}`);
+  await emp.getByRole("button", { name: /Materiales|Materials/ }).first().click();
+  await emp.locator("input[name=vendorName]").fill("Home Depot");
+  await emp.locator("input[name=amount]").fill("50.25");
+  await emp.locator("input[type=file]").setInputFiles({ name: "ticket.png", mimeType: "image/png", buffer: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]) });
+  await emp.getByRole("button", { name: /Guardar|Save/ }).click();
+  await emp.waitForURL(/expenses\/[0-9a-f-]{36}/, { timeout: 30000 });
+  ok("expense: employee's expense is pending review", (await emp.getByText(/Por aprobar|Pending review/).count()) > 0);
+  ok("expense: receipt attached", (await emp.getByText("ticket.png").count()) > 0);
+  ok("expense: employee cannot approve", (await emp.getByRole("button", { name: /^Aprobar$|^Approve$/ }).count()) === 0);
+  const before = await (async () => { await o.goto(`${B}/projects/${state.projectId}`); return await o.locator("main").innerText(); })();
+  ok("expense: pending expense does not count as actual cost yet", !/50[.,]25/.test(before.split("Costo real")[1]?.slice(0, 40) ?? ""));
+  await o.goto(B + "/dashboard");
+  ok("home: owner sees the expense to review", (await o.getByText(/Gasto por aprobar|Expense to review/).count()) > 0);
+  await o.goto(B + "/expenses");
+  await o.getByText("Home Depot").first().click();
+  await o.getByRole("button", { name: /^Aprobar$|^Approve$/ }).click();
+  await o.waitForTimeout(1500);
+  ok("expense: owner approves", (await o.getByText(/Aprobado|Approved/).count()) > 0);
+  await o.goto(`${B}/projects/${state.projectId}`);
+  ok("project: approved expense now counts in actual cost", /50[.,]25|173[.,]70/.test(await o.locator("main").innerText()));
+  await o.goto(B + "/expenses/new");
+  await o.locator("input[name=amount]").fill("0");
+  await o.getByRole("button", { name: /Guardar|Save/ }).click();
+  await o.waitForTimeout(1200);
+  ok("expense: zero amount is rejected with a message", (await o.getByRole("alert").count()) > 0);
+}
+
+async function phase6(browser) {
+  const o = state.owner;
+  await o.goto(`${B}/quotes/new?projectId=${state.projectId}`);
+  ok("proposal: client is preselected from the project", (await o.locator("select[name=clientId]").inputValue()) !== "");
+  ok("proposal: no sample clients in the list", (await o.locator("select[name=clientId] option").allInnerTexts()).every((x) => !/Rivera|Torres/.test(x)));
+  await o.locator("input[type=text]").nth(0).fill("Panel upgrade 200A");
+  await o.locator("input[type=number]").nth(1).fill("1200");
+  await o.locator("input[name=taxRate]").fill("7.5");
+  await o.getByRole("button", { name: /Nueva Proposal|New Proposal/ }).last().click();
+  await o.waitForURL(/quotes\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  state.quoteUrl = o.url();
+  ok("proposal: created and opened", (await o.getByText(/QT-/).count()) > 0);
+  ok("proposal: total includes tax (1,290)", /1[.,]290/.test(await o.locator("main").innerText()));
+  await o.getByRole("button", { name: /Crear enlace y enviar|Create link and send/ }).first().click();
+  const linkBox = o.locator("p.break-all").first();
+  await linkBox.waitFor({ timeout: 30000 });
+  const link = (await linkBox.innerText()).trim();
+  ok("proposal: customer link generated", /\/customer\/[a-f0-9]{64}$/.test(link));
+  await o.reload();
+  ok("proposal: sent, waiting on the customer", (await o.getByText(/Enviada|Enviado|Sent/).count()) > 0);
+
+  const cust = await page(browser, 390, 844, "en-US");
+  await cust.goto(link);
+  ok("customer: sees the proposal with total, no login", /1,290/.test(await cust.locator("main").innerText()) && cust.url().includes("/customer/"));
+  ok("customer: sees no supplier/cost data", !/PO-|Graybar|Home Depot|margin|profit/i.test(await cust.locator("main").innerText()));
+  await cust.getByLabel(/Your full name/).fill("");
+  ok("customer: approve is disabled without a name", await cust.getByRole("button", { name: /^Approve$/ }).isDisabled());
+  await cust.getByLabel(/Your full name/).fill("Carlos Cliente");
+  await cust.getByRole("button", { name: /^Approve$/ }).click();
+  await cust.waitForTimeout(1500);
+  ok("customer: approval recorded", (await cust.getByText(/approval was recorded/i).count()) > 0);
+
+  await o.reload();
+  ok("proposal: approved by the customer's name", (await o.getByText(/Carlos Cliente/).count()) > 0);
+  ok("proposal: no signature is claimed", (await o.getByText(/no es una firma|not a handwritten signature/i).count()) > 0);
+  await o.goto(`${B}/projects/${state.projectId}`);
+  ok("project: contract value taken from the approved proposal", /1[.,]290/.test(await o.locator("main").innerText()));
+
+  await cust.reload();
+  await cust.getByLabel(/Your full name/).fill("Carlos Cliente");
+  await cust.locator("textarea").fill("Please add two outlets in the kitchen");
+  await cust.getByRole("button", { name: /Send request/ }).click();
+  await cust.waitForTimeout(1500);
+  await o.goto(B + "/dashboard");
+  ok("home: owner sees the customer's change request", (await o.getByText(/pidió un cambio|asked for a change/).count()) > 0);
+  await o.goto(state.quoteUrl);
+  ok("proposal: change request listed", (await o.getByText(/two outlets/).count()) > 0);
+  await o.getByRole("button", { name: /Crear Change Order|Create Change Order/ }).first().click();
+  await o.getByLabel(/Descripción|Description/).nth(1).fill("Two kitchen outlets");
+  await o.getByLabel(/Precio|Price/).last().fill("150");
+  await o.getByLabel(/Cant\.|Cantidad|Quantity/).last().fill("2");
+  await o.getByRole("button", { name: /^Crear Change Order$|^Create Change Order$/ }).last().click();
+  await o.waitForTimeout(2000);
+  ok("change order: created with the difference (300)", (await o.getByText(/CO-/).count()) > 0 && /300/.test(await o.locator("main").innerText()));
+  await o.getByRole("button", { name: /Crear enlace y enviar|Create link and send/ }).last().click();
+  const coBox = o.locator("p.break-all").first();
+  await coBox.waitFor({ timeout: 30000 });
+  const coLink = (await coBox.innerText()).trim();
+  const cust2 = await page(browser, 390, 844, "en-US");
+  await cust2.goto(coLink);
+  ok("customer: change order page shows the difference", /300/.test(await cust2.locator("main").innerText()));
+  await cust2.getByLabel(/Your full name/).fill("Carlos Cliente");
+  await cust2.getByRole("button", { name: /^Approve$/ }).click();
+  await cust2.waitForTimeout(1500);
+  await o.goto(`${B}/projects/${state.projectId}`);
+  ok("project: contract value grows by the approved change order (1,590)", /1[.,]590/.test(await o.locator("main").innerText()));
+
+  // second proposal: request changes -> new version, old link dies
+  await o.goto(`${B}/quotes/new?projectId=${state.projectId}`);
+  await o.locator("input[type=text]").nth(0).fill("Lighting package");
+  await o.locator("input[type=number]").nth(1).fill("500");
+  await o.getByRole("button", { name: /Nueva Proposal|New Proposal/ }).last().click();
+  await o.waitForURL(/quotes\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  const q2 = o.url();
+  await o.getByRole("button", { name: /Crear enlace y enviar|Create link and send/ }).first().click();
+  const l2 = (await o.locator("p.break-all").first().innerText()).trim();
+  const c3 = await page(browser, 390, 844, "en-US");
+  await c3.goto(l2);
+  await c3.getByLabel(/Your full name/).fill("Carlos Cliente");
+  await c3.getByRole("button", { name: /Request changes/ }).click();
+  await c3.locator("textarea").fill("Cheaper fixtures please");
+  await c3.getByRole("button", { name: /Send request/ }).click();
+  await c3.waitForTimeout(1500);
+  await o.goto(q2);
+  ok("proposal v1: status changes requested", (await o.getByText(/Cambios pedidos|Changes requested/).count()) > 0);
+  await o.getByRole("button", { name: /Nueva versión|New version/ }).click();
+  await o.waitForURL((u) => u.toString() !== q2 && /quotes\/[0-9a-f-]{36}$/.test(u.toString()), { timeout: 30000 });
+  ok("proposal v2: opened as an editable version 2", (await o.getByText(/Versión 2|Version 2/).count()) > 0);
+  await c3.goto(l2);
+  ok("customer: the old version's link no longer works", (await c3.getByText(/not valid|no es válido|não é válido/).count()) > 0);
+}
+
+async function phase78(browser) {
+  const o = state.owner;
+  await o.goto(`${B}/projects/${state.projectId}/takeoff`);
+  ok("takeoff: PRELIMINARY banner shown", (await o.getByText(/PRELIMINAR|PRELIMINARY/).count()) > 0);
+  await o.getByLabel(/^Título$|^Title$/).fill("Lobby");
+  await o.getByRole("button", { name: /Crear takeoff|Create takeoff/ }).click();
+  await o.waitForURL(/takeoffs\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  state.takeoffUrl = o.url();
+  await o.getByLabel(/Tipo \/ descripción|Type \/ description/).fill("2x4 LED panel");
+  await o.getByLabel(/^Cant\.$|^Quantity$/).first().fill("12");
+  await o.getByRole("button", { name: /^Agregar$|^Add$/ }).first().click();
+  await o.waitForTimeout(1200);
+  await o.getByLabel(/Nombre del panel|Panel name/).fill("A");
+  await o.getByLabel(/Bus \(A\)/).fill("200");
+  await o.getByLabel(/Main \(A\)/).fill("200");
+  await o.getByRole("button", { name: /Agregar panel|Add panel/ }).click();
+  await o.waitForTimeout(1200);
+  await o.getByRole("button", { name: /Agregar circuito|Add circuit/ }).click();
+  await o.waitForTimeout(1200);
+  await o.getByLabel(/Nombre$|^Name$/).fill("F1");
+  await o.getByLabel(/Longitud \(ft\)|Length \(ft\)/).fill("100");
+  await o.getByLabel(/Calibre conductor|Conductor size/).fill("#4 CU");
+  await o.getByLabel(/Nº conductores|Conductors/).fill("3");
+  await o.getByLabel(/^Conduit$|Conduit size/).fill("1-1/4\"");
+  await o.getByLabel(/Tipo \(EMT|Type \(EMT/).fill("EMT");
+  await o.getByRole("button", { name: /Agregar feeder|Add feeder/ }).click();
+  await o.waitForTimeout(1500);
+  const txt = await o.locator("main").innerText();
+  ok("takeoff: counts appear in the material list", /2x4 LED panel[\s\S]*12 EA/.test(txt));
+  ok("takeoff: breakers derived (20A 1-pole and 200A 2-pole main)", /20A 1-pole breaker/.test(txt) && /200A 2-pole breaker/.test(txt));
+  ok("takeoff: wire length = 100 x 3 x 1.10 = 330 FT", /330 FT/.test(txt));
+  ok("takeoff: says branch wire/fittings are not estimated", /no se estima|not estimated/i.test(txt));
+  await o.getByRole("button", { name: /Marcar como verificado|Mark as verified/ }).click();
+  await o.waitForTimeout(1500);
+  ok("takeoff: verified by the manager", (await o.getByText(/Verificado por|Verified by/).count()) > 0);
+  await o.getByLabel(/^Cant\.$|^Quantity$/).first().fill("3");
+  await o.getByLabel(/Tipo \/ descripción|Type \/ description/).fill("Exit sign");
+  await o.getByRole("button", { name: /^Agregar$|^Add$/ }).first().click();
+  await o.waitForTimeout(1500);
+  ok("takeoff: editing a verified takeoff sends it back to unverified", (await o.getByText(/Marcar como verificado|Mark as verified/).count()) > 0);
+  await o.getByRole("button", { name: /Enviar como pedido de material|Send as material request/ }).click();
+  await o.waitForTimeout(2500);
+  await o.goto(B + "/materials/requests");
+  ok("takeoff: material request created with the PRELIMINARY note", (await o.locator("a[href*='/materials/']").filter({ hasText: /MR-/ }).count()) >= 1);
+}
+
 (async () => {
   const browser = await launch();
   try {
     state.owner = await page(browser);
+    state.owner.on("dialog", (d) => d.accept());
     await register(state.owner, "Ana Owner", `owner-${RUN}@bidpower-smoke.test`, "Smoke Electric");
     state.projectId = await createProject(state.owner, "Miami Beach", "Cliente Miami");
     if (want("all") || want("3") || want("45")) await phase3(browser);
     if (want("all") || want("45")) await phase45(browser);
+    if (want("all") || want("exp")) { if (!state.emp) state.emp = await inviteEmployee(browser, state.owner, "Luis Tester", `luis-${RUN}@bidpower-smoke.test`, "employee_basic", state.projectId); await phaseExpense(browser); }
+    if (want("all") || want("6")) await phase6(browser);
+    if (want("all") || want("78")) await phase78(browser);
   } catch (e) {
     console.error("ERROR", e.message.split("\n").slice(0, 4).join(" | "));
     process.exitCode = 2;

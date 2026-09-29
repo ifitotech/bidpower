@@ -103,12 +103,13 @@ export async function getNeedsAttention(ctx: { companyId: string; userId: string
   const soon = isoDay(new Date(today.getTime() + 3 * 86400000));
 
   if (reviewer) {
-    const [mr, pr, po, cr, qs, projects] = await Promise.all([
+    const [mr, pr, po, cr, qs, ex, projects] = await Promise.all([
       supabase.from("material_requests").select("id, number, project_id, created_at, project:projects(name)").eq("company_id", ctx.companyId).eq("status", "requested").order("created_at").limit(8),
       supabase.from("supply_quote_requests").select("id, number, status, response_due_date").eq("company_id", ctx.companyId).in("status", ["draft", "sent", "question_open", "responded"]).limit(60),
       supabase.from("purchase_orders").select("id, number, status, vendor_name, created_at").eq("company_id", ctx.companyId).in("status", ["pending_approval", "received", "pending_document"]).order("created_at").limit(20),
       supabase.from("change_requests").select("id, quote_id, requested_by_name, created_at").eq("company_id", ctx.companyId).eq("status", "open").order("created_at").limit(8),
       supabase.from("quotes").select("id, number, valid_until").eq("company_id", ctx.companyId).in("status", ["sent", "pending"]).not("valid_until", "is", null).lte("valid_until", soon).limit(8),
+      supabase.from("expenses").select("id, vendor_name").eq("company_id", ctx.companyId).eq("status", "pending_review").order("created_at").limit(8),
       ctx.perms.can_view_costs ? supabase.from("projects").select("id, name, budget_total").eq("company_id", ctx.companyId).gt("budget_total", 0).in("status", ["approved", "active"]) : Promise.resolve({ data: [] as { id: string; name: string; budget_total: number }[], error: null }),
     ]);
     for (const r of mr.data ?? []) add({ id: `mr-${r.id}`, titleKey: "attnMR", params: { number: r.number as string, project: (one(r.project as { name: string } | { name: string }[] | null)?.name) ?? "" }, href: `/projects/${r.project_id}/materials/${r.id}`, waitingOn: "owner", severity: "normal", sort: 3 });
@@ -126,6 +127,7 @@ export async function getNeedsAttention(ctx: { companyId: string; userId: string
       else add({ id: `pod-${r.id}`, titleKey: "attnPODoc", params: { number: r.number as string, vendor: r.vendor_name as string }, href: `/pos/${r.id}`, waitingOn: "employee", severity: "normal", sort: 4 });
     }
     for (const r of cr.data ?? []) add({ id: `cr-${r.id}`, titleKey: "attnChange", params: { name: (r.requested_by_name as string) || "" }, href: `/quotes/${r.quote_id}`, waitingOn: "owner", severity: "high", sort: 1 });
+    for (const r of ex.data ?? []) add({ id: `ex-${r.id}`, titleKey: "attnExpense", params: { vendor: (r.vendor_name as string) || "—" }, href: `/expenses/${r.id}`, waitingOn: "owner", severity: "normal", sort: 4 });
     for (const r of qs.data ?? []) add({ id: `qe-${r.id}`, titleKey: "attnProposalExpiring", params: { number: r.number as string, date: r.valid_until as string }, href: `/quotes/${r.id}`, waitingOn: "customer", severity: "normal", sort: 5 });
 
     if (ctx.perms.can_view_costs && (projects.data ?? []).length) {

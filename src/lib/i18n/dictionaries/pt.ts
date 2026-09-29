@@ -769,6 +769,16 @@ const pt: Dictionary = {
   errClientRequired: "Escolha um cliente.",
   errProposalLines: "Adicione ao menos uma linha com descrição.",
   quoteTypeService: "Serviço",
+  expenseNeedsReviewNote: "Sua despesa fica pendente até o Owner ou um Manager aprovar. Até lá não conta como custo do projeto.",
+  expStPending: "Aguardando aprovação",
+  expStApproved: "Aprovado",
+  expStRejected: "Rejeitado",
+  expStReimbursed: "Reembolsado",
+  expenseDate: "Data",
+  errExpenseCategory: "Escolha uma categoria.",
+  errExpenseAmount: "Digite um valor maior que zero.",
+  expensesToReview: "Despesas para aprovar",
+  attnExpense: "Despesa para aprovar: {vendor}",
 };
 
 export default pt;

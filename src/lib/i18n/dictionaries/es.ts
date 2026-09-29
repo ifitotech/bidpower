@@ -782,6 +782,16 @@ const es = {
   errClientRequired: "Elige un cliente.",
   errProposalLines: "Agrega al menos una línea con descripción.",
   quoteTypeService: "Servicio",
+  expenseNeedsReviewNote: "Tu gasto queda pendiente hasta que el Owner o un Manager lo apruebe. Hasta entonces no cuenta como costo del proyecto.",
+  expStPending: "Por aprobar",
+  expStApproved: "Aprobado",
+  expStRejected: "Rechazado",
+  expStReimbursed: "Reembolsado",
+  expenseDate: "Fecha",
+  errExpenseCategory: "Elige una categoría.",
+  errExpenseAmount: "Escribe un monto mayor que cero.",
+  expensesToReview: "Gastos por aprobar",
+  attnExpense: "Gasto por aprobar: {vendor}",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

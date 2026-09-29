@@ -371,53 +371,52 @@ export async function archiveProjectAction(formData: FormData) {
   } catch (err) { return { error: err instanceof Error ? err.message : "Could not archive project." }; }
 }
 
-export async function createExpenseAction(formData: FormData) {
+export async function createExpenseAction(formData: FormData): Promise<{ errorCode?: string; error?: string } | undefined> {
   try {
-    const { userId, companyId } = await getContext();
+    const { userId, companyId, role } = await getContext();
+    const perms = await getMyPermissions();
+    // "Upload receipt" is a permission, not a role: nobody records costs without it (RLS enforces the same rule).
+    if (!perms.can_upload_documents && role !== "owner") return { errorCode: "errForbidden" };
     const plan = await getCompanyPlan(companyId);
     const monthlyCount = await getUsage(companyId, "expenses_per_month");
 
-    const categoryId = formData.get("categoryId") as string;
-    const amount = Number(formData.get("amount") || 0);
+    const categoryId = String(formData.get("categoryId") || "");
+    const amount = Number(String(formData.get("amount") || "0").replace(",", "."));
+    const projectId = String(formData.get("projectId") || "");
+    if (!categoryId) return { errorCode: "errExpenseCategory" };
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 100000000) return { errorCode: "errExpenseAmount" };
 
-    if (!categoryId || amount <= 0) {
-      return { error: "Categoría y monto son obligatorios" };
+    const expense = await createExpense(companyId, userId, plan, monthlyCount, {
+      project_id: projectId || undefined,
+      vendor_name: String(formData.get("vendorName") || "").trim().slice(0, 160) || undefined,
+      category_id: categoryId,
+      amount,
+      notes: String(formData.get("notes") || "").trim().slice(0, 1000) || undefined,
+      date: String(formData.get("date") || "") || undefined,
+      status: role === "owner" || role === "manager" ? "approved" : "pending_review",
+    });
+
+    const receipt = formData.get("receipt");
+    let receiptFailed = false;
+    if (receipt instanceof File && receipt.size > 0) {
+      const { attachExpenseReceipt } = await import("@/lib/services/expenses");
+      try { await attachExpenseReceipt(companyId, userId, expense.id, receipt); } catch { receiptFailed = true; }
     }
 
-    const expense = await createExpense(
-      companyId,
-      userId,
-      plan,
-      monthlyCount,
-      {
-        project_id: (formData.get("projectId") as string) || undefined,
-        vendor_name: (formData.get("vendorName") as string) || undefined,
-        category_id: categoryId,
-        amount,
-        notes: (formData.get("notes") as string) || undefined,
-        date: (formData.get("date") as string) || undefined,
-      }
-    );
-
-    await logActivity({
-      companyId,
-      userId,
-      action: "create",
-      entityType: "expense",
-      entityId: expense.id,
-      newValues: { amount },
-    });
+    await logActivity({ companyId, userId, action: "create", entityType: "expense", entityId: expense.id, newValues: { amount } });
 
     revalidatePath("/expenses");
     revalidatePath("/dashboard");
-    redirect("/expenses");
+    if (projectId) revalidatePath(`/projects/${projectId}`);
+    redirect(`/expenses/${expense.id}${receiptFailed ? "?receipt=failed" : ""}`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Error al crear gasto";
+    const message = err instanceof Error ? err.message : (err as { message?: string })?.message || "Error al crear gasto";
     if (message.includes("NEXT_REDIRECT")) throw err;
-    return { error: message };
+    if (message.includes("row-level security")) return { errorCode: "errForbidden" };
+    if (message.includes("límite")) return { error: message };
+    return { errorCode: "errGeneric" };
   }
 }
-
 export async function createPOAction(formData: FormData) {
   try {
     const { userId, companyId } = await getContext();

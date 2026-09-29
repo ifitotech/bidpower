@@ -6,7 +6,7 @@ PGREST_BIN="${PGREST_BIN:-/opt/pgrst/postgrest}"
 WORK="${E2E_WORK:-/tmp/e2e}"; mkdir -p "$WORK"; chmod a+rwx "$WORK"
 cp "$ROOT"/scripts/e2e/stubs.sql "$ROOT"/supabase/migrations/*.sql "$WORK"/ && chmod a+r "$WORK"/*
 pg_lsclusters | grep -q online || { pg_ctlcluster 16 main start; sleep 3; }
-su postgres -c "psql -qc 'drop database if exists e2e' -c 'create database e2e'" 
+fuser -k 54331/tcp 54321/tcp >/dev/null 2>&1 || true; sleep 1; su postgres -c "psql -qc 'drop database if exists e2e' -c 'create database e2e'" 
 su postgres -c "psql -q -d e2e -v ON_ERROR_STOP=1 -f $WORK/stubs.sql" >/dev/null
 for f in "$WORK"/2026*.sql; do su postgres -c "psql -q -d e2e -v ON_ERROR_STOP=1 -f $f" >/dev/null 2>"$WORK/mig.err" || { echo "migration failed: $f"; cat "$WORK/mig.err"; exit 1; }; done
 su postgres -c "psql -q -d e2e -c \"alter database e2e set search_path to public\"" >/dev/null

@@ -768,6 +768,16 @@ const en: Dictionary = {
   errClientRequired: "Choose a customer.",
   errProposalLines: "Add at least one line with a description.",
   quoteTypeService: "Service",
+  expenseNeedsReviewNote: "Your expense stays pending until the Owner or a Manager approves it. Until then it does not count as project cost.",
+  expStPending: "Pending review",
+  expStApproved: "Approved",
+  expStRejected: "Rejected",
+  expStReimbursed: "Reimbursed",
+  expenseDate: "Date",
+  errExpenseCategory: "Choose a category.",
+  errExpenseAmount: "Enter an amount greater than zero.",
+  expensesToReview: "Expenses to review",
+  attnExpense: "Expense to review: {vendor}",
 };
 
 export default en;
