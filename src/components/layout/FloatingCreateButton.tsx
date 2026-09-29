@@ -12,10 +12,10 @@ export function FloatingCreateButton() {
   const [open, setOpen] = useState(false);
   const actions = [
     ...(isManagerOrAbove ? [
-      { href: "/quotes/new", label: t("createServiceQuote"), icon: FileText },
-      { href: "/supply-requests", label: t("createSupplyRequest"), icon: ShoppingCart },
+      { href: "/quotes/new", label: t("createProposal"), icon: FileText },
     ] : []),
-    ...(permissions.can_create_po ? [{ href: "/pos/new", label: "New purchase order", icon: ClipboardList }] : []),
+    ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: "/pricing/new", label: t("createPricingRequestShort"), icon: ShoppingCart }] : []),
+    ...(permissions.can_create_po ? [{ href: "/pos/new", label: t("newPurchaseOrder"), icon: ClipboardList }] : []),
     ...(isManagerOrAbove ? [{ href: "/projects/new", label: t("newProject"), icon: CalendarPlus }] : []),
   ];
   if (actions.length === 0) return null;

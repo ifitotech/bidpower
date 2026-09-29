@@ -57,7 +57,7 @@ export default function NewPricingForm({ projects, requests, initialFrom }: { pr
     <label className="block text-sm font-medium">{t("prNotes")}<textarea value={notes} rows={3} maxLength={2000} onChange={(e) => setNotes(e.target.value)} className={`${input} mt-1`} /></label>
     <label className="block text-sm font-medium">{t("prLinks")}<textarea value={links} rows={2} onChange={(e) => setLinks(e.target.value)} className={`${input} mt-1`} /></label>
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:left-64" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+    <div className="fixed inset-x-0 bottom-[calc(3.9rem+env(safe-area-inset-bottom,0px))] z-30 border-t md:bottom-0 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:left-64">
       <div className="mx-auto max-w-2xl"><button type="button" disabled={busy || (!source && !lines.trim())} onClick={submit} className="min-h-12 w-full rounded-xl bg-brand-600 px-4 font-semibold text-white disabled:opacity-40">{t("prCreate")}</button></div>
     </div>
   </div>;

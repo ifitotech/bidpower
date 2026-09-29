@@ -146,7 +146,7 @@ export default function RequestBuilder({ projectId, projectName, items, lists }:
     <label className="mt-3 block text-sm font-medium">{t("requestNotes")}<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={1000} className={`${input} mt-1`} /></label>
 
     {error && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:left-64" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+    <div className="fixed inset-x-0 bottom-[calc(3.9rem+env(safe-area-inset-bottom,0px))] z-30 border-t md:bottom-0 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:left-64">
       <div className="mx-auto max-w-3xl"><button type="button" disabled={busy || lines.length === 0} onClick={submit} className="min-h-12 w-full rounded-xl bg-brand-600 px-4 font-semibold text-white disabled:opacity-40">{t("sendRequest")}</button></div>
     </div>
   </div>;

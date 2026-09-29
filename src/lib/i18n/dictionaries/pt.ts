@@ -755,6 +755,20 @@ const pt: Dictionary = {
   errFileSize25: "O arquivo não pode passar de 25 MB.",
   tkNoAutoAnalysis: "O BidPower não analisa plantas automaticamente e nunca inventa quantidades. Envie a planta dentro de um projeto e faça o takeoff: você conta e mede, o BidPower soma e monta uma lista PRELIMINAR.",
   tkGoToProjects: "Ir para meus projetos",
+  proposals: "Proposals",
+  proposalsSubtitle: "O que você envia aos clientes para aprovação. Separado dos pedidos a fornecedores.",
+  newProposal: "Nova Proposal",
+  noProposals: "Ainda não há Proposals.",
+  noProposalsHint: "Crie uma a partir de um projeto e envie ao cliente com um link seguro.",
+  taxRatePct: "Imposto %",
+  createProposal: "Nova Proposal",
+  createPricingRequestShort: "Novo Pricing Request",
+  newPurchaseOrder: "Novo Purchase Order",
+  navPurchaseOrders: "Purchase Orders",
+  errLoadProposals: "Não foi possível carregar as Proposals. Tente novamente.",
+  errClientRequired: "Escolha um cliente.",
+  errProposalLines: "Adicione ao menos uma linha com descrição.",
+  quoteTypeService: "Serviço",
 };
 
 export default pt;

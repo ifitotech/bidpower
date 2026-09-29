@@ -12,6 +12,7 @@ import {
   Settings,
   FolderOpen,
   Package,
+  ShoppingCart,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,11 +34,12 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
     { href: "/projects", label: t("navProjects"), icon: Briefcase },
     ...(isEmployee ? [] : [
       { href: "/clients", label: t("navClients"), icon: Users },
-      { href: "/quotes", label: "Supply & Purchase", icon: FileText },
+      { href: "/quotes", label: t("proposals"), icon: FileText },
     ]),
   ];
 
   const operationsNav = [
+    ...(isManagerOrAbove || permissions.can_create_po ? [{ href: "/pos", label: t("navPurchaseOrders"), icon: ShoppingCart }] : []),
     ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: "/pricing", label: t("pricingRequests"), icon: Package }] : []),
     ...(isManagerOrAbove ? [{ href: "/materials/requests", label: t("materialRequests"), icon: Package }] : []),
     ...(permissions.can_manage_library ? [{ href: "/materials", label: t("materialsLibrary"), icon: Package }] : []),

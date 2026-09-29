@@ -67,9 +67,9 @@ export async function createQuote(
 
   if (error) throw error;
 
-  // Insert line items
+  // Insert line items (the quote is removed if they cannot be saved, so no empty Proposal is left behind)
   if (data.items.length > 0) {
-    await supabase.from("quote_items").insert(
+    const { error: itemsError } = await supabase.from("quote_items").insert(
       data.items.map((item, i) => ({
         quote_id: quote.id,
         description: item.description,
@@ -80,6 +80,10 @@ export async function createQuote(
         sort_order: i,
       }))
     );
+    if (itemsError) {
+      await supabase.from("quotes").delete().eq("id", quote.id);
+      throw itemsError;
+    }
   }
 
   // Status history

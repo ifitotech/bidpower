@@ -768,6 +768,20 @@ const es = {
   errFileSize25: "El archivo no puede superar 25 MB.",
   tkNoAutoAnalysis: "BidPower no analiza planos automáticamente y no inventa cantidades. Sube el plano dentro de un proyecto y haz el takeoff: tú cuentas y mides, BidPower suma y arma una lista PRELIMINAR.",
   tkGoToProjects: "Ir a mis proyectos",
+  proposals: "Proposals",
+  proposalsSubtitle: "Lo que envías a tus clientes para aprobar. Separado de los pedidos a suppliers.",
+  newProposal: "Nueva Proposal",
+  noProposals: "Aún no hay Proposals.",
+  noProposalsHint: "Crea una desde un proyecto y envíasela al cliente con un enlace seguro.",
+  taxRatePct: "Impuesto %",
+  createProposal: "Nueva Proposal",
+  createPricingRequestShort: "Nuevo Pricing Request",
+  newPurchaseOrder: "Nuevo Purchase Order",
+  navPurchaseOrders: "Purchase Orders",
+  errLoadProposals: "No se pudieron cargar las Proposals. Intenta de nuevo.",
+  errClientRequired: "Elige un cliente.",
+  errProposalLines: "Agrega al menos una línea con descripción.",
+  quoteTypeService: "Servicio",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

@@ -17,7 +17,7 @@ export function BottomNav() {
     { href: "/projects", label: t("navProjects"), icon: Briefcase },
     ...(role === "employee" ? [] : [
       { href: "/clients", label: t("navClients"), icon: Users },
-      { href: "/quotes", label: "Supply & Purchase", icon: FileText },
+      { href: "/quotes", label: t("proposals"), icon: FileText },
     ]),
     { href: "/more", label: "More", icon: Menu },
   ];
