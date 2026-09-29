@@ -293,3 +293,67 @@ export async function getConvertibleMaterialRequests(companyId: string, projectI
     id: r.id, number: r.number, projectId: r.project_id, status: r.status, projectName: one(r.project)?.name ?? "", itemCount: r.items?.[0]?.count ?? 0,
   }));
 }
+
+// ---- Secure link for Supply (no account) ----
+
+export type InvitationView = { id: string; supplier_name: string | null; supplier_email: string | null; expires_at: string; revoked_at: string | null; first_opened_at: string | null; last_opened_at: string | null };
+export type QuestionView = { id: string; invitation_id: string; author: string; author_name: string | null; body: string; created_at: string };
+
+export async function getPricingInvitations(companyId: string, requestId: string) {
+  const supabase = await createClient();
+  const [inv, q] = await Promise.all([
+    supabase.from("supplier_quote_invitations").select("id, supplier_name, supplier_email, expires_at, revoked_at, first_opened_at, last_opened_at").eq("request_id", requestId).eq("company_id", companyId).order("created_at", { ascending: false }),
+    supabase.from("pricing_request_questions").select("id, invitation_id, author, author_name, body, created_at").eq("request_id", requestId).eq("company_id", companyId).order("created_at"),
+  ]);
+  if (inv.error) throw inv.error;
+  if (q.error) throw q.error;
+  return { invitations: inv.data as InvitationView[], questions: q.data as QuestionView[] };
+}
+
+/**
+ * Creates a one-supplier link. Only the sha256 of the random token is stored, so the link is shown once.
+ * The request goes to "sent" (waiting on the supplier) when the first link is created from a draft.
+ */
+export async function createSupplierInvitation(companyId: string, userId: string, requestId: string, input: { supplierId?: string | null; supplierName: string; supplierEmail?: string | null; days?: number }) {
+  const supabase = await createClient();
+  const name = input.supplierName.trim().slice(0, 120);
+  if (!name) throw new Error("supplier_required");
+  const { data: req, error: reqErr } = await supabase.from("supply_quote_requests").select("id, status").eq("id", requestId).eq("company_id", companyId).maybeSingle();
+  if (reqErr) throw reqErr;
+  if (!req) throw new Error("forbidden");
+  if (!["draft", "sent", "question_open", "responded"].includes(req.status as string)) throw new Error("request_not_pending");
+
+  const { randomBytes, createHash } = await import("crypto");
+  const token = randomBytes(32).toString("hex");
+  const days = Math.min(60, Math.max(1, Math.round(input.days ?? 14)));
+  const { error } = await supabase.from("supplier_quote_invitations").insert({
+    company_id: companyId, request_id: requestId, created_by: userId, supplier_id: input.supplierId ?? null, supplier_name: name,
+    supplier_email: clean(input.supplierEmail, 200), token_hash: createHash("sha256").update(token).digest("hex"),
+    expires_at: new Date(Date.now() + days * 86400000).toISOString(),
+  });
+  if (error) throw error;
+  if (req.status === "draft") await transition(companyId, requestId, ["draft"], { status: "sent", waiting_on: "supplier", sent_at: new Date().toISOString() });
+  return token;
+}
+
+export async function revokeSupplierInvitation(companyId: string, requestId: string, invitationId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("supplier_quote_invitations").update({ revoked_at: new Date().toISOString() })
+    .eq("id", invitationId).eq("request_id", requestId).eq("company_id", companyId).is("revoked_at", null).select("id");
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error("forbidden");
+}
+
+/** The contractor answers a supplier's question; the request goes back to waiting on the supplier. */
+export async function answerSupplierQuestion(companyId: string, requestId: string, invitationId: string, authorName: string, body: string) {
+  const text = body.trim().slice(0, 2000);
+  if (!text) throw new Error("request_empty");
+  const supabase = await createClient();
+  const { data: inv, error: invErr } = await supabase.from("supplier_quote_invitations").select("id").eq("id", invitationId).eq("request_id", requestId).eq("company_id", companyId).maybeSingle();
+  if (invErr) throw invErr;
+  if (!inv) throw new Error("forbidden");
+  const { error } = await supabase.from("pricing_request_questions").insert({ company_id: companyId, request_id: requestId, invitation_id: invitationId, author: "contractor", author_name: authorName.slice(0, 120) || null, body: text });
+  if (error) throw error;
+  await supabase.from("supply_quote_requests").update({ status: "sent", waiting_on: "supplier", updated_at: new Date().toISOString() })
+    .eq("id", requestId).eq("company_id", companyId).eq("status", "question_open");
+}

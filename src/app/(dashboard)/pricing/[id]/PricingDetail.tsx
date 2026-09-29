@@ -10,9 +10,9 @@ import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { AVAILABILITY, PRICING_TYPES, bestPriceByLine } from "@/lib/pricing";
 import { PricingStatusBadge } from "@/components/shared/PricingStatusBadge";
 import { WaitingOn } from "@/components/shared/RequestStatusBadge";
-import type { getPricingRequestById } from "@/lib/services/pricing-requests";
+import type { InvitationView, QuestionView, getPricingRequestById } from "@/lib/services/pricing-requests";
 import {
-  addAttachmentAction, awardResponseAction, cancelPricingAction, closeRequestAction, createSupplierAction,
+  addAttachmentAction, answerQuestionAction, awardResponseAction, createSupplierLinkAction, revokeSupplierLinkAction, cancelPricingAction, closeRequestAction, createSupplierAction,
   getAttachmentUrlAction, markSentAction, recordResponseAction,
 } from "../actions";
 
@@ -21,7 +21,7 @@ type Supplier = { id: string; name: string };
 const AVAIL_KEYS: Record<string, keyof Dictionary> = { available: "availAvailable", partial: "availPartial", unavailable: "availUnavailable" };
 const OPEN = ["draft", "sent", "question_open", "responded"];
 
-export default function PricingDetail({ request: r, suppliers, canManage, pricesVisible }: { request: Request; suppliers: Supplier[]; canManage: boolean; pricesVisible: boolean }) {
+export default function PricingDetail({ request: r, suppliers, invitations = [], questions = [], canManage, pricesVisible }: { request: Request; suppliers: Supplier[]; invitations?: InvitationView[]; questions?: QuestionView[]; canManage: boolean; pricesVisible: boolean }) {
   const { t } = useI18n();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -101,6 +101,8 @@ export default function PricingDetail({ request: r, suppliers, canManage, prices
         <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmCancelRequest"))) run(() => cancelPricingAction(r.id)); }} className={`${btn} border border-red-100 bg-red-50 text-red-600`}>{t("prCancel")}</button>
       </div>
     </div>}
+
+    {canManage && <SupplierLinks request={r} suppliers={suppliers} invitations={invitations} questions={questions} isOpen={isOpen} onChange={() => router.refresh()} />}
 
     <section className="mt-8">
       <div className="mb-2 flex items-center gap-2"><h2 className="flex-1 font-semibold">{t("supplierResponses")}</h2>
@@ -182,4 +184,64 @@ function ResponseForm({ request: r, suppliers, onDone }: { request: Request; sup
     {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
     <button type="button" disabled={busy} onClick={save} className="min-h-11 w-full rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40">{t("saveResponse")}</button>
   </div>;
+}
+
+function SupplierLinks({ request: r, suppliers, invitations, questions, isOpen, onChange }: { request: Request; suppliers: Supplier[]; invitations: InvitationView[]; questions: QuestionView[]; isOpen: boolean; onChange: () => void }) {
+  const { t } = useI18n();
+  const [supplierId, setSupplierId] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [days, setDays] = useState("14");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fresh, setFresh] = useState<{ name: string; url: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [replies, setReplies] = useState<Record<string, string>>({});
+  const input = "w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-base outline-none focus:border-brand-500";
+
+  async function create() {
+    setBusy(true); setError(null);
+    const supplierName = suppliers.find((s) => s.id === supplierId)?.name ?? name.trim();
+    const res = await createSupplierLinkAction(r.id, { supplierId: supplierId || null, supplierName, supplierEmail: email || null, days: Number(days) || 14 }).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string; token?: string }));
+    setBusy(false);
+    if (res.errorCode || !res.token) { setError(t((res.errorCode ?? "errGeneric") as keyof Dictionary)); return; }
+    setFresh({ name: supplierName, url: `${window.location.origin}/supplier/${res.token}` });
+    setName(""); setEmail(""); setSupplierId("");
+    onChange();
+  }
+
+  async function act(fn: () => Promise<{ errorCode?: string }>) {
+    setBusy(true); setError(null);
+    const res = await fn().catch(() => ({ errorCode: "errGeneric" }));
+    if (res.errorCode) setError(t(res.errorCode as keyof Dictionary));
+    setBusy(false);
+    onChange();
+  }
+
+  const status = (i: InvitationView) => i.revoked_at ? t("linkRevoked") : new Date(i.expires_at) < new Date() ? t("linkExpires", { date: formatDate(i.expires_at) }) : i.first_opened_at ? t("linkOpened", { date: formatDate(i.first_opened_at) }) : t("linkNotOpened");
+
+  return <section className="mt-8">
+    <h2 className="mb-2 font-semibold">{t("supplierLinks")}</h2>
+    {error && <div role="alert" className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+    {fresh && <div className="mb-3 rounded-xl border border-green-300 bg-green-50 p-3">
+      <p className="text-sm font-semibold">{t("linkForSupplier", { name: fresh.name })}</p>
+      <p className="mt-1 break-all rounded-lg bg-white p-2 text-xs">{fresh.url}</p>
+      <p className="mt-1 text-xs text-slate-600">{t("linkShownOnce")}</p>
+      <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(fresh.url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { setError(t("errGeneric")); } }} className="mt-2 flex min-h-10 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white"><Copy className="h-4 w-4" />{copied ? t("prCopied") : t("copyLink")}</button>
+    </div>}
+    {isOpen && <div className="mb-3 grid gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:grid-cols-2">
+      <label className="block text-sm font-medium">{t("supplierName")}<select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={`${input} mt-1`}><option value="" />{suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      {!supplierId && <label className="block text-sm font-medium">{t("newSupplierName")}<input value={name} maxLength={120} onChange={(e) => setName(e.target.value)} className={`${input} mt-1`} /></label>}
+      <label className="block text-sm font-medium">{t("supplierEmailOptional")}<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${input} mt-1`} /></label>
+      <label className="block text-sm font-medium">{t("linkDays")}<input inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} className={`${input} mt-1`} /></label>
+      <button type="button" disabled={busy || (!supplierId && !name.trim())} onClick={create} className="min-h-11 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-2">{t("createSupplierLink")}</button>
+    </div>}
+    <ul className="space-y-2">{invitations.map((i) => { const qs = questions.filter((q) => q.invitation_id === i.id); const live = !i.revoked_at && new Date(i.expires_at) > new Date();
+      return <li key={i.id} className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
+        <div className="flex items-center gap-2"><span className="min-w-0 flex-1 truncate font-medium">{i.supplier_name}</span><span className="text-xs text-slate-400">{status(i)}</span>
+          {live && isOpen && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmRevokeLink"))) act(() => revokeSupplierLinkAction(r.id, i.id)); }} className="min-h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold">{t("revokeLink")}</button>}</div>
+        {qs.length > 0 && <div className="mt-2 space-y-1.5"><p className="text-xs font-semibold text-slate-500">{t("supplierQuestions")}</p>{qs.map((q) => <p key={q.id} className={`whitespace-pre-wrap rounded-lg p-2 text-xs ${q.author === "supplier" ? "bg-amber-50" : "bg-brand-50"}`}><span className="font-semibold">{q.author === "supplier" ? i.supplier_name : t("youLabel")}: </span>{q.body}</p>)}</div>}
+        {live && isOpen && qs.length > 0 && <div className="mt-2 flex gap-2"><input value={replies[i.id] ?? ""} maxLength={2000} aria-label={t("answerQuestion")} placeholder={t("answerQuestion")} onChange={(e) => setReplies((p) => ({ ...p, [i.id]: e.target.value }))} className={input} /><button type="button" disabled={busy || !(replies[i.id] ?? "").trim()} onClick={() => act(async () => { const res = await answerQuestionAction(r.id, i.id, replies[i.id] ?? ""); if (!res.errorCode) setReplies((p) => ({ ...p, [i.id]: "" })); return res; })} className="min-h-10 shrink-0 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white disabled:opacity-40">{t("answerQuestion")}</button></div>}
+      </li>; })}</ul>
+  </section>;
 }

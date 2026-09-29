@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260803000013_pricing_attachment_visibility.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260804000014_phase4_supplier_link.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -95,7 +95,15 @@ las instrucciones para borrarlos están en la cabecera del script.
 ## 10. Supplier Pricing (Fase 4, primera parte)
 
 - **Pricing Request** (`/pricing`): se crea desde un pedido de material revisado (las líneas se copian, no se reescriben) o pegando líneas. Tipo Gear/Lighting/Material/Otro, Bid Date, notas/specs, links y archivos (PDF/imagen, máx. 10 MB). Requiere el permiso *Crear Pricing Request*.
-- **Envío**: todavía no se envían correos ni enlaces seguros al supplier. Copia el texto, compártelo tú (WhatsApp/correo) y márcalo "enviado". El enlace seguro para que el supplier responda sin cuenta es la siguiente parte de la Fase 4.
+- **Envío**: no se envían correos (no hay proveedor de correo). Crea un enlace seguro por supplier y compártelo tú (WhatsApp/correo), o copia el texto y márcalo "enviado".
 - **Respuesta del supplier**: Owner/Manager registran precio, disponibilidad y lead time por línea, número y total del quote, y el PDF. La comparación resalta el mejor precio por línea. "Adjudicar" marca la respuesta ganadora; el PO llega en la Fase 5.
 - **Precios privados**: solo Owner/Manager, o quien tenga *Crear Pricing Request* **y** *Ver costos*, ve respuestas y PDFs de precios.
 - Migraciones nuevas: `20260803000012_phase4_supplier_pricing.sql` y `20260803000013_pricing_attachment_visibility.sql`.
+
+### Enlace seguro para el supplier (sin cuenta)
+
+- En el Pricing Request → *Enlaces para suppliers* → *Crear enlace seguro*. Se muestra **una sola vez** (solo se guarda su hash), vence en 14 días por defecto y se puede revocar.
+- El supplier abre `/supplier/<token>`: ve las líneas, Bid Date, notas y links; responde con precio/disponibilidad/lead time por línea, quote number, total, flete e impuesto (puede corregir mientras esté abierto); y puede hacer preguntas. **No** ve proyecto, cliente, otros suppliers ni lo que cobras.
+- Una pregunta pone el Pricing Request en *Pregunta abierta* (espera al Owner); al responderla vuelve a esperar al supplier. Una respuesta lo pasa a *Respondió*.
+- Límites de esta versión: el supplier no sube el PDF él mismo (súbelo tú en su respuesta) ni ve archivos subidos, solo links; no hay límite de intentos por IP (el token tiene 256 bits); no hay avisos por correo.
+- Migración: `20260804000014_phase4_supplier_link.sql`.

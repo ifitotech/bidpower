@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
 import {
-  addPricingAttachment, awardResponse, cancelPricingRequest, closePricingRequest, createPricingRequest, createSupplier,
+  addPricingAttachment, answerSupplierQuestion, awardResponse, createSupplierInvitation, revokeSupplierInvitation, cancelPricingRequest, closePricingRequest, createPricingRequest, createSupplier,
   getAttachmentUrl, markMaterialRequestConverted, markPricingSent, recordSupplierResponse,
   type PricingInput, type ResponseInput,
 } from "@/lib/services/pricing-requests";
@@ -99,4 +99,30 @@ export async function getAttachmentUrlAction(attachmentId: string): Promise<Pric
   const c = await ctx();
   if (!c || !UUID.test(attachmentId)) return { errorCode: "errGeneric" };
   try { return { success: true, url: await getAttachmentUrl(c.companyId, attachmentId) }; } catch (e) { return fail(e); }
+}
+
+export async function createSupplierLinkAction(requestId: string, input: { supplierId?: string | null; supplierName: string; supplierEmail?: string | null; days?: number }): Promise<PricingResult & { token?: string }> {
+  const c = await ctx();
+  if (!c || !UUID.test(requestId)) return { errorCode: "errGeneric" };
+  if (!isReviewer(c.role)) return { errorCode: "errForbidden" };
+  if (input?.supplierId && !UUID.test(input.supplierId)) return { errorCode: "errGeneric" };
+  try {
+    const token = await createSupplierInvitation(c.companyId, c.userId, requestId, input);
+    refresh(requestId);
+    return { success: true, token };
+  } catch (e) { return fail(e); }
+}
+
+export async function revokeSupplierLinkAction(requestId: string, invitationId: string): Promise<PricingResult> {
+  if (!UUID.test(invitationId)) return { errorCode: "errGeneric" };
+  return reviewerAction(requestId, (co) => revokeSupplierInvitation(co, requestId, invitationId));
+}
+
+export async function answerQuestionAction(requestId: string, invitationId: string, body: string): Promise<PricingResult> {
+  if (!UUID.test(invitationId)) return { errorCode: "errGeneric" };
+  return reviewerAction(requestId, async (co) => {
+    const { getCurrentProfile } = await import("@/lib/auth");
+    const profile = await getCurrentProfile().catch(() => null);
+    await answerSupplierQuestion(co, requestId, invitationId, profile?.fullName ?? "", String(body ?? ""));
+  });
 }

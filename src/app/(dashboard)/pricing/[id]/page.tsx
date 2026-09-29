@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getActionContext } from "@/lib/action-context";
-import { getPricingRequestById, getSuppliers } from "@/lib/services/pricing-requests";
+import { getPricingInvitations, getPricingRequestById, getSuppliers } from "@/lib/services/pricing-requests";
 import PricingDetail from "./PricingDetail";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,7 @@ export default async function PricingDetailPage({ params }: { params: Promise<{ 
   if (!request) notFound();
   const isReviewer = c.role === "owner" || c.role === "manager";
   const suppliers = isReviewer ? await getSuppliers(c.companyId).catch(() => []) : [];
+  const links = isReviewer ? await getPricingInvitations(c.companyId, id).catch(() => ({ invitations: [], questions: [] })) : { invitations: [], questions: [] };
   // RLS already returns no responses to people without view-costs; the flag only drives the notice.
-  return <PricingDetail request={request} suppliers={suppliers} canManage={isReviewer} pricesVisible={isReviewer || c.perms.can_view_costs} />;
+  return <PricingDetail request={request} suppliers={suppliers} invitations={links.invitations} questions={links.questions} canManage={isReviewer} pricesVisible={isReviewer || c.perms.can_view_costs} />;
 }
