@@ -22,6 +22,7 @@ export default function RegisterPage() {
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
   const [invite, setInvite] = useState("");
+  const [kind, setKind] = useState<"contractor" | "supply">("contractor");
 
   // Invitation link: the account joins the inviting company (no company step, email is fixed).
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function RegisterPage() {
     formData.set("password", password);
     formData.set("companyName", companyName);
     formData.set("phone", phone);
+    formData.set("accountKind", kind);
     if (invite) formData.set("invite", invite);
     try {
       const result = await registerAction(formData);
@@ -122,6 +124,13 @@ export default function RegisterPage() {
             </>
           ) : (
             <>
+              <div role="radiogroup" aria-label={t("accountType")} className="grid grid-cols-2 gap-2">
+                {(["contractor", "supply"] as const).map((k) => (
+                  <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className={`min-h-12 rounded-xl border px-3 py-2 text-sm font-semibold transition ${kind === k ? "border-white bg-white text-slate-900" : "border-white/20 bg-white/10 text-white"}`}>
+                    {k === "contractor" ? t("accountContractor") : t("accountSupply")}
+                  </button>
+                ))}
+              </div>
               <div>
                 <label className="text-xs text-brand-200 mb-1 block">{t("companyName")}</label>
                 <input
@@ -148,7 +157,7 @@ export default function RegisterPage() {
                   className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40"
                 />
               </div>
-              <div>
+              {kind === "contractor" && <div>
                 <label className="text-xs text-brand-200 mb-1 block">{t("businessType")}</label>
                 <select
                   name="businessType"
@@ -162,7 +171,7 @@ export default function RegisterPage() {
                   <option value="general" className="text-slate-900">General Contractor</option>
                   <option value="other" className="text-slate-900">Otro</option>
                 </select>
-              </div>
+              </div>}
             </>
           )}
 

@@ -22,6 +22,7 @@ export async function registerAction(formData: FormData): Promise<AuthResult> {
   const fullName = String(formData.get("fullName") || "").trim();
   const companyName = String(formData.get("companyName") || "").trim();
   const phone = String(formData.get("phone") || "").trim() || undefined;
+  const accountKind = String(formData.get("accountKind") || "") === "supply" ? "supply" : "contractor";
 
   if (!email || !password || !fullName || !companyName) return { errorCode: "errMissingFields" };
   if (password.length < 8) return { errorCode: "errPasswordShort" };
@@ -35,7 +36,7 @@ export async function registerAction(formData: FormData): Promise<AuthResult> {
     email,
     password,
     options: {
-      data: { full_name: fullName, company_name: companyName, phone: phone ?? "" },
+      data: { full_name: fullName, company_name: companyName, phone: phone ?? "", account_kind: accountKind },
       ...(process.env.NEXT_PUBLIC_SITE_URL ? { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` } : {}),
     },
   });
@@ -55,13 +56,13 @@ export async function registerAction(formData: FormData): Promise<AuthResult> {
 
   // 2. Profile + company + owner membership + settings + Free plan + categories (atomic, RLS-safe).
   try {
-    await createCompanyWithOwner({ fullName, companyName, phone });
+    await createCompanyWithOwner({ fullName, companyName, phone, kind: accountKind });
   } catch {
     // The account exists and is signed in; the company is retried from metadata on the next request.
     return { errorCode: "errCompanyCreate" };
   }
 
-  redirect("/dashboard");
+  redirect(accountKind === "supply" ? "/supply" : "/dashboard");
 }
 
 // Invited people join the inviting company; no company of their own is created.

@@ -29,6 +29,8 @@ export default async function DashboardLayout({
       getCurrentMember().catch(() => null),
       getCurrentProfile().catch(() => null),
     ]);
+    // A supply account has its own workspace.
+    if ((member?.company as { kind?: string } | null)?.kind === "supply") redirect("/supply");
     companyName = (member?.company as { name?: string } | null)?.name ?? "";
     role = (member?.role as string | undefined) ?? "";
     permissions = await getMyPermissions(member).catch(() => NO_PERMISSIONS);

@@ -331,6 +331,96 @@ async function phase78(browser) {
   ok("takeoff: material request created with the PRELIMINARY note", (await o.locator("a[href*='/materials/']").filter({ hasText: /MR-/ }).count()) >= 1);
 }
 
+async function phase9(browser) {
+  const o = state.owner;
+  // Supply house registers with its own account type
+  const sp = await page(browser, 390, 844, "es-ES");
+  await sp.goto(B + "/register");
+  await sp.getByRole("textbox").nth(0).fill("Sam Supply");
+  await sp.getByRole("textbox").nth(1).fill(`supply-${RUN}@bidpower-smoke.test`);
+  await sp.locator("input[type=password]").fill("Smoke-test-123");
+  await sp.getByRole("button", { name: /Continuar|Continue/ }).click();
+  await sp.getByRole("radio", { name: /Supply house/ }).click();
+  await sp.locator("input[name=companyNameField]").fill("Graybar Supply");
+  ok("supply register: business type selector is hidden for supply", (await sp.locator("select[name=businessType]").count()) === 0);
+  await sp.getByRole("button", { name: /Crear empresa|Create free company/ }).click();
+  await sp.waitForURL("**/supply", { timeout: 30000 });
+  ok("supply: lands on the supply inbox", (await sp.getByText(/Bandeja|Inbox/).count()) > 0);
+  await sp.goto(B + "/dashboard");
+  ok("supply: contractor dashboard is not reachable (redirected)", sp.url().endsWith("/supply"));
+  await sp.goto(B + "/projects");
+  ok("supply: contractor modules are not reachable", sp.url().endsWith("/supply"));
+  await o.goto(B + "/supply");
+  ok("contractor: supply workspace is not reachable", o.url().endsWith("/dashboard"));
+
+  // connection code
+  await sp.goto(B + "/supply/contractors");
+  await sp.getByRole("button", { name: /Generar código|Generate code/ }).click();
+  const code = (await sp.getByTestId("connect-code").innerText()).trim();
+  ok("supply: single-use code generated (24 hex)", /^[a-f0-9]{24}$/.test(code));
+  await o.goto(B + "/suppliers");
+  await o.getByLabel(/Código que te dio el supply|Code the supply gave you/).fill("0".repeat(24));
+  await o.getByRole("button", { name: /Conectar con un código|Connect with a code/ }).last().click();
+  await o.waitForTimeout(1200);
+  ok("contractor: a wrong code is refused with a message", (await o.getByRole("alert").count()) > 0);
+  await o.getByLabel(/Código que te dio el supply|Code the supply gave you/).fill(code);
+  await o.getByRole("button", { name: /Conectar con un código|Connect with a code/ }).last().click();
+  await o.waitForTimeout(1800);
+  ok("contractor: connected, supplier record shows Connected", (await o.getByText("Graybar Supply").count()) > 0 && (await o.getByText(/^Conectado$|^Connected$/).count()) > 0);
+
+  // pricing request sent inside the app
+  await o.goto(B + "/pricing/new");
+  await o.locator("textarea").first().fill("12 x 2x4 LED panel\n40 x Duplex outlet");
+  await o.getByLabel(/^Título|^Title/).fill("Lobby package");
+  await o.locator("input[type=date]").fill("2030-02-01");
+  await o.getByRole("button", { name: /Crear Pricing Request|Create Pricing Request/ }).click();
+  await o.waitForURL(/pricing\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  state.pr2 = o.url();
+  await o.locator("input[type=file]").setInputFiles({ name: "lighting-plan.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 plan") });
+  await o.waitForTimeout(1500);
+  await o.getByRole("combobox").filter({ has: o.locator("option", { hasText: "Graybar Supply" }) }).first().selectOption({ label: "Graybar Supply" });
+  await o.getByRole("button", { name: /Enviar a su cuenta Supply|Send to their Supply account/ }).click();
+  await o.waitForTimeout(1800);
+  ok("pricing: sent to the Supply account (no link to share)", (await o.getByText(/Verán la solicitud|will see the request/).count()) > 0 && (await o.locator("p.break-all").count()) === 0);
+
+  // supply inbox
+  await sp.goto(B + "/supply");
+  ok("supply inbox: shows the request with the contractor and the Bid Date", (await sp.getByText(/Lobby package/).count()) > 0 && (await sp.getByText(/Smoke Electric/).count()) > 0);
+  await sp.getByText(/Lobby package/).first().click();
+  await sp.waitForURL(/supply\/requests\/[0-9a-f-]{36}$/);
+  ok("supply request: sees the lines and the plans file", (await sp.getByText(/2x4 LED panel/).count()) > 0 && (await sp.getByText("lighting-plan.pdf").count()) > 0);
+  ok("supply request: does not see the project name", (await sp.locator("body").innerText()).indexOf("Miami Beach") === -1);
+  await sp.locator("textarea[aria-label]").last().fill("Do you want 4000K?");
+  await sp.getByRole("button", { name: /Enviar pregunta|Send question/ }).click();
+  await sp.waitForTimeout(1200);
+  const priceInputs = sp.getByLabel(/^Precio |^Price /);
+  const n = await priceInputs.count();
+  for (let i = 0; i < n; i++) await priceInputs.nth(i).fill(String(20 + i));
+  await sp.getByLabel(/Nº de quote|Quote number/).fill("GB-1001");
+  await sp.getByRole("button", { name: /Enviar mi respuesta|Send my response/ }).click();
+  await sp.waitForTimeout(1800);
+  ok("supply request: quote sent", (await sp.getByRole("status").count()) > 0);
+  await sp.goto(B + "/supply");
+  await sp.getByRole("button", { name: /Cotizados|Quoted/ }).click();
+  ok("supply inbox: the quote shows under Quoted with its number", (await sp.getByText(/GB-1001/).count()) > 0);
+
+  // contractor side sees it like any other response
+  await o.goto(state.pr2);
+  ok("pricing: the supply's quote arrives in the normal comparison", (await o.getByText(/GB-1001/).count()) > 0);
+  ok("pricing: the supply's question is listed", (await o.getByText(/4000K/).count()) > 0);
+
+  // supply revokes
+  await sp.goto(B + "/supply/contractors");
+  ok("supply: sees the contractor with counters", (await sp.getByText(/Smoke Electric/).count()) > 0 && (await sp.getByText(/1 solicitudes|1 requests/).count()) > 0);
+  sp.on("dialog", (d) => d.accept());
+  await sp.getByRole("button", { name: /^Revocar$|^Revoke$/ }).click();
+  await sp.waitForTimeout(1500);
+  await sp.goto(B + "/supply");
+  ok("supply: after disconnecting the inbox is empty", (await sp.getByText(/Lobby package/).count()) === 0);
+  await o.goto(B + "/suppliers");
+  ok("contractor: supplier shows as not connected after disconnect", (await o.getByText(/Sin cuenta|No account/).count()) > 0);
+}
+
 (async () => {
   const browser = await launch();
   try {
@@ -343,6 +433,7 @@ async function phase78(browser) {
     if (want("all") || want("exp")) { if (!state.emp) state.emp = await inviteEmployee(browser, state.owner, "Luis Tester", `luis-${RUN}@bidpower-smoke.test`, "employee_basic", state.projectId); await phaseExpense(browser); }
     if (want("all") || want("6")) await phase6(browser);
     if (want("all") || want("78")) await phase78(browser);
+    if (want("all") || want("9")) await phase9(browser);
   } catch (e) {
     console.error("ERROR", e.message.split("\n").slice(0, 4).join(" | "));
     process.exitCode = 2;

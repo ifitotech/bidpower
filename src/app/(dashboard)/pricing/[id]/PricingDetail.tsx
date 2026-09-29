@@ -19,7 +19,7 @@ import {
 } from "../actions";
 
 type Request = NonNullable<Awaited<ReturnType<typeof getPricingRequestById>>>;
-type Supplier = { id: string; name: string };
+type Supplier = { id: string; name: string; supply_company_id?: string | null };
 const AVAIL_KEYS: Record<string, keyof Dictionary> = { available: "availAvailable", partial: "availPartial", unavailable: "availUnavailable" };
 const OPEN = ["draft", "sent", "question_open", "responded"];
 
@@ -202,9 +202,22 @@ function SupplierLinks({ request: r, suppliers, invitations, questions, isOpen, 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fresh, setFresh] = useState<{ name: string; url: string } | null>(null);
+  const [sentInApp, setSentInApp] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [replies, setReplies] = useState<Record<string, string>>({});
   const input = "w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-base outline-none focus:border-brand-500";
+
+  const connected = Boolean(suppliers.find((s) => s.id === supplierId)?.supply_company_id);
+
+  async function sendInApp() {
+    setBusy(true); setError(null);
+    const supplierName = suppliers.find((s) => s.id === supplierId)?.name ?? "";
+    const res = await createSupplierLinkAction(r.id, { supplierId, supplierName, viaAccount: true }).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string }));
+    setBusy(false);
+    if (res.errorCode) { setError(t(res.errorCode as keyof Dictionary)); return; }
+    setSentInApp(supplierName);
+    onChange();
+  }
 
   async function create() {
     setBusy(true); setError(null);
@@ -230,6 +243,7 @@ function SupplierLinks({ request: r, suppliers, invitations, questions, isOpen, 
   return <section className="mt-8">
     <h2 className="mb-2 font-semibold">{t("supplierLinks")}</h2>
     {error && <div role="alert" className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+    {sentInApp && <div role="status" className="mb-3 rounded-xl border border-green-300 bg-green-50 p-3 text-sm">{t("sentToSupplyAccount", { name: sentInApp })}</div>}
     {fresh && <div className="mb-3 rounded-xl border border-green-300 bg-green-50 p-3">
       <p className="text-sm font-semibold">{t("linkForSupplier", { name: fresh.name })}</p>
       <p className="mt-1 break-all rounded-lg bg-white p-2 text-xs">{fresh.url}</p>
@@ -241,11 +255,12 @@ function SupplierLinks({ request: r, suppliers, invitations, questions, isOpen, 
       {!supplierId && <label className="block text-sm font-medium">{t("newSupplierName")}<input value={name} maxLength={120} onChange={(e) => setName(e.target.value)} className={`${input} mt-1`} /></label>}
       <label className="block text-sm font-medium">{t("supplierEmailOptional")}<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${input} mt-1`} /></label>
       <label className="block text-sm font-medium">{t("linkDays")}<input inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} className={`${input} mt-1`} /></label>
-      <button type="button" disabled={busy || (!supplierId && !name.trim())} onClick={create} className="min-h-11 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-2">{t("createSupplierLink")}</button>
+      {connected && <button type="button" disabled={busy} onClick={sendInApp} className="min-h-11 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40 sm:col-span-2">{t("sendToSupplyAccount")}</button>}
+      <button type="button" disabled={busy || (!supplierId && !name.trim())} onClick={create} className={`min-h-11 rounded-xl px-4 text-sm font-semibold disabled:opacity-40 sm:col-span-2 ${connected ? "border border-slate-200" : "bg-brand-600 text-white"}`}>{t("createSupplierLink")}</button>
     </div>}
     <ul className="space-y-2">{invitations.map((i) => { const qs = questions.filter((q) => q.invitation_id === i.id); const live = !i.revoked_at && new Date(i.expires_at) > new Date();
       return <li key={i.id} className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
-        <div className="flex items-center gap-2"><span className="min-w-0 flex-1 truncate font-medium">{i.supplier_name}</span><span className="text-xs text-slate-400">{status(i)}</span>
+        <div className="flex items-center gap-2"><span className="min-w-0 flex-1 truncate font-medium">{i.supplier_name}{i.supply_company_id ? <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">{t("supplyAccountBadge")}</span> : null}</span><span className="text-xs text-slate-400">{status(i)}</span>
           {live && isOpen && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmRevokeLink"))) act(() => revokeSupplierLinkAction(r.id, i.id)); }} className="min-h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold">{t("revokeLink")}</button>}</div>
         {qs.length > 0 && <div className="mt-2 space-y-1.5"><p className="text-xs font-semibold text-slate-500">{t("supplierQuestions")}</p>{qs.map((q) => <p key={q.id} className={`whitespace-pre-wrap rounded-lg p-2 text-xs ${q.author === "supplier" ? "bg-amber-50" : "bg-brand-50"}`}><span className="font-semibold">{q.author === "supplier" ? i.supplier_name : t("youLabel")}: </span>{q.body}</p>)}</div>}
         {live && isOpen && qs.length > 0 && <div className="mt-2 flex gap-2"><input value={replies[i.id] ?? ""} maxLength={2000} aria-label={t("answerQuestion")} placeholder={t("answerQuestion")} onChange={(e) => setReplies((p) => ({ ...p, [i.id]: e.target.value }))} className={input} /><button type="button" disabled={busy || !(replies[i.id] ?? "").trim()} onClick={() => act(async () => { const res = await answerQuestionAction(r.id, i.id, replies[i.id] ?? ""); if (!res.errorCode) setReplies((p) => ({ ...p, [i.id]: "" })); return res; })} className="min-h-10 shrink-0 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white disabled:opacity-40">{t("answerQuestion")}</button></div>}

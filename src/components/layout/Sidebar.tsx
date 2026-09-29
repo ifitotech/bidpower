@@ -40,6 +40,7 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
 
   const operationsNav = [
     ...(isManagerOrAbove || permissions.can_create_po ? [{ href: "/pos", label: t("navPurchaseOrders"), icon: ShoppingCart }] : []),
+    ...(isManagerOrAbove ? [{ href: "/suppliers", label: t("navSuppliers"), icon: Users }] : []),
     ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: "/pricing", label: t("pricingRequests"), icon: Package }] : []),
     ...(isManagerOrAbove ? [{ href: "/materials/requests", label: t("materialRequests"), icon: Package }] : []),
     ...(permissions.can_manage_library ? [{ href: "/materials", label: t("materialsLibrary"), icon: Package }] : []),

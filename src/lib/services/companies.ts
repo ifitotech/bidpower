@@ -10,12 +10,14 @@ export async function createCompanyWithOwner(params: {
   fullName?: string;
   companyName: string;
   phone?: string;
+  kind?: "contractor" | "supply";
 }): Promise<string> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_company_with_owner", {
     p_company_name: params.companyName,
     p_full_name: params.fullName ?? null,
     p_phone: params.phone ?? null,
+    p_kind: params.kind ?? "contractor",
   });
   if (error) throw error;
   return data as string;

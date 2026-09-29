@@ -67,6 +67,7 @@ export const getCurrentMember = cache(async function getCurrentMember() {
       fullName,
       companyName,
       phone: String(meta.phone ?? "").trim() || undefined,
+      kind: String(meta.account_kind ?? "") === "supply" ? "supply" : "contractor",
     });
   } catch {
     return null;

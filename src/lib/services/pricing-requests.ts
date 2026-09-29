@@ -259,9 +259,9 @@ export async function getAttachmentUrl(companyId: string, attachmentId: string) 
 
 export async function getSuppliers(companyId: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("suppliers").select("id, name").eq("company_id", companyId).eq("is_active", true).order("name");
+  const { data, error } = await supabase.from("suppliers").select("id, name, supply_company_id").eq("company_id", companyId).eq("is_active", true).order("name");
   if (error) throw error;
-  return data as { id: string; name: string }[];
+  return data as { id: string; name: string; supply_company_id: string | null }[];
 }
 
 export async function createSupplier(companyId: string, userId: string, name: string) {
@@ -288,13 +288,13 @@ export async function getConvertibleMaterialRequests(companyId: string, projectI
 
 // ---- Secure link for Supply (no account) ----
 
-export type InvitationView = { id: string; supplier_name: string | null; supplier_email: string | null; expires_at: string; revoked_at: string | null; first_opened_at: string | null; last_opened_at: string | null };
+export type InvitationView = { id: string; supply_company_id: string | null; supplier_name: string | null; supplier_email: string | null; expires_at: string; revoked_at: string | null; first_opened_at: string | null; last_opened_at: string | null };
 export type QuestionView = { id: string; invitation_id: string; author: string; author_name: string | null; body: string; created_at: string };
 
 export async function getPricingInvitations(companyId: string, requestId: string) {
   const supabase = await createClient();
   const [inv, q] = await Promise.all([
-    supabase.from("supplier_quote_invitations").select("id, supplier_name, supplier_email, expires_at, revoked_at, first_opened_at, last_opened_at").eq("request_id", requestId).eq("company_id", companyId).order("created_at", { ascending: false }),
+    supabase.from("supplier_quote_invitations").select("id, supply_company_id, supplier_name, supplier_email, expires_at, revoked_at, first_opened_at, last_opened_at").eq("request_id", requestId).eq("company_id", companyId).order("created_at", { ascending: false }),
     supabase.from("pricing_request_questions").select("id, invitation_id, author, author_name, body, created_at").eq("request_id", requestId).eq("company_id", companyId).order("created_at"),
   ]);
   if (inv.error) throw inv.error;
@@ -306,7 +306,7 @@ export async function getPricingInvitations(companyId: string, requestId: string
  * Creates a one-supplier link. Only the sha256 of the random token is stored, so the link is shown once.
  * The request goes to "sent" (waiting on the supplier) when the first link is created from a draft.
  */
-export async function createSupplierInvitation(companyId: string, userId: string, requestId: string, input: { supplierId?: string | null; supplierName: string; supplierEmail?: string | null; days?: number }) {
+export async function createSupplierInvitation(companyId: string, userId: string, requestId: string, input: { supplierId?: string | null; supplierName: string; supplierEmail?: string | null; days?: number; viaAccount?: boolean }) {
   const supabase = await createClient();
   const name = input.supplierName.trim().slice(0, 120);
   if (!name) throw new Error("supplier_required");
@@ -318,14 +318,25 @@ export async function createSupplierInvitation(companyId: string, userId: string
   const { randomBytes, createHash } = await import("crypto");
   const token = randomBytes(32).toString("hex");
   const days = Math.min(60, Math.max(1, Math.round(input.days ?? 14)));
+
+  // Sending inside the app: the recipient is the supplier's connected Supply account (looked up here, not trusted from the client).
+  let supplyCompanyId: string | null = null;
+  if (input.viaAccount) {
+    if (!input.supplierId) throw new Error("supplier_required");
+    const { data: sup, error: supErr } = await supabase.from("suppliers").select("supply_company_id").eq("id", input.supplierId).eq("company_id", companyId).maybeSingle();
+    if (supErr) throw supErr;
+    if (!sup?.supply_company_id) throw new Error("supply_not_connected");
+    supplyCompanyId = sup.supply_company_id as string;
+  }
   const { error } = await supabase.from("supplier_quote_invitations").insert({
     company_id: companyId, request_id: requestId, created_by: userId, supplier_id: input.supplierId ?? null, supplier_name: name,
-    supplier_email: clean(input.supplierEmail, 200), token_hash: createHash("sha256").update(token).digest("hex"),
-    expires_at: new Date(Date.now() + days * 86400000).toISOString(),
+    supplier_email: clean(input.supplierEmail, 200), token_hash: createHash("sha256").update(token).digest("hex"), supply_company_id: supplyCompanyId,
+    expires_at: new Date(Date.now() + (supplyCompanyId ? 365 : days) * 86400000).toISOString(),
   });
   if (error) throw error;
   if (req.status === "draft") await transition(companyId, requestId, ["draft"], { status: "sent", waiting_on: "supplier", sent_at: new Date().toISOString() });
-  return token;
+  // An in-app request has no link to share: the token is discarded on purpose.
+  return supplyCompanyId ? null : token;
 }
 
 export async function revokeSupplierInvitation(companyId: string, requestId: string, invitationId: string) {

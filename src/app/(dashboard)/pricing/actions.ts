@@ -17,7 +17,7 @@ function fail(e: unknown): PricingResult {
   const msg = e instanceof Error ? e.message : "";
   const map: Record<string, string> = {
     request_empty: "errRequestEmpty", request_too_large: "errRequestTooLarge", request_not_pending: "errPricingNotOpen",
-    supplier_required: "errSupplierRequired", response_empty: "errResponseEmpty", file_type: "errFileType", file_size: "errFileSize", forbidden: "errForbidden",
+    supplier_required: "errSupplierRequired", supply_not_connected: "errSupplyNotConnected", response_empty: "errResponseEmpty", file_type: "errFileType", file_size: "errFileSize", forbidden: "errForbidden",
   };
   return { errorCode: map[msg] ?? "errGeneric" };
 }
@@ -101,7 +101,7 @@ export async function getAttachmentUrlAction(attachmentId: string): Promise<Pric
   try { return { success: true, url: await getAttachmentUrl(c.companyId, attachmentId) }; } catch (e) { return fail(e); }
 }
 
-export async function createSupplierLinkAction(requestId: string, input: { supplierId?: string | null; supplierName: string; supplierEmail?: string | null; days?: number }): Promise<PricingResult & { token?: string }> {
+export async function createSupplierLinkAction(requestId: string, input: { supplierId?: string | null; supplierName: string; supplierEmail?: string | null; days?: number; viaAccount?: boolean }): Promise<PricingResult & { token?: string | null }> {
   const c = await ctx();
   if (!c || !UUID.test(requestId)) return { errorCode: "errGeneric" };
   if (!isReviewer(c.role)) return { errorCode: "errForbidden" };
