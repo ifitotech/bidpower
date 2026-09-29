@@ -1,22 +1,19 @@
 {
-  "name": "Bidpower",
-  "short_name": "Bidpower",
-  "description": "Bidpower: tus proyectos, clientes y compras en un solo lugar",
+  "id": "/dashboard",
+  "name": "BidPower",
+  "short_name": "BidPower",
+  "description": "BidPower: tus proyectos, clientes y compras en un solo lugar",
   "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
   "orientation": "portrait-primary",
+  "background_color": "#0B1F3B",
+  "theme_color": "#0B1F3B",
   "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    { "src": "/icons/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/app-icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/app-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" }
   ]
 }

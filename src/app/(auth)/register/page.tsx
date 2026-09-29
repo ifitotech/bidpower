@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { HardHat } from "lucide-react";
+import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/Button";
 import { registerAction } from "../actions";
 import { createClient } from "@/lib/supabase/client";
@@ -70,15 +70,13 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-brand-800 to-brand-900 text-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0B2A5C] to-[#07152B] text-white">
       <div className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-10">
         <LanguageSwitcher />
       </div>
       <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full py-12">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur">
-            <HardHat className="w-8 h-8 text-white" />
-          </div>
+          <Logo variant="symbol" tone="dark" className="mx-auto mb-4 h-14" />
           <h1 className="text-2xl font-bold">{invite ? t("createMyAccount") : t("register")}</h1>
           {!invite && <p className="text-brand-100 mt-1 text-sm">
             {t("stepOf", { current: step, total: 2 })} ·{" "}

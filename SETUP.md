@@ -1,4 +1,4 @@
-# Bidpower — Guía de conexión
+# BidPower — Guía de conexión
 
 ## 1. Supabase
 

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="BidPower">
+  <defs><linearGradient id="i-b" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#0A84FF"/><stop offset="1" stop-color="#00C2FF"/></linearGradient>
+    <linearGradient id="i-d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0A84FF"/><stop offset="1" stop-color="#0A4FD0"/></linearGradient>
+    <linearGradient id="i-w" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#C9CFDA"/></linearGradient>
+    <radialGradient id="i-g" cx=".3" cy=".2" r="1.1"><stop offset="0" stop-color="#123A78"/><stop offset=".55" stop-color="#0B1F3B"/><stop offset="1" stop-color="#07152B"/></radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#i-g)"/>
+  <g transform="translate(66.6 107.2) scale(2.7063)"><path d="M4 92 L70 32 L88 46 L36 92 Z" fill="url(#i-b)"/>
+    <path d="M70 32 L88 46 L88 100 L70 100 Z" fill="url(#i-d)"/>
+    <path d="M92 8 L108 20 L108 100 L92 100 Z" fill="url(#i-w)"/>
+    <rect x="112" y="34" width="10" height="66" rx="1.5" fill="url(#i-d)"/>
+    <rect x="126" y="54" width="10" height="46" rx="1.5" fill="url(#i-b)"/></g>
+</svg>

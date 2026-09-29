@@ -10,12 +10,12 @@ import {
   FileText,
   UserCog,
   Settings,
-  HardHat,
   FolderOpen,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
+import { Logo } from "@/components/shared/Logo";
 import { logoutAction } from "@/app/(auth)/actions";
 
 const roleLabel: Record<string, "owner" | "manager" | "employee"> = { owner: "owner", manager: "manager", employee: "employee" };
@@ -49,9 +49,7 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
     <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 flex-col z-30">
       <div className="px-5 py-5 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center">
-            <HardHat className="w-5 h-5 text-white" />
-          </div>
+          <Logo variant="mark" className="h-10 w-10 shrink-0" />
           <div>
             <p className="font-bold text-lg leading-tight">{t("appName")}</p>
             <p className="max-w-[9.5rem] truncate text-xs text-slate-500">{companyName}</p>

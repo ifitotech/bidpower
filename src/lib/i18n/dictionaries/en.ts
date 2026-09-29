@@ -1,7 +1,7 @@
 import type { Dictionary } from "./es";
 
 const en: Dictionary = {
-  appName: "Bidpower",
+  appName: "BidPower",
   appTagline: "The operating system for your business",
   save: "Save",
   cancel: "Cancel",
@@ -211,7 +211,7 @@ const en: Dictionary = {
   newPasswordHint: "Use at least 8 characters.",
   savePassword: "Save password",
 
-  // Phase 1 — Bidpower foundation
+  // Phase 1 — BidPower foundation
   greetingMorning: "Good morning, {name}",
   greetingAfternoon: "Good afternoon, {name}",
   greetingEvening: "Good evening, {name}",
@@ -249,7 +249,7 @@ const en: Dictionary = {
   errLoadProjects: "We could not load your projects. Please try again.",
   errLoadProject: "We could not load this project.",
   errProjectRequired: "Project name and client are required.",
-  errNoSupabase: "Bidpower is not connected to Supabase. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+  errNoSupabase: "BidPower is not connected to Supabase. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
   checkEmailToConfirm: "Account created. Confirm your email, then sign in.",
   tryAgain: "Try again",
 

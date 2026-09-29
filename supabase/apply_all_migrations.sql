@@ -1,9 +1,9 @@
--- Bidpower — todas las migraciones en orden (generado; la fuente de verdad es supabase/migrations/).
+-- BidPower — todas las migraciones en orden (generado; la fuente de verdad es supabase/migrations/).
 -- Pega TODO este archivo en Supabase → SQL Editor y ejecútalo UNA sola vez en un proyecto nuevo.
 -- Si ya aplicaste algunas migraciones antes, no lo uses: ejecuta solo las que falten.
 
 -- ===== supabase/migrations/20260728000000_initial_schema.sql =====
--- Bidpower Initial Schema
+-- BidPower Initial Schema
 -- Multi-tenant SaaS foundation
 -- Run this in your Supabase SQL Editor
 
@@ -413,7 +413,7 @@ CREATE POLICY "Members can view projects"
 -- More policies will be added in later phases
 
 -- ===== supabase/migrations/20260728000001_rls_and_storage.sql =====
--- Bidpower — RLS policies completas + Storage bucket
+-- BidPower — RLS policies completas + Storage bucket
 -- Ejecutar después de la migración inicial
 
 -- =====================================================
@@ -705,7 +705,7 @@ ALTER TABLE quotes DROP CONSTRAINT IF EXISTS quotes_quote_type_check;
 ALTER TABLE quotes ADD CONSTRAINT quotes_quote_type_check CHECK (quote_type IN ('service', 'materials', 'plan_estimate', 'complete'));
 
 -- ===== supabase/migrations/20260728000005_phase2_5_modules.sql =====
--- Bidpower Phase 2-5 supporting modules
+-- BidPower Phase 2-5 supporting modules
 
 CREATE TABLE IF NOT EXISTS invoices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -827,7 +827,7 @@ CREATE POLICY "Members can view company time entries" ON time_entries FOR SELECT
 CREATE POLICY "Employees can manage own time entries" ON time_entries FOR ALL TO authenticated USING (company_id IN (SELECT get_user_company_ids()) AND user_id = auth.uid()) WITH CHECK (company_id IN (SELECT get_user_company_ids()) AND user_id = auth.uid());
 
 -- ===== supabase/migrations/20260729000006_supply_quotes_foundation.sql =====
--- Bidpower - Supply Quotes foundation
+-- BidPower - Supply Quotes foundation
 -- Incremental migration. Does not replace or remove existing objects.
 
 -- Ensure the existing multi-tenant helper functions are available even when
@@ -1083,7 +1083,7 @@ BEGIN
 END $$;
 
 -- ===== supabase/migrations/20260730000007_phase1_company_bootstrap.sql =====
--- Bidpower — Phase 1: atomic company bootstrap
+-- BidPower — Phase 1: atomic company bootstrap
 --
 -- Signing up must create, in one transaction and without weakening RLS:
 --   profile -> company -> owner membership -> company settings -> Free plan -> default categories
@@ -1176,7 +1176,7 @@ REVOKE ALL ON FUNCTION public.create_company_with_owner(TEXT, TEXT, TEXT) FROM P
 GRANT EXECUTE ON FUNCTION public.create_company_with_owner(TEXT, TEXT, TEXT) TO authenticated;
 
 -- ===== supabase/migrations/20260731000008_phase2_team_permissions.sql =====
--- Bidpower — Phase 2: Team & Permissions
+-- BidPower — Phase 2: Team & Permissions
 --
 -- * Individual permissions per member (on top of owner / manager / employee)
 -- * Permission audit trail

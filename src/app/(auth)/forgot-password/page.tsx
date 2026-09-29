@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { HardHat } from "lucide-react";
+import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/Button";
 import { resetPasswordAction } from "../actions";
 import { useI18n } from "@/lib/i18n/provider";
@@ -25,12 +25,10 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-brand-800 to-brand-900 text-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0B2A5C] to-[#07152B] text-white">
       <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <HardHat className="w-8 h-8" />
-          </div>
+          <Logo variant="symbol" tone="dark" className="mx-auto mb-4 h-14" />
           <h1 className="text-2xl font-bold">{t("forgotPasswordTitle")}</h1>
           <p className="text-brand-100 mt-2 text-sm">{t("forgotPasswordHint")}</p>
         </div>

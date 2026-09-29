@@ -1,4 +1,4 @@
--- Bidpower — Phase 2: Team & Permissions
+-- BidPower — Phase 2: Team & Permissions
 --
 -- * Individual permissions per member (on top of owner / manager / employee)
 -- * Permission audit trail

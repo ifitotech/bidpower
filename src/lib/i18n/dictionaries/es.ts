@@ -1,6 +1,6 @@
 const es = {
   // Common
-  appName: "Bidpower",
+  appName: "BidPower",
   appTagline: "El sistema operativo de tu empresa",
   save: "Guardar",
   cancel: "Cancelar",
@@ -225,7 +225,7 @@ const es = {
   savePassword: "Guardar contraseña",
   spanish: "Español",
 
-  // Phase 1 — Bidpower foundation
+  // Phase 1 — BidPower foundation
   greetingMorning: "Buenos días, {name}",
   greetingAfternoon: "Buenas tardes, {name}",
   greetingEvening: "Buenas noches, {name}",
@@ -263,7 +263,7 @@ const es = {
   errLoadProjects: "No pudimos cargar tus proyectos. Intenta de nuevo.",
   errLoadProject: "No pudimos cargar este proyecto.",
   errProjectRequired: "El nombre y el cliente son obligatorios.",
-  errNoSupabase: "Bidpower no está conectado a Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+  errNoSupabase: "BidPower no está conectado a Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.",
   checkEmailToConfirm: "Cuenta creada. Confirma tu email y luego inicia sesión.",
   tryAgain: "Reintentar",
 

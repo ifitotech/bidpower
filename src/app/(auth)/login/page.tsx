@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { HardHat } from "lucide-react";
+import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/Button";
 import { loginAction, signInWithGoogleAction } from "../actions";
 import { useI18n } from "@/lib/i18n/provider";
@@ -55,16 +55,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-brand-800 to-brand-900 text-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0B2A5C] to-[#07152B] text-white">
       <div className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-10">
         <LanguageSwitcher />
       </div>
       <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full">
         <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-5 backdrop-blur">
-            <HardHat className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("appName")}</h1>
+          <Logo variant="full" tone="dark" className="mx-auto mb-2 w-64 max-w-full" />
+          <h1 className="sr-only">{t("appName")}</h1>
           <p className="text-brand-100 mt-2 text-sm">{t("appTagline")}</p>
         </div>
 

@@ -1,4 +1,4 @@
-// Browser storage keys. The product went ContractorOS → Bidpower; old keys are copied once
+// Browser storage keys. The product went ContractorOS → BidPower; old keys are copied once
 // so nobody loses saved preferences or drafts.
 
 const LEGACY_KEYS: Record<string, string> = {

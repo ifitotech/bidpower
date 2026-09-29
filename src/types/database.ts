@@ -1,4 +1,4 @@
-// Bidpower - Core Database Types
+// BidPower - Core Database Types
 // Prepared for multi-tenant SaaS architecture
 
 export type UserRole = "owner" | "manager" | "employee";

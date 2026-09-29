@@ -1,6 +1,6 @@
-# Bidpower — Product Direction (fuente de verdad)
+# BidPower — Product Direction (fuente de verdad)
 
-Bidpower **no** compite con QuickBooks ni es software contable. Su misión es ser la mejor herramienta del día a día para contractors y electricistas. El centro de todo es el **PROJECT**.
+BidPower **no** compite con QuickBooks ni es software contable. Su misión es ser la mejor herramienta del día a día para contractors y electricistas. El centro de todo es el **PROJECT**.
 
 ## Usuarios dentro de un proyecto
 
@@ -35,7 +35,7 @@ No usar "Quote" para todo. Los objetos permanecen separados.
 9. **Needs Attention** — mostrar qué requiere acción (material solicitado, supplier respondió, Pricing Request vence mañana, PO sin receipt, Customer pidió cambio).
 10. **Waiting On** — cada objeto indica quién tiene la próxima acción: Supplier, Customer, Employee u Owner.
 
-## Qué NO es Bidpower
+## Qué NO es BidPower
 
 No construir como core: payroll, taxes, bank reconciliation, bookkeeping completo, chart of accounts, contabilidad completa, inventory ERP, fleet management, CRM complejo, workflows contables avanzados.
 
@@ -45,7 +45,7 @@ Project budget / contract value, actual cost, committed cost, Purchase Orders, E
 
 ## Estrategia QuickBooks
 
-Bidpower captura y organiza la operación; QuickBooks hace el accounting. Más adelante: exportar/sincronizar Customers, Projects/Jobs, Suppliers/Vendors, Expenses, Purchase Orders, Invoices y Payments cuando corresponda, y resúmenes de costo por proyecto. No construir la integración antes de su fase, pero **no diseñar la arquitectura de forma que la dificulte** (ids estables, entidades separadas, datos operativos limpios).
+BidPower captura y organiza la operación; QuickBooks hace el accounting. Más adelante: exportar/sincronizar Customers, Projects/Jobs, Suppliers/Vendors, Expenses, Purchase Orders, Invoices y Payments cuando corresponda, y resúmenes de costo por proyecto. No construir la integración antes de su fase, pero **no diseñar la arquitectura de forma que la dificulte** (ids estables, entidades separadas, datos operativos limpios).
 
 ## Electrical first
 
@@ -53,7 +53,7 @@ Excelente primero para Electrical Contractors y Electrical Supply Houses; luego 
 
 ## Filosofía de desarrollo
 
-No improvisar features. Antes de agregar una función: ¿el contractor la usa a diario? ¿reduce pasos? ¿evita repetir información? ¿mueve el proyecto hacia adelante? ¿la persona correcta ve solo lo que necesita? ¿pertenece a Bidpower o a QuickBooks? Si no cumple, no entra al core.
+No improvisar features. Antes de agregar una función: ¿el contractor la usa a diario? ¿reduce pasos? ¿evita repetir información? ¿mueve el proyecto hacia adelante? ¿la persona correcta ve solo lo que necesita? ¿pertenece a BidPower o a QuickBooks? Si no cumple, no entra al core.
 
 ## Fases
 

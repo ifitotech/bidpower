@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { updatePasswordAction } from "../actions";
 import { useI18n } from "@/lib/i18n/provider";
+import { Logo } from "@/components/shared/Logo";
 
 export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -20,8 +21,9 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center px-6 bg-gradient-to-br from-brand-800 to-brand-900 text-white">
+    <div className="min-h-screen flex flex-col justify-center px-6 bg-gradient-to-br from-[#0B2A5C] to-[#07152B] text-white">
       <div className="w-full max-w-md mx-auto">
+        <Logo variant="symbol" tone="dark" className="mb-5 h-12" />
         <h1 className="text-2xl font-bold mb-2">{t("newPassword")}</h1>
         <p className="text-brand-100 text-sm mb-8">{t("newPasswordHint")}</p>
         <form onSubmit={handleSubmit} className="space-y-4">

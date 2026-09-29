@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { HardHat } from "lucide-react";
+import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/Button";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n/provider";
@@ -16,11 +16,11 @@ export default function InviteView({ state, token, info, failed = false }: { sta
   const link = "block w-full rounded-xl py-3.5 text-center font-medium";
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-brand-800 to-brand-900 text-white">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-[#0B2A5C] to-[#07152B] text-white">
       <div className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-10"><LanguageSwitcher /></div>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-12">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur"><HardHat className="h-8 w-8" /></div>
+          <Logo variant="symbol" tone="dark" className="mx-auto mb-4 h-14" />
           <h1 className="text-2xl font-bold">{state === "invalid" || !info ? t("appName") : t("inviteTitle", { company: info.company })}</h1>
           {info && state !== "invalid" && <p className="mt-2 text-sm text-brand-100">{t("inviteJoinAs", { role: roleName })}</p>}
         </div>

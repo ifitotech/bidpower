@@ -1,4 +1,4 @@
--- Bidpower — RLS policies completas + Storage bucket
+-- BidPower — RLS policies completas + Storage bucket
 -- Ejecutar después de la migración inicial
 
 -- =====================================================

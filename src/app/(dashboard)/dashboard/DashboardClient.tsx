@@ -5,6 +5,7 @@ import { AlertTriangle, ChevronRight, Clock3, MapPin, Plus, Receipt } from "luci
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { useI18n } from "@/lib/i18n/provider";
 import { APP_NAME } from "@/lib/constants";
+import { Logo } from "@/components/shared/Logo";
 import { usePermissions } from "@/lib/permissions-context";
 
 type HomeProject = { id: string; name: string; status: string; address?: string | null; clientName?: string | null };
@@ -37,7 +38,7 @@ export default function DashboardClient({
   return (
     <div className="mx-auto min-w-0 max-w-5xl p-4 pb-8 md:p-8">
       <header className="mb-6">
-        <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">{APP_NAME}</p>
+        <div className="mb-2 flex items-center gap-2"><Logo variant="mark" className="h-8 w-8 md:hidden" /><p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">{APP_NAME}</p></div>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{firstName ? t(greetingKey, { name: firstName }) : t("navHome")}</h1>
         {companyName && <p className="mt-1 text-sm text-slate-500">{companyName}</p>}
       </header>

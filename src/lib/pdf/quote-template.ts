@@ -125,7 +125,7 @@ export function buildQuoteHTML(data: QuotePDFData): string {
   ${data.notes ? `<div class="section"><div class="label">Notas</div><div style="font-size:13px;">${data.notes}</div></div>` : ""}
 
   <div class="footer">
-    Generado con Bidpower · ${data.company.name}
+    Generado con BidPower · ${data.company.name}
   </div>
 </body>
 </html>`;

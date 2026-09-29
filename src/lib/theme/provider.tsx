@@ -1,8 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import "@/lib/storage";
 
-export type Theme = "light" | "dark" | "system";import "@/lib/storage";
+export type Theme = "light" | "dark" | "system";
 
 const STORAGE_KEY = "bidpower-theme";
 
