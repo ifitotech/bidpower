@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
+import { usePermissions } from "@/lib/permissions-context";
 import { formatDate } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { MATERIAL_CATEGORIES } from "@/lib/materials";
@@ -16,6 +17,7 @@ type Request = NonNullable<Awaited<ReturnType<typeof getRequestById>>>;
 
 export default function RequestDetail({ request: r, projectId, canReview, canCancel }: { request: Request; projectId: string; canReview: boolean; canCancel: boolean }) {
   const { t } = useI18n();
+  const { permissions } = usePermissions();
   const router = useRouter();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -54,6 +56,7 @@ export default function RequestDetail({ request: r, projectId, canReview, canCan
         <button type="button" disabled={busy} onClick={() => run(() => reviewRequestAction(r.id, "rejected", note))} className="min-h-11 flex-1 rounded-xl border border-slate-200 px-4 text-sm font-semibold disabled:opacity-40">{t("sendBack")}</button>
       </div>
     </div>}
+    {canReview && permissions.can_create_pricing_request && (r.status === "requested" || r.status === "reviewed") && <Link href={`/pricing/new?from=${r.id}`} className="mt-3 flex min-h-11 w-full items-center justify-center rounded-xl border border-brand-500 bg-brand-50 px-4 text-sm font-semibold text-brand-700">{t("createPricingFromRequest")}</Link>}
     {pending && canCancel && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmCancelRequest"))) run(() => cancelRequestAction(r.id)); }} className="mt-3 min-h-11 w-full rounded-xl border border-red-100 bg-red-50 px-4 text-sm font-medium text-red-600 disabled:opacity-40">{t("cancelRequest")}</button>}
   </div>;
 }

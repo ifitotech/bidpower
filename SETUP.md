@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260802000011_phase3_materials.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260803000013_pricing_attachment_visibility.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -91,3 +91,11 @@ las instrucciones para borrarlos están en la cabecera del script.
 - **Pedido de material** (`Proyecto → Pedidos de material`): buscar en favoritos/recientes/apodos, agregar texto libre, pegar una lista (WhatsApp/correo/Excel) o usar una lista guardada. Requiere el permiso *Pedir material* y un proyecto visible para la persona.
 - Owner/Manager revisan en `/materials/requests` (también aparece en Inicio → "Necesita atención"). Un pedido es distinto de una Solicitud a proveedores: no envía nada a nadie ni genera precios.
 - Migración nueva: `20260802000011_phase3_materials.sql` (ya incluida en `apply_all_migrations.sql`).
+
+## 10. Supplier Pricing (Fase 4, primera parte)
+
+- **Pricing Request** (`/pricing`): se crea desde un pedido de material revisado (las líneas se copian, no se reescriben) o pegando líneas. Tipo Gear/Lighting/Material/Otro, Bid Date, notas/specs, links y archivos (PDF/imagen, máx. 10 MB). Requiere el permiso *Crear Pricing Request*.
+- **Envío**: todavía no se envían correos ni enlaces seguros al supplier. Copia el texto, compártelo tú (WhatsApp/correo) y márcalo "enviado". El enlace seguro para que el supplier responda sin cuenta es la siguiente parte de la Fase 4.
+- **Respuesta del supplier**: Owner/Manager registran precio, disponibilidad y lead time por línea, número y total del quote, y el PDF. La comparación resalta el mejor precio por línea. "Adjudicar" marca la respuesta ganadora; el PO llega en la Fase 5.
+- **Precios privados**: solo Owner/Manager, o quien tenga *Crear Pricing Request* **y** *Ver costos*, ve respuestas y PDFs de precios.
+- Migraciones nuevas: `20260803000012_phase4_supplier_pricing.sql` y `20260803000013_pricing_attachment_visibility.sql`.

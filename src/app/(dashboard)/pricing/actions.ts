@@ -1,0 +1,96 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getActionContext } from "@/lib/action-context";
+import {
+  addPricingAttachment, awardResponse, cancelPricingRequest, closePricingRequest, createPricingRequest, createSupplier,
+  getAttachmentUrl, markMaterialRequestConverted, markPricingSent, recordSupplierResponse,
+  type PricingInput, type ResponseInput,
+} from "@/lib/services/pricing-requests";
+
+export type PricingResult = { errorCode?: string; success?: boolean; id?: string; number?: string; url?: string };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isReviewer = (role: string) => role === "owner" || role === "manager";
+
+function fail(e: unknown): PricingResult {
+  const msg = e instanceof Error ? e.message : "";
+  const map: Record<string, string> = {
+    request_empty: "errRequestEmpty", request_too_large: "errRequestTooLarge", request_not_pending: "errPricingNotOpen",
+    supplier_required: "errSupplierRequired", response_empty: "errResponseEmpty", file_type: "errFileType", file_size: "errFileSize", forbidden: "errForbidden",
+  };
+  return { errorCode: map[msg] ?? "errGeneric" };
+}
+
+async function ctx() {
+  try { return await getActionContext(); } catch { return null; }
+}
+
+function refresh(id?: string) {
+  revalidatePath("/pricing");
+  if (id) revalidatePath(`/pricing/${id}`);
+  revalidatePath("/materials/requests");
+  revalidatePath("/dashboard");
+}
+
+export async function createPricingRequestAction(input: PricingInput): Promise<PricingResult> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_create_pricing_request) return { errorCode: "errForbidden" };
+  if (!input || !Array.isArray(input.lines)) return { errorCode: "errGeneric" };
+  if (input.projectId && !UUID.test(input.projectId)) return { errorCode: "errGeneric" };
+  if (input.materialRequestId && !UUID.test(input.materialRequestId)) return { errorCode: "errGeneric" };
+  if (input.bidDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.bidDate)) return { errorCode: "errGeneric" };
+  try {
+    const result = await createPricingRequest(c.companyId, c.userId, { ...input, lines: input.lines.slice(0, 301) });
+    // Employees cannot change the Material Request; owners/managers hand it off in the same step.
+    if (input.materialRequestId && isReviewer(c.role)) await markMaterialRequestConverted(c.companyId, input.materialRequestId).catch(() => undefined);
+    refresh(result.id);
+    return { success: true, id: result.id, number: result.number };
+  } catch (e) { return fail(e); }
+}
+
+export async function createSupplierAction(name: string): Promise<PricingResult> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_create_pricing_request) return { errorCode: "errForbidden" };
+  try { return { success: true, id: await createSupplier(c.companyId, c.userId, String(name ?? "")) }; } catch (e) { return fail(e); }
+}
+
+async function reviewerAction(requestId: string, fn: (companyId: string, userId: string) => Promise<unknown>): Promise<PricingResult> {
+  const c = await ctx();
+  if (!c || !UUID.test(requestId)) return { errorCode: "errGeneric" };
+  if (!isReviewer(c.role)) return { errorCode: "errForbidden" };
+  try { await fn(c.companyId, c.userId); refresh(requestId); return { success: true }; } catch (e) { return fail(e); }
+}
+
+export const markSentAction = (requestId: string) => reviewerAction(requestId, (co) => markPricingSent(co, requestId));
+export const closeRequestAction = (requestId: string) => reviewerAction(requestId, (co) => closePricingRequest(co, requestId));
+export const cancelPricingAction = (requestId: string) => reviewerAction(requestId, (co) => cancelPricingRequest(co, requestId));
+
+export async function awardResponseAction(requestId: string, responseId: string): Promise<PricingResult> {
+  if (!UUID.test(responseId)) return { errorCode: "errGeneric" };
+  return reviewerAction(requestId, (co) => awardResponse(co, requestId, responseId));
+}
+
+export async function recordResponseAction(requestId: string, input: ResponseInput): Promise<PricingResult> {
+  if (!input || !Array.isArray(input.lines)) return { errorCode: "errGeneric" };
+  if (input.supplierId && !UUID.test(input.supplierId)) return { errorCode: "errGeneric" };
+  if (input.expiresOn && !/^\d{4}-\d{2}-\d{2}$/.test(input.expiresOn)) return { errorCode: "errGeneric" };
+  return reviewerAction(requestId, (co, user) => recordSupplierResponse(co, user, requestId, { ...input, lines: input.lines.slice(0, 301) }));
+}
+
+export async function addAttachmentAction(formData: FormData): Promise<PricingResult> {
+  const requestId = String(formData.get("requestId") ?? "");
+  const file = formData.get("file");
+  const responseId = String(formData.get("responseId") ?? "");
+  if (!(file instanceof File) || file.size === 0) return { errorCode: "errGeneric" };
+  if (responseId && !UUID.test(responseId)) return { errorCode: "errGeneric" };
+  return reviewerAction(requestId, (co, user) => addPricingAttachment(co, user, requestId, file, responseId || null));
+}
+
+export async function getAttachmentUrlAction(attachmentId: string): Promise<PricingResult> {
+  const c = await ctx();
+  if (!c || !UUID.test(attachmentId)) return { errorCode: "errGeneric" };
+  try { return { success: true, url: await getAttachmentUrl(c.companyId, attachmentId) }; } catch (e) { return fail(e); }
+}
