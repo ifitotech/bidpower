@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260805000015_phase5_purchasing.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260806000016_phase6_customer.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -119,3 +119,15 @@ las instrucciones para borrarlos están en la cabecera del script.
 - **Privacidad**: los documentos de un PO solo los ve quien puede ver ese PO.
 - Pendiente en esta fase: flujo de *excepción* sin documento (el estado existe pero no hay pantalla), correo al supplier y recepción parcial por línea.
 - Migración: `20260805000015_phase5_purchasing.sql`.
+
+## 12. Cliente: Proposal, aprobación y Change Orders (Fase 6)
+
+- **Proposal** = el quote al cliente que ya existía (sigue separado de los pedidos a suppliers). En el detalle: *Enlaces para el cliente* → crear enlace. Crear el primer enlace de un borrador es "enviar": pasa a *Enviado* y espera al cliente. El enlace se muestra **una sola vez** (solo se guarda su hash), vence en 30 días y se puede revocar. No se envía correo: lo compartes tú (WhatsApp/correo).
+- **El cliente** abre `/customer/<token>` sin cuenta: ve su Proposal (líneas, total, términos, contacto de la empresa) y puede **aprobar**, **pedir cambios** o **rechazar**. Al aprobar se guardan su nombre, fecha/hora e IP (según la reporta el servidor de la app). **No es una firma manuscrita** y así se le indica. No ve costos, suppliers, POs ni ganancia.
+- **Al aprobarse**: la Proposal queda *Aprobada*; si el proyecto no tenía valor de contrato, se toma el total aprobado, y un proyecto en *lead/quoted* pasa a *aprobado*.
+- **Una Proposal enviada no se edita**: para cambiarla, *Nueva versión* (copia las líneas, la anterior queda *Reemplazada* y sus enlaces dejan de funcionar; mismo número, versión 2, 3…). Esto lo impone la base de datos.
+- **Pedir cambios**: antes de aprobar, la Proposal pasa a *Cambios pedidos* (espera al Owner) y se crea un **Change Request**; después de aprobada, el Change Request queda abierto sin cambiar la Proposal. Sale en Inicio → "Clientes pidieron cambios".
+- **Change Order**: desde un Change Request (o nuevo) en una Proposal aprobada; líneas con precio (negativo = crédito). Se envía al cliente con su propio enlace; al aprobarse, la diferencia se suma al valor del contrato del proyecto (una sola vez).
+- **Decisión manual**: si el cliente respondió fuera de la app, se puede registrar (queda marcado como manual).
+- Pendiente: PDF/versión imprimible para el cliente en el enlace, avisos por correo y un límite de intentos por IP.
+- Migración: `20260806000016_phase6_customer.sql`.

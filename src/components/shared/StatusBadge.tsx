@@ -54,9 +54,13 @@ export function POStatusBadge({ status }: { status: string }) {
   return <Badge variant={variant}>{label}</Badge>;
 }
 
+const quoteKeys: Record<string, keyof Dictionary> = { changes_requested: "quoteStChangesRequested", superseded: "quoteStSuperseded" };
+
 export function QuoteStatusBadge({ status }: { status: string }) {
-  const label = quoteLabels[status] ?? status;
-  const variant = quoteColors[status] ?? "default";
+  const { t } = useI18n();
+  const key = quoteKeys[status];
+  const label = key ? t(key) : quoteLabels[status] ?? status;
+  const variant = quoteColors[status] ?? (status === "changes_requested" ? "warning" : "default");
   return <Badge variant={variant}>{label}</Badge>;
 }
 

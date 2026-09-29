@@ -1,5 +1,6 @@
 import { countPendingRequests } from "@/lib/services/material-requests";
 import { countAwaitingPricing } from "@/lib/services/pricing-requests";
+import { countCustomerAttention } from "@/lib/services/proposals";
 import { countPOsPendingApproval } from "@/lib/services/purchase-orders";
 import { getCurrentMember, getCurrentProfile } from "@/lib/auth";
 import { getDashboardMetrics } from "@/lib/services/dashboard";
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
     const member = await getCurrentMember();
     if (!member?.company_id) throw new Error("no-company");
     const companyId = member.company_id as string;
-    const [profile, projects, metrics, pendingRequests, pricingResponded, posToApprove] = await Promise.all([
+    const [profile, projects, metrics, pendingRequests, pricingResponded, posToApprove, customerChanges] = await Promise.all([
       getCurrentProfile(),
       getProjects(companyId),
       // Attention counts are optional context; the project list must still render without them.
@@ -25,6 +26,7 @@ export default async function DashboardPage() {
       member.role === "owner" || member.role === "manager" ? countPendingRequests(companyId).catch(() => 0) : Promise.resolve(0),
       member.role === "owner" || member.role === "manager" ? countAwaitingPricing(companyId).catch(() => 0) : Promise.resolve(0),
       member.role === "owner" || member.role === "manager" ? countPOsPendingApproval(companyId).catch(() => 0) : Promise.resolve(0),
+      member.role === "owner" || member.role === "manager" ? countCustomerAttention(companyId).catch(() => 0) : Promise.resolve(0),
     ]);
     const company = member.company as { name?: string } | null;
     const firstName = (profile?.fullName || profile?.email || "").split(/[\s@]/)[0];
@@ -41,6 +43,7 @@ export default async function DashboardPage() {
           materialRequests: pendingRequests,
           pricingResponded,
           posToApprove,
+          customerChanges,
         }}
       />
     );

@@ -22,7 +22,7 @@ export default function DashboardClient({
   companyName: string;
   projects: HomeProject[];
   totalProjects?: number;
-  attention: { invoices: number; quotes: number; purchaseOrders: number; materialRequests?: number; pricingResponded?: number; posToApprove?: number };
+  attention: { invoices: number; quotes: number; purchaseOrders: number; materialRequests?: number; pricingResponded?: number; posToApprove?: number; customerChanges?: number };
   error?: "errNoSupabase" | "errLoadProjects";
 }) {
   const { t } = useI18n();
@@ -36,6 +36,7 @@ export default function DashboardClient({
     ...(isManagerOrAbove ? [{ href: "/materials/requests", icon: <Package className="h-4 w-4" />, title: t("requestsPendingAttention"), count: attention.materialRequests ?? 0 }] : []),
     ...(isManagerOrAbove ? [{ href: "/pricing", icon: <Package className="h-4 w-4" />, title: t("awaitingPricingAttention"), count: attention.pricingResponded ?? 0 }] : []),
     ...(isManagerOrAbove ? [{ href: "/pos", icon: <AlertTriangle className="h-4 w-4" />, title: t("posToApprove"), count: attention.posToApprove ?? 0 }] : []),
+    ...(isManagerOrAbove ? [{ href: "/quotes", icon: <Clock3 className="h-4 w-4" />, title: t("customerAttention"), count: attention.customerChanges ?? 0 }] : []),
   ].filter((item) => item.count > 0);
 
   return (
