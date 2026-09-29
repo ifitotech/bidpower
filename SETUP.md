@@ -87,7 +87,7 @@ las instrucciones para borrarlos están en la cabecera del script.
 
 ## 9. Materiales (Fase 3)
 
-- **Biblioteca** (`/materiales` → `/materials`): ítems de uso frecuente con unidad, categoría, apodos de campo (romex, mud ring…) y favoritos. La gestiona quien tenga el permiso *Gestionar biblioteca* (Owner y Manager por plantilla).
+- **Biblioteca** (`/materials`): ítems de uso frecuente con unidad, categoría, apodos de campo (romex, mud ring…) y favoritos. La gestiona quien tenga el permiso *Gestionar biblioteca* (Owner y Manager por plantilla).
 - **Pedido de material** (`Proyecto → Pedidos de material`): buscar en favoritos/recientes/apodos, agregar texto libre, pegar una lista (WhatsApp/correo/Excel) o usar una lista guardada. Requiere el permiso *Pedir material* y un proyecto visible para la persona.
 - Owner/Manager revisan en `/materials/requests` (también aparece en Inicio → "Necesita atención"). Un pedido es distinto de una Solicitud a proveedores: no envía nada a nadie ni genera precios.
 - Migración nueva: `20260802000011_phase3_materials.sql` (ya incluida en `apply_all_migrations.sql`).
