@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260807000017_phase7_project_control.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260808000018_phase8_electrical_takeoff.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -144,3 +144,13 @@ las instrucciones para borrarlos están en la cabecera del script.
 - Ambas vistas usan `security_invoker`: cada persona ve solo lo que ya podía ver por RLS.
 - `/reports` ahora es solo para Owner/Manager y cuenta solo gastos reales.
 - Migración: `20260807000017_phase7_project_control.sql`.
+
+## 14. Takeoff eléctrico manual (Fase 8) — todo PRELIMINAR
+
+- **No hay IA ni análisis automático de planos, y no se inventa ninguna cantidad.** Lo que existe es una herramienta para que tú cuentes y midas y BidPower sume. (La pantalla vieja "Plan Estimator" era una maqueta que solo guardaba un nombre de archivo; ahora explica esto y lleva a los proyectos.)
+- En cada proyecto → *Takeoffs* (Owner/Manager, o con permiso *Crear Pricing Request*): subir planos como referencia (PDF/imagen, 25 MB), **conteos** por tipo (luminarias, dispositivos, gear, otros), **paneles con circuitos** (breaker A y polos) y **feeders** con longitud, calibre y conduit.
+- **Lista preliminar de materiales** = suma de lo ingresado: conteos iguales se suman; breakers por amperaje y polos (más el main de cada panel: 2 polos monofásico, 3 polos trifásico); un panel por panel; cable = longitud × conductores, tierra y conduit = longitud, todos con un **desperdicio % editable** (supuesto por defecto 10 %, visible). Cada línea muestra su base. No se estiman cable/conduit de circuitos ramales, cajas ni accesorios (se avisa en pantalla).
+- **Verificación**: solo Owner/Manager marcan *Verificado* (queda quién y cuándo). Cualquier cambio a los números lo devuelve a *Sin verificar*; esto lo impone la base de datos.
+- **Envío**: *Enviar como pedido de material* crea un Material Request (líneas de texto, nota PRELIMINAR) que sigue el flujo normal → Pricing Request → PO. Nunca lleva precios.
+- Pendiente: editar filas en su lugar (hoy se borra y se agrega), lectura asistida de planos (requiere proveedor de IA y verificación humana), exportar CSV/PDF.
+- Migración: `20260808000018_phase8_electrical_takeoff.sql`.

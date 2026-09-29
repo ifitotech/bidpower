@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays, Package, ClipboardList, FileText, FolderOpen, MapPin, Pencil, Plus, Receipt, ShoppingCart, User } from "lucide-react";
+import { ArrowLeft, CalendarDays, Package, Zap, ClipboardList, FileText, FolderOpen, MapPin, Pencil, Plus, Receipt, ShoppingCart, User } from "lucide-react";
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
@@ -64,6 +64,7 @@ export default function ProjectDetailClient({ project: p, error, team = [], canM
   }
 
   const tools = [
+    ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: `/projects/${p.id}/takeoff`, label: t("takeoffs"), icon: Zap }] : []),
     ...(permissions.can_request_material || isManagerOrAbove ? [{ href: `/projects/${p.id}/materials`, label: t("materialRequests"), icon: Package }] : []),
     { href: "/expenses", label: t("expenses"), icon: Receipt },
     { href: "/pos", label: t("toolPOs"), icon: ShoppingCart },

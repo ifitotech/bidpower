@@ -26,7 +26,9 @@ Es el trabajo operativo del cliente. Contiene cliente, dirección, descripción,
 - Manager: puede operar jobs, quotes y revisar operaciones según permisos.
 - Employee: debe ver solo la información necesaria para realizar su trabajo.
 
-## Fases
+## Fases (historial de construcción inicial)
+
+> La hoja de ruta vigente y su numeración están en `PRODUCT_DIRECTION.md` (fases 0–10). Esta lista solo describe lo que se construyó primero.
 
 - Fase 1: Auth y empresa — núcleo completado.
 - Fase 2: Dashboard — métricas reales y estados vacíos.
