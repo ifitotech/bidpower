@@ -64,9 +64,15 @@ async function reviewerAction(requestId: string, fn: (companyId: string, userId:
   try { await fn(c.companyId, c.userId); refresh(requestId); return { success: true }; } catch (e) { return fail(e); }
 }
 
-export const markSentAction = (requestId: string) => reviewerAction(requestId, (co) => markPricingSent(co, requestId));
-export const closeRequestAction = (requestId: string) => reviewerAction(requestId, (co) => closePricingRequest(co, requestId));
-export const cancelPricingAction = (requestId: string) => reviewerAction(requestId, (co) => cancelPricingRequest(co, requestId));
+export async function markSentAction(requestId: string): Promise<PricingResult> {
+  return reviewerAction(requestId, (co) => markPricingSent(co, requestId));
+}
+export async function closeRequestAction(requestId: string): Promise<PricingResult> {
+  return reviewerAction(requestId, (co) => closePricingRequest(co, requestId));
+}
+export async function cancelPricingAction(requestId: string): Promise<PricingResult> {
+  return reviewerAction(requestId, (co) => cancelPricingRequest(co, requestId));
+}
 
 export async function awardResponseAction(requestId: string, responseId: string): Promise<PricingResult> {
   if (!UUID.test(responseId)) return { errorCode: "errGeneric" };
