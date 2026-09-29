@@ -1,4 +1,4 @@
--- Project Harbor Initial Schema
+-- Bidpower Initial Schema
 -- Multi-tenant SaaS foundation
 -- Run this in your Supabase SQL Editor
 

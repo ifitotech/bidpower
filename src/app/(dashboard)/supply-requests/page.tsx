@@ -17,9 +17,9 @@ export default function SupplyRequestsPage() {
   const [status, setStatus] = useState("all");
   const [open, setOpen] = useState(false);
   useEffect(() => {
-    const saved = window.localStorage.getItem("harbor:supply-requests");
+    const saved = window.localStorage.getItem("bidpower:supply-requests");
     if (saved) {
-      try { setRequests(JSON.parse(saved) as SupplyRequest[]); } catch { window.localStorage.removeItem("harbor:supply-requests"); }
+      try { setRequests(JSON.parse(saved) as SupplyRequest[]); } catch { window.localStorage.removeItem("bidpower:supply-requests"); }
     }
   }, []);
   const filtered = useMemo(() => requests.filter((r) => `${r.supplier} ${r.project} ${r.id} ${r.partNumber} ${r.description}`.toLowerCase().includes(query.toLowerCase()) && (status === "all" || r.status === status)), [requests, query, status]);
@@ -28,7 +28,7 @@ export default function SupplyRequestsPage() {
     const next = { id: `SR-${String(requests.length + 1).padStart(3, "0")}`, supplier: String(formData.get("supplier") || "New supplier"), project: String(formData.get("project") || "No project"), items: Number(formData.get("items") || 1), partNumber: String(formData.get("partNumber") || "Manual item"), description: String(formData.get("description") || "Material description pending"), unit: String(formData.get("unit") || "each"), notes: String(formData.get("notes") || ""), status: "Waiting for pricing", date: "Today" };
     const updated = [next, ...requests];
     setRequests(updated);
-    window.localStorage.setItem("harbor:supply-requests", JSON.stringify(updated));
+    window.localStorage.setItem("bidpower:supply-requests", JSON.stringify(updated));
     setOpen(false);
   }
 

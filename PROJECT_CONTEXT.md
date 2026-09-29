@@ -1,8 +1,8 @@
-# Project Harbor (antes ContractorOS) — Contexto para desarrolladores e IAs
+# Bidpower (antes ContractorOS) — Contexto para desarrolladores e IAs
 
 ## Objetivo del producto
 
-Project Harbor ayuda al dueño de una empresa de servicios a operar el negocio completo: captar clientes, organizar jobs, preparar quotes, pedir precios a suppliers, facturar, registrar gastos, controlar purchase orders, asignar empleados, guardar archivos y revisar reportes.
+Bidpower ayuda al dueño de una empresa de servicios a operar el negocio completo: captar clientes, organizar jobs, preparar quotes, pedir precios a suppliers, facturar, registrar gastos, controlar purchase orders, asignar empleados, guardar archivos y revisar reportes.
 
 La prioridad es que una persona trabajando desde el teléfono pueda hacer las tareas principales rápidamente.
 
@@ -73,4 +73,4 @@ No exponer nunca secrets, service role keys o API keys de proveedores en el clie
 
 ## Instrucción para otra IA
 
-Antes de modificar Project Harbor, leer `README.md`, este archivo y las migraciones Supabase. Preservar la interfaz existente, comprobar rutas relacionadas, crear migraciones nuevas para cambios de DB y ejecutar typecheck/build antes de entregar.
+Antes de modificar Bidpower, leer `README.md`, este archivo y las migraciones Supabase. Preservar la interfaz existente, comprobar rutas relacionadas, crear migraciones nuevas para cambios de DB y ejecutar typecheck/build antes de entregar.

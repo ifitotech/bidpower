@@ -1,7 +1,7 @@
 {
-  "name": "Project Harbor",
-  "short_name": "Project Harbor",
-  "description": "Project Harbor: tus proyectos, clientes y compras en un solo lugar",
+  "name": "Bidpower",
+  "short_name": "Bidpower",
+  "description": "Bidpower: tus proyectos, clientes y compras en un solo lugar",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",

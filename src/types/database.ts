@@ -1,4 +1,4 @@
-// Project Harbor - Core Database Types
+// Bidpower - Core Database Types
 // Prepared for multi-tenant SaaS architecture
 
 export type UserRole = "owner" | "manager" | "employee";

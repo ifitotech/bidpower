@@ -4,13 +4,13 @@ import { ThemeProvider } from "@/lib/theme/provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Project Harbor",
-  description: "Project Harbor: tus proyectos, clientes y compras en un solo lugar",
+  title: "Bidpower",
+  description: "Bidpower: tus proyectos, clientes y compras en un solo lugar",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Project Harbor",
+    title: "Bidpower",
   },
 };
 

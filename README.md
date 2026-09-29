@@ -1,8 +1,8 @@
-# Project Harbor
+# Bidpower
 
-> Project Harbor (antes ContractorOS). El código y el paquete ya usan el nombre nuevo; el repositorio de GitHub y el proyecto de Vercel se renombran desde sus paneles.
+> Bidpower (antes ContractorOS y Project Harbor). El código y el paquete ya usan el nombre nuevo; el repositorio de GitHub y el proyecto de Vercel se renombran desde sus paneles.
 
-Project Harbor es un sistema operativo SaaS, mobile-first, para empresas de servicios como electricidad, HVAC, plomería, remodelación y construcción.
+Bidpower es un sistema operativo SaaS, mobile-first, para empresas de servicios como electricidad, HVAC, plomería, remodelación y construcción.
 
 Su objetivo es centralizar clientes, jobs, quotes, invoices, gastos, purchase orders, empleados, calendario, archivos, reportes y configuración de la empresa en una sola aplicación.
 

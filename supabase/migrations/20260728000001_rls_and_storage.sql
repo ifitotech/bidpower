@@ -1,4 +1,4 @@
--- Project Harbor — RLS policies completas + Storage bucket
+-- Bidpower — RLS policies completas + Storage bucket
 -- Ejecutar después de la migración inicial
 
 -- =====================================================

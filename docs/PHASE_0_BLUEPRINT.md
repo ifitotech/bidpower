@@ -1,4 +1,4 @@
-# Project Harbor — Fase 0: Master Blueprint
+# Bidpower — Fase 0: Master Blueprint
 
 Documento de diseño. Complementa `PRODUCT_DIRECTION.md`. No hay código asociado.
 Las decisiones marcadas **[por confirmar]** usan la recomendación por defecto hasta que el Owner del producto responda.

@@ -1,4 +1,4 @@
-# Project Harbor development instructions
+# Bidpower development instructions
 
 Read `README.md`, `PROJECT_CONTEXT.md` and `PRODUCT_DIRECTION.md` (product source of truth: vocabulary, principles, phases) before making significant changes.
 Work phase by phase; do not start the next phase until the user confirms the previous one.

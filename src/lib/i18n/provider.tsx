@@ -17,7 +17,7 @@ import {
 } from "./index";
 import "@/lib/storage";
 
-const STORAGE_KEY = "harbor-locale";
+const STORAGE_KEY = "bidpower-locale";
 
 type I18nContextValue = {
   locale: Locale;

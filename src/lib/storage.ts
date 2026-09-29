@@ -1,13 +1,19 @@
-// Browser storage keys. The product used to be called ContractorOS; keys were renamed to "harbor".
-// Old values are copied once so nobody loses saved preferences or drafts.
+// Browser storage keys. The product went ContractorOS → Bidpower; old keys are copied once
+// so nobody loses saved preferences or drafts.
 
 const LEGACY_KEYS: Record<string, string> = {
-  "harbor-theme": "harbor-theme",
-  "harbor-locale": "harbor-locale",
-  "harbor:material-list": "harbor:material-list",
-  "harbor:plan-estimator-history": "harbor:plan-estimator-history",
-  "harbor:settings-defaults": "harbor:settings-defaults",
-  "harbor:supply-requests": "harbor:supply-requests",
+  "contractoros-theme": "bidpower-theme",
+  "contractoros-locale": "bidpower-locale",
+  "contractoros:material-list": "bidpower:material-list",
+  "contractoros:plan-estimator-history": "bidpower:plan-estimator-history",
+  "contractoros:settings-defaults": "bidpower:settings-defaults",
+  "contractoros:supply-requests": "bidpower:supply-requests",
+  "harbor-theme": "bidpower-theme",
+  "harbor-locale": "bidpower-locale",
+  "harbor:material-list": "bidpower:material-list",
+  "harbor:plan-estimator-history": "bidpower:plan-estimator-history",
+  "harbor:settings-defaults": "bidpower:settings-defaults",
+  "harbor:supply-requests": "bidpower:supply-requests",
 };
 
 export function migrateLegacyStorage() {

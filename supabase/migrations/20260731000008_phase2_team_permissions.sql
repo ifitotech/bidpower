@@ -1,4 +1,4 @@
--- Project Harbor — Phase 2: Team & Permissions
+-- Bidpower — Phase 2: Team & Permissions
 --
 -- * Individual permissions per member (on top of owner / manager / employee)
 -- * Permission audit trail

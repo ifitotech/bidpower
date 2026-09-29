@@ -2,7 +2,7 @@ import type { Dictionary } from "./es";
 
 /** Português (Brasil) — listo para activar cuando se necesite */
 const pt: Dictionary = {
-  appName: "Project Harbor",
+  appName: "Bidpower",
   appTagline: "O sistema operacional da sua empresa",
   save: "Salvar",
   cancel: "Cancelar",
@@ -212,7 +212,7 @@ const pt: Dictionary = {
   newPasswordHint: "Use pelo menos 8 caracteres.",
   savePassword: "Salvar senha",
 
-  // Phase 1 — Project Harbor foundation
+  // Phase 1 — Bidpower foundation
   greetingMorning: "Bom dia, {name}",
   greetingAfternoon: "Boa tarde, {name}",
   greetingEvening: "Boa noite, {name}",
@@ -250,7 +250,7 @@ const pt: Dictionary = {
   errLoadProjects: "Não foi possível carregar seus projetos. Tente novamente.",
   errLoadProject: "Não foi possível carregar este projeto.",
   errProjectRequired: "O nome do projeto e o cliente são obrigatórios.",
-  errNoSupabase: "O Project Harbor não está conectado ao Supabase. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+  errNoSupabase: "O Bidpower não está conectado ao Supabase. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.",
   checkEmailToConfirm: "Conta criada. Confirme seu e-mail e depois faça login.",
   tryAgain: "Tentar novamente",
 

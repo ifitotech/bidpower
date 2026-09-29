@@ -1,4 +1,4 @@
--- Project Harbor — Phase 1: atomic company bootstrap
+-- Bidpower — Phase 1: atomic company bootstrap
 --
 -- Signing up must create, in one transaction and without weakening RLS:
 --   profile -> company -> owner membership -> company settings -> Free plan -> default categories

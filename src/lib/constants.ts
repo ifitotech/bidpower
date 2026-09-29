@@ -45,5 +45,5 @@ export const BUSINESS_TYPES = [
   { value: "other", label: "Otro" },
 ] as const;
 
-export const APP_NAME = "Project Harbor";
+export const APP_NAME = "Bidpower";
 export const APP_TAGLINE = "El sistema operativo de tu empresa";

@@ -1,4 +1,4 @@
-# Project Harbor — Guía de conexión
+# Bidpower — Guía de conexión
 
 ## 1. Supabase
 

@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 export type Theme = "light" | "dark" | "system";import "@/lib/storage";
 
-const STORAGE_KEY = "harbor-theme";
+const STORAGE_KEY = "bidpower-theme";
 
 const ThemeContext = createContext<{
   theme: Theme;
