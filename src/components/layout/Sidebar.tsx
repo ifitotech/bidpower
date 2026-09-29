@@ -24,11 +24,14 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
   const pathname = usePathname();
   const { t } = useI18n();
 
+  const isEmployee = role === "employee";
   const workNav = [
     { href: "/dashboard", label: t("navHome"), icon: Home },
     { href: "/projects", label: t("navProjects"), icon: Briefcase },
-    { href: "/clients", label: t("navClients"), icon: Users },
-    { href: "/quotes", label: "Supply & Purchase", icon: FileText },
+    ...(isEmployee ? [] : [
+      { href: "/clients", label: t("navClients"), icon: Users },
+      { href: "/quotes", label: "Supply & Purchase", icon: FileText },
+    ]),
   ];
 
   const operationsNav = [
@@ -37,8 +40,8 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
   ];
 
   const managementNav = [
-    { href: "/employees", label: t("navEmployees"), icon: UserCog },
-    { href: "/my-company", label: t("myCompany"), icon: Settings },
+    ...(role === "owner" ? [{ href: "/employees", label: t("navEmployees"), icon: UserCog }] : []),
+    ...(isEmployee ? [] : [{ href: "/my-company", label: t("myCompany"), icon: Settings }]),
     { href: "/more", label: "More", icon: Settings },
   ];
 

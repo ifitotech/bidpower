@@ -125,3 +125,9 @@ Needs Attention (Fase 7) se calcula desde estos campos: material solicitado, sup
 3. Permiso de biblioteca para empleados (por defecto: solo pedir, el Owner aprueba).
 4. Cómo se envía hoy la lista al supply (email, WhatsApp, PDF, llamada).
 5. Confirmación de la Fase 1 con Supabase real.
+
+## 11. Estado de implementación
+
+- **Fase 2 (Team & Permissions):** implementada. Migración `20260731000008_phase2_team_permissions.sql`
+  (permisos por miembro con plantillas, auditoría, RLS por proyecto asignado y por permiso, invitaciones por token,
+  protección del Owner). Aprobación por encima del límite de PO: pendiente, se resuelve en Fase 5.

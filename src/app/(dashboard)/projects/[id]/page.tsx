@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCurrentMember } from "@/lib/auth";
 import { getProjectById } from "@/lib/services/projects";
+import { getProjectTeam } from "@/lib/services/employees";
 import ProjectDetailClient from "./ProjectDetailClient";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,5 +23,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     return <ProjectDetailClient error="errLoadProject" />;
   }
   if (!project) notFound();
-  return <ProjectDetailClient project={project} />;
+
+  // Owners and managers assign people to the project.
+  let team: Awaited<ReturnType<typeof getProjectTeam>> = [];
+  let canManageTeam = false;
+  try {
+    const member = await getCurrentMember();
+    if (member?.company_id && (member.role === "owner" || member.role === "manager")) {
+      canManageTeam = true;
+      team = await getProjectTeam(id, member.company_id as string);
+    }
+  } catch {
+    // The rest of the project still renders.
+  }
+  return <ProjectDetailClient project={project} team={team} canManageTeam={canManageTeam} />;
 }

@@ -1,21 +1,60 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarDays, ClipboardList, FileText, FolderOpen, MapPin, Pencil, Plus, Receipt, ShoppingCart, User } from "lucide-react";
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
+import { usePermissions } from "@/lib/permissions-context";
+import type { Dictionary } from "@/lib/i18n/dictionaries/es";
+import { setProjectAssignmentAction } from "@/app/(dashboard)/actions";
 
 type Project = {
   id: string; name: string; status: string; description?: string | null; address?: string | null; start_date?: string | null;
   contract_value: number; budget_total: number; budget_materials: number; budget_labor: number; budget_subcontractors: number; budget_other: number;
-  spentTotal: number; profit: number; margin: number; overBudget: boolean;
+  spentTotal: number; profit: number; margin: number; overBudget: boolean; costsHidden?: boolean; profitHidden?: boolean;
   client?: { name?: string; contact_name?: string | null; phone?: string | null } | null;
   expenses?: { id: string; amount: number; vendor_name?: string | null; category?: { name?: string } | null }[];
 };
 
-export default function ProjectDetailClient({ project: p, error }: { project?: Project; error?: "errNoSupabase" | "errLoadProject" }) {
+type TeamPerson = { userId: string; name: string; role: string; assigned: boolean };
+
+function ProjectTeam({ projectId, people }: { projectId: string; people: TeamPerson[] }) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function toggle(person: TeamPerson) {
+    setBusy(person.userId);
+    setError(null);
+    const form = new FormData();
+    form.set("projectId", projectId);
+    form.set("userId", person.userId);
+    form.set("assigned", String(!person.assigned));
+    const result = await setProjectAssignmentAction(form).catch(() => ({ errorCode: "errGeneric" }));
+    if (result.errorCode) setError(t(result.errorCode as keyof Dictionary));
+    setBusy(null);
+    router.refresh();
+  }
+
+  return <section className="mt-4">
+    <h2 className="mb-2 font-semibold">{t("projectTeam")}</h2>
+    {error && <div role="alert" className="mb-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
+    <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+      {people.length === 0 ? <p className="px-4 py-6 text-center text-sm text-slate-400">{t("noTeamCandidates")}</p> : people.map((person) => <div key={person.userId} className="flex items-center gap-3 px-4 py-3 text-sm">
+        <div className="min-w-0 flex-1"><p className="truncate font-medium">{person.name}</p><p className="text-xs text-slate-500">{person.role === "manager" ? t("manager") : t("employee")}</p></div>
+        <button type="button" disabled={busy === person.userId} onClick={() => toggle(person)} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${person.assigned ? "border-slate-200 text-slate-600" : "border-brand-500 bg-brand-50 text-brand-700"}`}>{person.assigned ? t("unassignMember") : t("assignMember")}</button>
+      </div>)}
+    </div>
+  </section>;
+}
+
+export default function ProjectDetailClient({ project: p, error, team = [], canManageTeam = false }: { project?: Project; error?: "errNoSupabase" | "errLoadProject"; team?: TeamPerson[]; canManageTeam?: boolean }) {
   const { t, locale } = useI18n();
+  const { isManagerOrAbove } = usePermissions();
   const back = <Link href="/projects" aria-label={t("projects")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100"><ArrowLeft className="h-4 w-4" /></Link>;
 
   if (!p) {
@@ -26,11 +65,15 @@ export default function ProjectDetailClient({ project: p, error }: { project?: P
   const tools = [
     { href: "/expenses", label: t("expenses"), icon: Receipt },
     { href: "/pos", label: t("toolPOs"), icon: ShoppingCart },
-    { href: "/quotes", label: t("toolQuotes"), icon: FileText },
-    { href: "/invoices", label: t("toolInvoices"), icon: ClipboardList },
+    ...(isManagerOrAbove ? [
+      { href: "/quotes", label: t("toolQuotes"), icon: FileText },
+      { href: "/invoices", label: t("toolInvoices"), icon: ClipboardList },
+    ] : []),
     { href: "/files", label: t("toolFiles"), icon: FolderOpen },
     { href: "/calendar", label: t("calendar"), icon: CalendarDays },
   ];
+  const costsHidden = Boolean(p.costsHidden);
+  const profitHidden = Boolean(p.profitHidden);
 
   return <div className="mx-auto max-w-4xl p-4 md:p-8">
     <div className="mb-6 flex items-start gap-3">
@@ -43,15 +86,15 @@ export default function ProjectDetailClient({ project: p, error }: { project?: P
           {p.address && <span className="inline-flex min-w-0 items-center gap-1"><MapPin className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{p.address}</span></span>}
         </div>
       </div>
-      <Link href={`/projects/${p.id}/edit`} aria-label={t("editProject")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100"><Pencil className="h-4 w-4" /></Link>
+      {isManagerOrAbove && <Link href={`/projects/${p.id}/edit`} aria-label={t("editProject")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100"><Pencil className="h-4 w-4" /></Link>}
     </div>
 
     <div className="grid gap-4 md:grid-cols-2">
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="mb-3 font-semibold">{t("projectInfo")}</h2>
         <dl className="space-y-2 text-sm">
-          <div className="flex justify-between gap-3"><dt className="text-slate-500">{t("contractValue")}</dt><dd className="font-semibold">{formatCurrency(Number(p.contract_value))}</dd></div>
-          <div className="flex justify-between gap-3"><dt className="text-slate-500">{t("profit")}</dt><dd className={`font-semibold ${p.profit >= 0 ? "text-green-600" : "text-red-600"}`}>{formatCurrency(p.profit)} · {p.margin.toFixed(1)}%</dd></div>
+          {!costsHidden && <div className="flex justify-between gap-3"><dt className="text-slate-500">{t("contractValue")}</dt><dd className="font-semibold">{formatCurrency(Number(p.contract_value))}</dd></div>}
+          {!profitHidden && <div className="flex justify-between gap-3"><dt className="text-slate-500">{t("profit")}</dt><dd className={`font-semibold ${p.profit >= 0 ? "text-green-600" : "text-red-600"}`}>{formatCurrency(p.profit)} · {p.margin.toFixed(1)}%</dd></div>}
           {p.start_date && <div className="flex justify-between gap-3"><dt className="text-slate-500">{t("startDate")}</dt><dd className="font-medium">{formatDate(p.start_date, locale)}</dd></div>}
           {p.client?.contact_name && <div className="flex justify-between gap-3"><dt className="text-slate-500">{t("contactPerson")}</dt><dd className="font-medium">{p.client.contact_name}</dd></div>}
           {p.client?.phone && <div className="flex justify-between gap-3"><dt className="text-slate-500">{t("phone")}</dt><dd className="font-medium">{p.client.phone}</dd></div>}
@@ -59,7 +102,7 @@ export default function ProjectDetailClient({ project: p, error }: { project?: P
         {p.description && <div className="mt-4 border-t border-slate-100 pt-3"><p className="mb-1 text-xs font-semibold uppercase text-slate-400">{t("notes")}</p><p className="whitespace-pre-line text-sm text-slate-700">{p.description}</p></div>}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
+      {!costsHidden && <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="mb-3 font-semibold">{t("budgetVsExpenses")}</h2>
         <div className="flex justify-between text-sm"><span className="text-slate-500">{t("budget")}</span><span className="font-medium">{formatCurrency(Number(p.budget_total))}</span></div>
         <div className="mt-2 flex justify-between text-sm"><span className="text-slate-500">{t("spent")}</span><span className={`font-medium ${p.overBudget ? "text-red-600" : ""}`}>{formatCurrency(p.spentTotal)}</span></div>
@@ -70,7 +113,7 @@ export default function ProjectDetailClient({ project: p, error }: { project?: P
           <div><p className="text-slate-400">{t("subcontractors")}</p><p className="font-medium">{formatCurrency(Number(p.budget_subcontractors))}</p></div>
           <div><p className="text-slate-400">{t("other")}</p><p className="font-medium">{formatCurrency(Number(p.budget_other))}</p></div>
         </div>
-      </section>
+      </section>}
     </div>
 
     <section className="mt-4">
@@ -80,11 +123,13 @@ export default function ProjectDetailClient({ project: p, error }: { project?: P
       </div>
     </section>
 
-    <section className="mt-4">
+    {canManageTeam && <ProjectTeam projectId={p.id} people={team} />}
+
+    {!costsHidden && <section className="mt-4">
       <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold">{t("projectExpenses")}</h2><Link href="/expenses/new" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600"><Plus className="h-3.5 w-3.5" />{t("newExpense")}</Link></div>
       <div className="divide-y divide-slate-50 rounded-xl border border-slate-200 bg-white">
         {(p.expenses || []).length === 0 ? <div className="px-4 py-8 text-center text-sm text-slate-400">{t("noResults")}</div> : p.expenses?.map((e) => <div key={e.id} className="flex justify-between gap-3 px-4 py-3 text-sm"><div className="min-w-0"><p className="truncate font-medium">{e.vendor_name || t("vendor")}</p><p className="truncate text-xs text-slate-500">{e.category?.name || t("category")}</p></div><p className="font-semibold">{formatCurrency(Number(e.amount))}</p></div>)}
       </div>
-    </section>
+    </section>}
   </div>;
 }

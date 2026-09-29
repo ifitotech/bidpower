@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Routes reachable without a session. Everything else requires authentication.
-const PUBLIC_PREFIXES = ["/login", "/register", "/forgot-password", "/reset-password", "/auth", "/api/health"];
+const PUBLIC_PREFIXES = ["/login", "/register", "/forgot-password", "/reset-password", "/auth", "/invite", "/api/health"];
 // Auth screens that a signed-in user should never be stuck on.
 const AUTH_ONLY_PREFIXES = ["/login", "/register", "/forgot-password"];
 

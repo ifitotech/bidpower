@@ -5,6 +5,7 @@ import { AlertTriangle, ChevronRight, Clock3, MapPin, Plus, Receipt } from "luci
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { useI18n } from "@/lib/i18n/provider";
 import { APP_NAME } from "@/lib/constants";
+import { usePermissions } from "@/lib/permissions-context";
 
 type HomeProject = { id: string; name: string; status: string; address?: string | null; clientName?: string | null };
 
@@ -24,6 +25,7 @@ export default function DashboardClient({
   error?: "errNoSupabase" | "errLoadProjects";
 }) {
   const { t } = useI18n();
+  const { isManagerOrAbove } = usePermissions();
   const hour = new Date().getHours();
   const greetingKey = hour < 12 ? "greetingMorning" : hour < 19 ? "greetingAfternoon" : "greetingEvening";
   const attentionItems = [
@@ -62,15 +64,15 @@ export default function DashboardClient({
           <h2 className="text-lg font-bold">{t("projects")}</h2>
           <div className="flex items-center gap-3">
             {totalProjects > projects.length && <Link href="/projects" className="text-xs font-semibold text-brand-600">{t("viewAll")} ({totalProjects})</Link>}
-            <Link href="/projects/new" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-700"><Plus className="h-4 w-4" />{t("newProject")}</Link>
+            {isManagerOrAbove && <Link href="/projects/new" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-700"><Plus className="h-4 w-4" />{t("newProject")}</Link>}
           </div>
         </div>
 
         {projects.length === 0 && !error ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
-            <p className="font-semibold">{t("noProjectsYet")}</p>
-            <p className="mt-1 text-sm text-slate-500">{t("noProjectsHint")}</p>
-            <Link href="/projects/new" className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"><Plus className="h-4 w-4" />{t("newProject")}</Link>
+            <p className="font-semibold">{isManagerOrAbove ? t("noProjectsYet") : t("noProjectsAssigned")}</p>
+            <p className="mt-1 text-sm text-slate-500">{isManagerOrAbove ? t("noProjectsHint") : t("noProjectsAssignedHint")}</p>
+            {isManagerOrAbove && <Link href="/projects/new" className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"><Plus className="h-4 w-4" />{t("newProject")}</Link>}
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

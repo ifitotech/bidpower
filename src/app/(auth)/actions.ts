@@ -11,7 +11,12 @@ function hasSupabaseEnv() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
+const INVITE_TOKEN = /^[a-f0-9]{64}$/;
+
 export async function registerAction(formData: FormData): Promise<AuthResult> {
+  const inviteToken = String(formData.get("invite") || "");
+  if (inviteToken) return registerInvitedAction(formData, inviteToken);
+
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
   const fullName = String(formData.get("fullName") || "").trim();
@@ -59,6 +64,39 @@ export async function registerAction(formData: FormData): Promise<AuthResult> {
   redirect("/dashboard");
 }
 
+// Invited people join the inviting company; no company of their own is created.
+async function registerInvitedAction(formData: FormData, inviteToken: string): Promise<AuthResult> {
+  const email = String(formData.get("email") || "").trim();
+  const password = String(formData.get("password") || "");
+  const fullName = String(formData.get("fullName") || "").trim();
+
+  if (!INVITE_TOKEN.test(inviteToken)) return { errorCode: "inviteInvalid" };
+  if (!email || !password || !fullName) return { errorCode: "errMissingFields" };
+  if (password.length < 8) return { errorCode: "errPasswordShort" };
+  if (!hasSupabaseEnv()) return { errorCode: "errNoSupabase" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { full_name: fullName, invite_token: inviteToken },
+      ...(process.env.NEXT_PUBLIC_SITE_URL ? { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` } : {}),
+    },
+  });
+  if (error) {
+    if (/already registered|already exists/i.test(error.message)) return { errorCode: "errEmailExists" };
+    return { error: error.message };
+  }
+  if (!data.user || (data.user.identities && data.user.identities.length === 0)) return { errorCode: "errEmailExists" };
+  // Email confirmation on: the invitation is accepted on first sign-in (see getCurrentMember).
+  if (!data.session) return { successCode: "checkEmailToConfirm" };
+
+  const { error: acceptError } = await supabase.rpc("accept_invitation", { p_token: inviteToken });
+  if (acceptError) return { errorCode: /mismatch/.test(acceptError.message) ? "inviteWrongEmail" : "inviteInvalid" };
+  redirect("/dashboard");
+}
+
 export async function loginAction(formData: FormData): Promise<AuthResult> {
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
@@ -74,6 +112,9 @@ export async function loginAction(formData: FormData): Promise<AuthResult> {
     return { error: error.message };
   }
 
+  // Coming from an invitation link: go back to it so it can be accepted.
+  const invite = String(formData.get("invite") || "");
+  if (INVITE_TOKEN.test(invite)) redirect(`/invite/${invite}`);
   redirect("/dashboard");
 }
 

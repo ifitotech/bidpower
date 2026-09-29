@@ -5,16 +5,20 @@ import { usePathname } from "next/navigation";
 import { Home, FileText, Menu, Briefcase, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
+import { usePermissions } from "@/lib/permissions-context";
 
 export function BottomNav() {
   const pathname = usePathname();
   const { t } = useI18n();
+  const { role } = usePermissions();
 
   const items = [
     { href: "/dashboard", label: t("navHome"), icon: Home },
     { href: "/projects", label: t("navProjects"), icon: Briefcase },
-    { href: "/clients", label: t("navClients"), icon: Users },
-    { href: "/quotes", label: "Supply & Purchase", icon: FileText },
+    ...(role === "employee" ? [] : [
+      { href: "/clients", label: t("navClients"), icon: Users },
+      { href: "/quotes", label: "Supply & Purchase", icon: FileText },
+    ]),
     { href: "/more", label: "More", icon: Menu },
   ];
 
