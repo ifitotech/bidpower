@@ -1,167 +1,94 @@
 "use client";
 
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  Briefcase,
-  CheckCircle2,
-  ChevronRight,
-  Clock3,
-  DollarSign,
-  FileText,
-  Plus,
-  Receipt,
-  TrendingUp,
-  Users,
-} from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { AlertTriangle, ChevronRight, Clock3, MapPin, Plus, Receipt } from "lucide-react";
+import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { useI18n } from "@/lib/i18n/provider";
+import { APP_NAME } from "@/lib/constants";
 
-type Metrics = {
-  activeProjectsCount: number;
-  completedProjectsCount: number;
-  employeesWorking: number;
-  pendingInvoices: number;
-  totalContractValue: number;
-  totalSpent: number;
-  totalProfit: number;
-  margin: number;
-  pendingQuotes: number;
-  posWithoutDoc: number;
-  expensesThisMonth: number;
-};
-
-type Activity = {
-  id: string;
-  action: string;
-  entity_type: string;
-  created_at: string;
-  user?: { full_name?: string } | null;
-};
+type HomeProject = { id: string; name: string; status: string; address?: string | null; clientName?: string | null };
 
 export default function DashboardClient({
-  metrics,
+  firstName,
   companyName,
-  isDemo,
-  activity = [],
+  projects,
+  totalProjects = projects.length,
+  attention,
+  error,
 }: {
-  metrics?: Metrics;
-  activity?: Activity[];
+  firstName: string;
   companyName: string;
-  isDemo: boolean;
+  projects: HomeProject[];
+  totalProjects?: number;
+  attention: { invoices: number; quotes: number; purchaseOrders: number };
+  error?: "errNoSupabase" | "errLoadProjects";
 }) {
   const { t } = useI18n();
-  const data = metrics ?? {
-    activeProjectsCount: 0,
-    completedProjectsCount: 0,
-    employeesWorking: 0,
-    pendingInvoices: 0,
-    totalContractValue: 0,
-    totalSpent: 0,
-    totalProfit: 0,
-    margin: 0,
-    pendingQuotes: 0,
-    posWithoutDoc: 0,
-    expensesThisMonth: 0,
-  };
-  const attentionCount = data.pendingInvoices + data.pendingQuotes + data.posWithoutDoc;
+  const hour = new Date().getHours();
+  const greetingKey = hour < 12 ? "greetingMorning" : hour < 19 ? "greetingAfternoon" : "greetingEvening";
+  const attentionItems = [
+    { href: "/invoices", icon: <Receipt className="h-4 w-4" />, title: t("attentionInvoices"), count: attention.invoices },
+    { href: "/quotes", icon: <Clock3 className="h-4 w-4" />, title: t("attentionQuotes"), count: attention.quotes },
+    { href: "/pos", icon: <AlertTriangle className="h-4 w-4" />, title: t("posWithoutDoc"), count: attention.purchaseOrders },
+  ].filter((item) => item.count > 0);
 
   return (
-    <div className="min-w-0 p-4 pb-8 md:p-8">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="mb-1 text-sm font-medium text-brand-600">Business overview</p>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t("dashboard")}</h1>
-          <p className="mt-1 text-sm text-slate-500">{companyName || t("demoMode")}</p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/projects/new" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:border-brand-300">
-            <Plus className="h-4 w-4" /> New job
-          </Link>
-          <Link href="/quotes/new" className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700">
-            <FileText className="h-4 w-4" /> New quote
-          </Link>
-        </div>
+    <div className="mx-auto min-w-0 max-w-5xl p-4 pb-8 md:p-8">
+      <header className="mb-6">
+        <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">{APP_NAME}</p>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{firstName ? t(greetingKey, { name: firstName }) : t("navHome")}</h1>
+        {companyName && <p className="mt-1 text-sm text-slate-500">{companyName}</p>}
       </header>
 
-      {isDemo && <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800"><strong>{t("demoMode")}.</strong> {t("demoModeHint")}</div>}
+      {error && <div role="alert" className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{t(error)}</div>}
 
-      <section className="relative mb-6 overflow-hidden rounded-2xl bg-slate-950 p-5 text-white shadow-xl shadow-slate-950/10 md:p-7">
-        <div className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-brand-500/20 blur-3xl" />
-        <div className="relative grid gap-6 md:grid-cols-[1.2fr_1fr] md:items-end">
-          <div>
-            <p className="text-sm font-medium text-slate-300">Active work value</p>
-            <p className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">{formatCurrency(data.totalContractValue)}</p>
-            <p className="mt-2 max-w-md text-sm text-slate-400">Your current active and approved jobs, before expenses.</p>
+      {attentionItems.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-2 text-sm font-bold">{t("needsAttention")}</h2>
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+            {attentionItems.map((item) => (
+              <Link key={item.href} href={item.href} className="flex min-w-0 items-center gap-3 rounded-xl border border-amber-100 bg-amber-50/60 p-3 transition hover:border-amber-300">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">{item.icon}</span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.title}</span>
+                <span className="flex items-center gap-1 text-sm font-bold text-slate-700">{item.count}<ChevronRight className="h-4 w-4 text-slate-400" /></span>
+              </Link>
+            ))}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <SummaryStat label="Estimated profit" value={formatCurrency(data.totalProfit)} detail={`${Math.round(data.margin)}% margin`} positive />
-            <SummaryStat label="Spent to date" value={formatCurrency(data.totalSpent)} detail="Across active jobs" />
+        </section>
+      )}
+
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold">{t("projects")}</h2>
+          <div className="flex items-center gap-3">
+            {totalProjects > projects.length && <Link href="/projects" className="text-xs font-semibold text-brand-600">{t("viewAll")} ({totalProjects})</Link>}
+            <Link href="/projects/new" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-700"><Plus className="h-4 w-4" />{t("newProject")}</Link>
           </div>
         </div>
+
+        {projects.length === 0 && !error ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
+            <p className="font-semibold">{t("noProjectsYet")}</p>
+            <p className="mt-1 text-sm text-slate-500">{t("noProjectsHint")}</p>
+            <Link href="/projects/new" className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"><Plus className="h-4 w-4" />{t("newProject")}</Link>
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {projects.map((p) => (
+              <Link key={p.id} href={`/projects/${p.id}`} className="block min-w-0 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-brand-300">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{p.name}</p>
+                    <p className="truncate text-xs text-slate-500">{p.clientName || "—"}</p>
+                  </div>
+                  <ProjectStatusBadge status={p.status} />
+                </div>
+                {p.address && <p className="mt-2 flex items-center gap-1 truncate text-xs text-slate-400"><MapPin className="h-3.5 w-3.5 shrink-0" />{p.address}</p>}
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
-
-      <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi title={t("activeProjects")} value={String(data.activeProjectsCount)} detail={`${data.completedProjectsCount} completed`} icon={<Briefcase className="h-4 w-4" />} href="/projects" />
-        <Kpi title="Invoices to collect" value={String(data.pendingInvoices)} detail="Sent, partial or overdue" icon={<Receipt className="h-4 w-4" />} href="/invoices" alert={data.pendingInvoices > 0} />
-        <Kpi title={t("pendingQuotes")} value={String(data.pendingQuotes)} detail="Waiting for a decision" icon={<FileText className="h-4 w-4" />} href="/quotes" />
-        <Kpi title={t("monthExpenses")} value={formatCurrency(data.expensesThisMonth)} detail={`${data.employeesWorking} active members`} icon={<DollarSign className="h-4 w-4" />} href="/expenses" />
-      </section>
-
-      <div className="mb-6 grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
-        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div><h2 className="font-bold">Needs attention</h2><p className="mt-0.5 text-xs text-slate-500">Items that may need action today</p></div>
-            {attentionCount > 0 && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">{attentionCount}</span>}
-          </div>
-          <div className="space-y-2">
-            <AttentionRow href="/invoices" icon={<Receipt className="h-4 w-4" />} title="Invoices to collect" detail={`${data.pendingInvoices} invoice${data.pendingInvoices === 1 ? "" : "s"} need follow-up`} count={data.pendingInvoices} />
-            <AttentionRow href="/quotes" icon={<Clock3 className="h-4 w-4" />} title="Quotes awaiting response" detail={`${data.pendingQuotes} customer quote${data.pendingQuotes === 1 ? "" : "s"} still pending`} count={data.pendingQuotes} />
-            <AttentionRow href="/pos" icon={<AlertTriangle className="h-4 w-4" />} title="Purchase orders missing documents" detail={`${data.posWithoutDoc} receipt${data.posWithoutDoc === 1 ? "" : "s"} required to close`} count={data.posWithoutDoc} />
-            {attentionCount === 0 && <div className="flex items-center gap-3 rounded-xl bg-green-50 p-4 text-sm text-green-800"><CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />Everything is up to date.</div>}
-          </div>
-        </section>
-
-        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="mb-4 flex items-center justify-between"><div><h2 className="font-bold">Quick actions</h2><p className="mt-0.5 text-xs text-slate-500">Common tasks for the owner</p></div><ArrowUpRight className="h-4 w-4 text-slate-400" /></div>
-          <div className="grid grid-cols-2 gap-2">
-            <QuickAction href="/supply-requests" icon={<Receipt className="h-4 w-4" />} label="Request supply pricing" />
-            <QuickAction href="/invoices/new" icon={<DollarSign className="h-4 w-4" />} label="Create invoice" />
-            <QuickAction href="/pos/new" icon={<Briefcase className="h-4 w-4" />} label="New purchase order" />
-            <QuickAction href="/employees/invite" icon={<Users className="h-4 w-4" />} label="Invite team member" />
-          </div>
-        </section>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <ActivityPanel activity={activity} />
-        <EmptyPanel title={t("activeProjects")} href="/projects" label={t("viewAll")} empty={isDemo} />
-      </div>
     </div>
   );
-}
-
-function SummaryStat({ label, value, detail, positive = false }: { label: string; value: string; detail: string; positive?: boolean }) {
-  return <div className="rounded-xl border border-white/10 bg-white/5 p-3"><p className="truncate text-xs text-slate-400">{label}</p><p className={`mt-1 truncate text-lg font-bold ${positive ? "text-emerald-400" : "text-white"}`}>{value}</p><p className="mt-0.5 truncate text-[11px] text-slate-500">{detail}</p></div>;
-}
-
-function Kpi({ title, value, detail, icon, href, alert = false }: { title: string; value: string; detail: string; icon: React.ReactNode; href: string; alert?: boolean }) {
-  return <Link href={href} className="group min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"><div className="mb-3 flex items-center justify-between gap-2"><span className={`flex h-8 w-8 items-center justify-center rounded-lg ${alert ? "bg-amber-100 text-amber-700" : "bg-brand-50 text-brand-600"}`}>{icon}</span><ArrowUpRight className="h-4 w-4 text-slate-300 transition group-hover:text-brand-500" /></div><p className="truncate text-xs font-medium text-slate-500">{title}</p><p className={`mt-1 truncate text-2xl font-bold tracking-tight ${alert ? "text-amber-700" : "text-slate-900"}`}>{value}</p><p className="mt-1 truncate text-[11px] text-slate-400">{detail}</p></Link>;
-}
-
-function AttentionRow({ href, icon, title, detail, count }: { href: string; icon: React.ReactNode; title: string; detail: string; count: number }) {
-  return <Link href={href} className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-100 p-3 transition hover:border-brand-200 hover:bg-brand-50/40"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">{icon}</span><span className="min-w-0 flex-1"><strong className="block truncate text-sm">{title}</strong><span className="block truncate text-xs text-slate-500">{detail}</span></span><span className="flex items-center gap-1 text-sm font-bold text-slate-700">{count}<ChevronRight className="h-4 w-4 text-slate-400" /></span></Link>;
-}
-
-function QuickAction({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
-  return <Link href={href} className="flex min-h-20 flex-col justify-between rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs font-semibold text-slate-700 transition hover:border-brand-200 hover:bg-brand-50"><span className="text-brand-600">{icon}</span><span>{label}</span></Link>;
-}
-
-function ActivityPanel({ activity }: { activity: Activity[] }) {
-  return <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h2 className="font-bold">Recent activity</h2><p className="mt-0.5 text-xs text-slate-500">Latest changes in your company</p></div><Link href="/reports" className="text-xs font-semibold text-brand-600">View reports</Link></div>{activity.length === 0 ? <div className="px-5 py-10 text-center text-sm text-slate-400">No activity yet</div> : <div className="divide-y divide-slate-100">{activity.map((item) => <div key={item.id} className="flex min-w-0 items-center gap-3 px-5 py-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100"><Clock3 className="h-4 w-4 text-slate-500" /></span><p className="min-w-0 flex-1 truncate text-sm"><strong>{item.user?.full_name || "Team member"}</strong> · {item.action} · {item.entity_type}</p><time className="shrink-0 text-[11px] text-slate-400">{new Date(item.created_at).toLocaleDateString()}</time></div>)}</div>}</section>;
-}
-
-function EmptyPanel({ title, href, label, empty }: { title: string; href: string; label: string; empty: boolean }) {
-  return <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><h2 className="truncate font-bold">{title}</h2><Link href={href} className="shrink-0 text-xs font-semibold text-brand-600">{label}</Link></div><div className="px-5 py-10 text-center text-sm text-slate-400">{empty ? "No data yet" : "No recent records"}</div></section>;
 }

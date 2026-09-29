@@ -1,11 +1,12 @@
-# ContractorOS — Guía de conexión (cuando toque)
+# Project Harbor — Guía de conexión
 
 ## 1. Supabase
 
 1. Crea un proyecto en https://supabase.com
-2. SQL Editor → ejecuta en orden:
-   - `supabase/migrations/20260728000000_initial_schema.sql`
-   - `supabase/migrations/20260728000001_rls_and_storage.sql`
+2. SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
+   (de `20260728000000_initial_schema.sql` a `20260730000007_phase1_company_bootstrap.sql`).
+   La última crea la función `create_company_with_owner`, necesaria para que el registro
+   cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
    - Nombre: `documents`
    - Public: **No**

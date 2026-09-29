@@ -6,6 +6,7 @@ import { HardHat } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { loginAction, signInWithGoogleAction } from "../actions";
 import { useI18n } from "@/lib/i18n/provider";
+import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 
 export default function LoginPage() {
@@ -24,9 +25,15 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     const formData = new FormData(e.currentTarget);
-    const result = await loginAction(formData);
-    if (result?.error) {
-      setError(result.error);
+    try {
+      const result = await loginAction(formData);
+      if (result?.errorCode || result?.error) {
+        setError(result.errorCode ? t(result.errorCode as keyof Dictionary) : (result.error as string));
+        setLoading(false);
+      }
+      // On success the server action redirects to /dashboard.
+    } catch {
+      setError(t("errGeneric"));
       setLoading(false);
     }
   }
@@ -34,8 +41,13 @@ export default function LoginPage() {
   async function handleGoogle() {
     setLoading(true);
     setError(null);
-    const result = await signInWithGoogleAction();
-    if (result?.error) { setError(result.error); setLoading(false); }
+    try {
+      const result = await signInWithGoogleAction();
+      if (result?.error) { setError(result.error); setLoading(false); }
+    } catch {
+      setError(t("errGeneric"));
+      setLoading(false);
+    }
   }
 
   return (

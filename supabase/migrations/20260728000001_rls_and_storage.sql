@@ -92,6 +92,9 @@ CREATE POLICY "Managers can update clients"
 -- =====================================================
 -- PROJECTS
 -- =====================================================
+-- The initial schema already defines a policy with this name; replace it so this
+-- migration can run on a fresh database.
+DROP POLICY IF EXISTS "Members can view projects" ON projects;
 CREATE POLICY "Members can view projects"
   ON projects FOR SELECT
   USING (company_id IN (SELECT get_user_company_ids()));

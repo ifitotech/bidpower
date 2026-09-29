@@ -12,11 +12,15 @@ import {
   Settings,
   HardHat,
   FolderOpen,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
+import { logoutAction } from "@/app/(auth)/actions";
 
-export function Sidebar() {
+const roleLabel: Record<string, "owner" | "manager" | "employee"> = { owner: "owner", manager: "manager", employee: "employee" };
+
+export function Sidebar({ companyName = "", userName = "", role = "" }: { companyName?: string; userName?: string; role?: string }) {
   const pathname = usePathname();
   const { t } = useI18n();
 
@@ -47,7 +51,7 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="font-bold text-lg leading-tight">{t("appName")}</h1>
-            <p className="text-xs text-slate-500">ElectricPro LLC</p>
+            <p className="max-w-[9.5rem] truncate text-xs text-slate-500">{companyName}</p>
           </div>
         </div>
       </div>
@@ -86,13 +90,18 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-sm">
-            U
+          <div className="w-9 h-9 shrink-0 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-sm">
+            {(userName || "?").charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">Usuario</p>
-            <p className="text-xs text-slate-500">Owner · {t("freePlan")}</p>
+            <p className="text-sm font-medium truncate">{userName || t("userFallback")}</p>
+            <p className="text-xs text-slate-500 truncate">{role && roleLabel[role] ? t(roleLabel[role]) : ""}</p>
           </div>
+          <form action={logoutAction}>
+            <button type="submit" aria-label={t("logout")} title={t("logout")} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-red-600">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </form>
         </div>
       </div>
     </aside>

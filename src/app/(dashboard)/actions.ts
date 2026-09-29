@@ -173,27 +173,38 @@ export async function archiveClientAction(formData: FormData) {
   } catch (err) { return { error: err instanceof Error ? err.message : "Error al archivar cliente" }; }
 }
 
+const PROJECT_STATUSES = ["lead", "quoted", "approved", "active", "on_hold", "completed", "cancelled"] as const;
+
+// Returns `errorCode` values that the client translates through i18n.
 export async function createProjectAction(formData: FormData) {
   try {
-    const { userId, companyId } = await getContext();
-    const name = formData.get("name") as string;
-    const clientId = formData.get("clientId") as string;
-    const contractValue = Number(formData.get("contractValue") || 0);
+    const { userId, companyId, role } = await getContext();
+    if (role !== "owner" && role !== "manager") return { errorCode: "errGeneric" };
+    const name = String(formData.get("name") || "").trim();
+    let clientId = String(formData.get("clientId") || "");
+    const newClientName = String(formData.get("newClientName") || "").trim();
+    const money = (key: string) => Math.max(0, Number(formData.get(key) || 0) || 0);
+    const status = String(formData.get("status") || "lead");
 
-    if (!name?.trim() || !clientId) {
-      return { error: "Nombre y cliente son obligatorios" };
+    if (!name || (!clientId && !newClientName)) return { errorCode: "errProjectRequired" };
+
+    if (!clientId || clientId === "new") {
+      const client = await createClientRecord(companyId, { name: newClientName });
+      clientId = client.id;
     }
 
     const project = await createProject(companyId, {
       client_id: clientId,
-      name: name.trim(),
-      description: (formData.get("description") as string) || undefined,
-      address: (formData.get("address") as string) || undefined,
-      contract_value: contractValue,
-      budget_materials: Number(formData.get("budgetMaterials") || 0),
-      budget_labor: Number(formData.get("budgetLabor") || 0),
-      budget_subcontractors: Number(formData.get("budgetSubcontractors") || 0),
-      budget_other: Number(formData.get("budgetOther") || 0),
+      name,
+      description: String(formData.get("description") || "").trim() || undefined,
+      address: String(formData.get("address") || "").trim() || undefined,
+      status: (PROJECT_STATUSES as readonly string[]).includes(status) ? (status as (typeof PROJECT_STATUSES)[number]) : "lead",
+      contract_value: money("contractValue"),
+      budget_materials: money("budgetMaterials"),
+      budget_labor: money("budgetLabor"),
+      budget_subcontractors: money("budgetSubcontractors"),
+      budget_other: money("budgetOther"),
+      start_date: String(formData.get("startDate") || "") || undefined,
     });
 
     await logActivity({
@@ -203,15 +214,14 @@ export async function createProjectAction(formData: FormData) {
       entityType: "project",
       entityId: project.id,
       newValues: { name },
-    });
-
-    revalidatePath("/projects");
-    redirect("/projects");
+    }).catch(() => undefined);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Error al crear proyecto";
-    if (message.includes("NEXT_REDIRECT")) throw err;
-    return { error: message };
+    return { error: err instanceof Error ? err.message : (err as { message?: string })?.message || undefined, errorCode: "errGeneric" };
   }
+
+  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+  redirect("/projects");
 }
 
 export async function createInvoiceAction(formData: FormData) {
@@ -264,6 +274,7 @@ export async function updateProjectAction(formData: FormData) {
     const { companyId } = await getContext();
     await updateProject(String(formData.get("id") || ""), companyId, { name: String(formData.get("name") || "").trim(), description: String(formData.get("description") || "").trim(), address: String(formData.get("address") || "").trim(), status: String(formData.get("status") || "lead"), contract_value: Number(formData.get("contractValue") || 0) });
     revalidatePath("/projects");
+    revalidatePath("/dashboard");
     revalidatePath(`/projects/${String(formData.get("id") || "")}`);
     return { success: true };
   } catch (err) { return { error: err instanceof Error ? err.message : "Could not update project." }; }

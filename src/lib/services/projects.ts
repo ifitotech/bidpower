@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getProjectFinancials } from "@/lib/finance";
+import type { ProjectStatus } from "@/types/database";
 
 export async function getProjects(companyId: string) {
   const supabase = await createClient();
@@ -57,9 +58,10 @@ export async function getProjectById(projectId: string, companyId: string) {
     )
     .eq("id", projectId)
     .eq("company_id", companyId)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) return null;
 
   const spentTotal = (data.expenses ?? []).reduce(
     (sum: number, e: { amount: number }) => sum + Number(e.amount),
@@ -92,6 +94,7 @@ export async function createProject(
     budget_subcontractors?: number;
     budget_other?: number;
     start_date?: string;
+    status?: ProjectStatus;
   }
 ) {
   const supabase = await createClient();
@@ -110,7 +113,7 @@ export async function createProject(
       name: data.name,
       description: data.description ?? null,
       address: data.address ?? null,
-      status: "lead",
+      status: data.status ?? "lead",
       contract_value: data.contract_value,
       budget_total: budgetTotal,
       budget_materials: data.budget_materials ?? 0,

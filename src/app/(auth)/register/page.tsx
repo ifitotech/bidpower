@@ -6,6 +6,7 @@ import { HardHat } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { registerAction } from "../actions";
 import { useI18n } from "@/lib/i18n/provider";
+import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 
 export default function RegisterPage() {
@@ -35,12 +36,18 @@ export default function RegisterPage() {
     formData.set("password", password);
     formData.set("companyName", companyName);
     formData.set("phone", phone);
-    const result = await registerAction(formData);
-    if (result?.error) {
-      setError(result.error);
-      setLoading(false);
-    } else if (result?.success) {
-      setSuccess(result.success);
+    try {
+      const result = await registerAction(formData);
+      if (result?.errorCode || result?.error) {
+        setError(result.errorCode ? t(result.errorCode as keyof Dictionary) : (result.error as string));
+        setLoading(false);
+      } else if (result?.successCode) {
+        setSuccess(t(result.successCode as keyof Dictionary));
+        setLoading(false);
+      }
+      // On success the server action redirects to /dashboard.
+    } catch {
+      setError(t("errGeneric"));
       setLoading(false);
     }
   }

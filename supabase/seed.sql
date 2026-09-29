@@ -1,4 +1,4 @@
--- ContractorOS Demo Seed
+-- Project Harbor Demo Seed
 -- Solo para desarrollo. NO ejecutar en producción.
 -- Requiere que ya exista un usuario auth y una empresa.
 

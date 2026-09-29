@@ -1,6 +1,8 @@
-# ContractorOS
+# Project Harbor
 
-ContractorOS es un sistema operativo SaaS, mobile-first, para empresas de servicios como electricidad, HVAC, plomería, remodelación y construcción.
+> Project Harbor es el nuevo nombre de producto de ContractorOS. El repositorio, el paquete y las claves de `localStorage` conservan el nombre técnico `contractoros` para no romper despliegues ni datos existentes.
+
+Project Harbor es un sistema operativo SaaS, mobile-first, para empresas de servicios como electricidad, HVAC, plomería, remodelación y construcción.
 
 Su objetivo es centralizar clientes, jobs, quotes, invoices, gastos, purchase orders, empleados, calendario, archivos, reportes y configuración de la empresa en una sola aplicación.
 

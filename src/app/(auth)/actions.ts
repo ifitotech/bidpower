@@ -4,78 +4,73 @@ import { createClient } from "@/lib/supabase/server";
 import { createCompanyWithOwner } from "@/lib/services/companies";
 import { redirect } from "next/navigation";
 
-export async function registerAction(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const fullName = formData.get("fullName") as string;
-  const companyName = formData.get("companyName") as string;
-  const phone = (formData.get("phone") as string) || undefined;
+// Error codes are translated on the client through the i18n dictionaries.
+export type AuthResult = { error?: string; errorCode?: string; successCode?: string } | undefined;
 
-  if (!email || !password || !fullName || !companyName) {
-    return { error: "Todos los campos obligatorios deben completarse." };
-  }
+function hasSupabaseEnv() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
+export async function registerAction(formData: FormData): Promise<AuthResult> {
+  const email = String(formData.get("email") || "").trim();
+  const password = String(formData.get("password") || "");
+  const fullName = String(formData.get("fullName") || "").trim();
+  const companyName = String(formData.get("companyName") || "").trim();
+  const phone = String(formData.get("phone") || "").trim() || undefined;
+
+  if (!email || !password || !fullName || !companyName) return { errorCode: "errMissingFields" };
+  if (password.length < 8) return { errorCode: "errPasswordShort" };
+  if (!hasSupabaseEnv()) return { errorCode: "errNoSupabase" };
 
   const supabase = await createClient();
 
-  // 1. Create auth user
+  // 1. Auth user. Company data travels in the user metadata so the company can
+  //    still be created on first login when email confirmation is required.
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name: fullName },
+      data: { full_name: fullName, company_name: companyName, phone: phone ?? "" },
+      ...(process.env.NEXT_PUBLIC_SITE_URL ? { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` } : {}),
     },
   });
 
   if (authError) {
+    if (/already registered|already exists/i.test(authError.message)) return { errorCode: "errEmailExists" };
     return { error: authError.message };
   }
+  if (!authData.user) return { errorCode: "errGeneric" };
 
-  if (!authData.user) {
-    return { error: "No se pudo crear el usuario." };
-  }
+  // Supabase hides duplicate emails when confirmation is on by returning a user
+  // with no identities.
+  if (authData.user.identities && authData.user.identities.length === 0) return { errorCode: "errEmailExists" };
 
-  // Supabase returns no session when email confirmation is enabled.
-  // Do not attempt company creation until the user is authenticated.
-  if (!authData.session) {
-    return { success: "Cuenta creada. Confirma tu email y luego inicia sesión." };
-  }
+  // No session: email confirmation is enabled. The company is created on first login.
+  if (!authData.session) return { successCode: "checkEmailToConfirm" };
 
-  // 2. Create company + owner membership + defaults
+  // 2. Profile + company + owner membership + settings + Free plan + categories (atomic, RLS-safe).
   try {
-    await createCompanyWithOwner({
-      userId: authData.user.id,
-      fullName,
-      email,
-      companyName,
-      phone,
-    });
-  } catch (err) {
-    const message = err instanceof Error
-      ? err.message
-      : err && typeof err === "object" && "message" in err
-        ? String((err as { message: unknown }).message)
-        : "We could not create the company.";
-    return { error: message };
+    await createCompanyWithOwner({ fullName, companyName, phone });
+  } catch {
+    // The account exists and is signed in; the company is retried from metadata on the next request.
+    return { errorCode: "errCompanyCreate" };
   }
 
   redirect("/dashboard");
 }
 
-export async function loginAction(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+export async function loginAction(formData: FormData): Promise<AuthResult> {
+  const email = String(formData.get("email") || "").trim();
+  const password = String(formData.get("password") || "");
 
-  if (!email || !password) {
-    return { error: "Email y contraseña son obligatorios." };
-  }
+  if (!email || !password) return { errorCode: "errMissingFields" };
+  if (!hasSupabaseEnv()) return { errorCode: "errNoSupabase" };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    if (/invalid login credentials/i.test(error.message)) return { errorCode: "errInvalidCredentials" };
     return { error: error.message };
   }
 

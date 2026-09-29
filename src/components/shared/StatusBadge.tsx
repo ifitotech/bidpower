@@ -1,3 +1,6 @@
+"use client";
+
+import { useI18n } from "@/lib/i18n/provider";
 import { Badge } from "@/components/ui/Badge";
 import { PO_STATUS_LABELS, PO_STATUS_COLORS } from "@/lib/po-status";
 import type { POStatus, QuoteStatus, ProjectStatus } from "@/types/database";
@@ -22,15 +25,15 @@ const quoteColors: Record<string, "default" | "success" | "warning" | "danger" |
   cancelled: "default",
 };
 
-const projectLabels: Record<string, string> = {
-  lead: "Lead",
-  quoted: "Cotizado",
-  approved: "Aprobado",
-  active: "Activo",
-  on_hold: "En pausa",
-  completed: "Completado",
-  cancelled: "Cancelado",
-};
+const projectLabelKeys = {
+  lead: "statusLead",
+  quoted: "statusQuoted",
+  approved: "statusApproved",
+  active: "statusActive",
+  on_hold: "statusOnHold",
+  completed: "statusCompleted",
+  cancelled: "statusCancelled",
+} as const;
 
 const projectColors: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
   lead: "default",
@@ -55,7 +58,9 @@ export function QuoteStatusBadge({ status }: { status: string }) {
 }
 
 export function ProjectStatusBadge({ status }: { status: string }) {
-  const label = projectLabels[status] ?? status;
+  const { t } = useI18n();
+  const key = projectLabelKeys[status as keyof typeof projectLabelKeys];
+  const label = key ? t(key) : status;
   const variant = projectColors[status] ?? "default";
   return <Badge variant={variant}>{label}</Badge>;
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FileText, Menu, Building2, Users } from "lucide-react";
+import { Home, FileText, Menu, Briefcase, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -12,9 +12,9 @@ export function BottomNav() {
 
   const items = [
     { href: "/dashboard", label: t("navHome"), icon: Home },
+    { href: "/projects", label: t("navProjects"), icon: Briefcase },
     { href: "/clients", label: t("navClients"), icon: Users },
     { href: "/quotes", label: "Supply & Purchase", icon: FileText },
-    { href: "/my-company", label: t("myCompany"), icon: Building2 },
     { href: "/more", label: "More", icon: Menu },
   ];
 

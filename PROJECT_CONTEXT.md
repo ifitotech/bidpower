@@ -1,4 +1,4 @@
-# ContractorOS — Contexto para desarrolladores e IAs
+# Project Harbor (antes ContractorOS) — Contexto para desarrolladores e IAs
 
 ## Objetivo del producto
 

@@ -1,7 +1,7 @@
 {
-  "name": "ContractorOS",
-  "short_name": "ContractorOS",
-  "description": "El sistema operativo para empresas de servicios",
+  "name": "Project Harbor",
+  "short_name": "Project Harbor",
+  "description": "Project Harbor: tus proyectos, clientes y compras en un solo lugar",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
