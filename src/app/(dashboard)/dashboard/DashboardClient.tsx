@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ChevronRight, Clock3, MapPin, Plus, Receipt } from "lucide-react";
+import { AlertTriangle, ChevronRight, Clock3, MapPin, Package, Plus, Receipt } from "lucide-react";
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { useI18n } from "@/lib/i18n/provider";
 import { APP_NAME } from "@/lib/constants";
@@ -22,7 +22,7 @@ export default function DashboardClient({
   companyName: string;
   projects: HomeProject[];
   totalProjects?: number;
-  attention: { invoices: number; quotes: number; purchaseOrders: number };
+  attention: { invoices: number; quotes: number; purchaseOrders: number; materialRequests?: number };
   error?: "errNoSupabase" | "errLoadProjects";
 }) {
   const { t } = useI18n();
@@ -33,6 +33,7 @@ export default function DashboardClient({
     { href: "/invoices", icon: <Receipt className="h-4 w-4" />, title: t("attentionInvoices"), count: attention.invoices },
     { href: "/quotes", icon: <Clock3 className="h-4 w-4" />, title: t("attentionQuotes"), count: attention.quotes },
     { href: "/pos", icon: <AlertTriangle className="h-4 w-4" />, title: t("posWithoutDoc"), count: attention.purchaseOrders },
+    ...(isManagerOrAbove ? [{ href: "/materials/requests", icon: <Package className="h-4 w-4" />, title: t("requestsPendingAttention"), count: attention.materialRequests ?? 0 }] : []),
   ].filter((item) => item.count > 0);
 
   return (

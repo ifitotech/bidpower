@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260801000010_security_hardening.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260802000011_phase3_materials.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -84,3 +84,10 @@ BASE_URL=https://TU-APP.vercel.app node scripts/smoke-phase1-2.js
 
 Requiere Playwright + Chromium y "Confirm email" desactivado en Supabase Auth. Crea usuarios `@bidpower-smoke.test`;
 las instrucciones para borrarlos están en la cabecera del script.
+
+## 9. Materiales (Fase 3)
+
+- **Biblioteca** (`/materiales` → `/materials`): ítems de uso frecuente con unidad, categoría, apodos de campo (romex, mud ring…) y favoritos. La gestiona quien tenga el permiso *Gestionar biblioteca* (Owner y Manager por plantilla).
+- **Pedido de material** (`Proyecto → Pedidos de material`): buscar en favoritos/recientes/apodos, agregar texto libre, pegar una lista (WhatsApp/correo/Excel) o usar una lista guardada. Requiere el permiso *Pedir material* y un proyecto visible para la persona.
+- Owner/Manager revisan en `/materials/requests` (también aparece en Inicio → "Necesita atención"). Un pedido es distinto de una Solicitud a proveedores: no envía nada a nadie ni genera precios.
+- Migración nueva: `20260802000011_phase3_materials.sql` (ya incluida en `apply_all_migrations.sql`).

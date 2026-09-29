@@ -11,10 +11,12 @@ import {
   UserCog,
   Settings,
   FolderOpen,
+  Package,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
+import { usePermissions } from "@/lib/permissions-context";
 import { Logo } from "@/components/shared/Logo";
 import { logoutAction } from "@/app/(auth)/actions";
 
@@ -23,6 +25,7 @@ const roleLabel: Record<string, "owner" | "manager" | "employee"> = { owner: "ow
 export function Sidebar({ companyName = "", userName = "", role = "" }: { companyName?: string; userName?: string; role?: string }) {
   const pathname = usePathname();
   const { t } = useI18n();
+  const { permissions, isManagerOrAbove } = usePermissions();
 
   const isEmployee = role === "employee";
   const workNav = [
@@ -35,6 +38,8 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
   ];
 
   const operationsNav = [
+    ...(isManagerOrAbove ? [{ href: "/materials/requests", label: t("materialRequests"), icon: Package }] : []),
+    ...(permissions.can_manage_library ? [{ href: "/materials", label: t("materialsLibrary"), icon: Package }] : []),
     { href: "/calendar", label: t("calendar"), icon: CalendarDays },
     { href: "/files", label: "Files & Photos", icon: FolderOpen },
   ];

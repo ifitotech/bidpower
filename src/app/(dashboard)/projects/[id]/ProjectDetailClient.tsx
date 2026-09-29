@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarDays, ClipboardList, FileText, FolderOpen, MapPin, Pencil, Plus, Receipt, ShoppingCart, User } from "lucide-react";
+import { ArrowLeft, CalendarDays, Package, ClipboardList, FileText, FolderOpen, MapPin, Pencil, Plus, Receipt, ShoppingCart, User } from "lucide-react";
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
@@ -54,7 +54,7 @@ function ProjectTeam({ projectId, people }: { projectId: string; people: TeamPer
 
 export default function ProjectDetailClient({ project: p, error, team = [], canManageTeam = false }: { project?: Project; error?: "errNoSupabase" | "errLoadProject"; team?: TeamPerson[]; canManageTeam?: boolean }) {
   const { t, locale } = useI18n();
-  const { isManagerOrAbove } = usePermissions();
+  const { isManagerOrAbove, permissions } = usePermissions();
   const back = <Link href="/projects" aria-label={t("projects")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100"><ArrowLeft className="h-4 w-4" /></Link>;
 
   if (!p) {
@@ -63,6 +63,7 @@ export default function ProjectDetailClient({ project: p, error, team = [], canM
 
   const progress = p.budget_total > 0 ? Math.min(100, (p.spentTotal / p.budget_total) * 100) : 0;
   const tools = [
+    ...(permissions.can_request_material || isManagerOrAbove ? [{ href: `/projects/${p.id}/materials`, label: t("materialRequests"), icon: Package }] : []),
     { href: "/expenses", label: t("expenses"), icon: Receipt },
     { href: "/pos", label: t("toolPOs"), icon: ShoppingCart },
     ...(isManagerOrAbove ? [
