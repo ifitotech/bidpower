@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 96" role="img" aria-label="Bidpower">
+  <defs>
+    <linearGradient id="hex" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#1E40AF"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FDE68A"/>
+      <stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+  <!-- hex nut -->
+  <path d="M48 5 L85 26.500 V69.500 L48 91 L11 69.500 V26.500 Z" fill="url(#hex)" stroke="url(#hex)" stroke-width="7" stroke-linejoin="round"/>
+  <!-- thread ring -->
+  <circle cx="48" cy="48" r="27" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="4"/>
+  <circle cx="48" cy="48" r="20" fill="#0F2A66"/>
+  <!-- bolt -->
+  <path d="M53 32 L38 50 H47 L43 65 L58 46 H49 Z" fill="url(#spark)" stroke="#FBBF24" stroke-width="1.5" stroke-linejoin="round"/>
+  <text x="112" y="63" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="46" font-weight="800" letter-spacing="-1.2" fill="#0F172A">Bid<tspan fill="#2563EB">power</tspan></text>
+</svg>
