@@ -29,7 +29,7 @@ export default function POsClient({ orders = [], demo = false }: { orders?: PO[]
     { value: "completed", label: t("completed") },
   ];
   return <div className="p-4 md:p-8">
-    <PageHeader title={t("purchaseOrders")} action={permissions.can_create_po ? <Link href="/pos/new" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white"><Plus className="w-4 h-4" />{t("newPO")}</Link> : undefined} />
+    <PageHeader title={t("purchaseOrders")} action={permissions.can_create_po ? <Link href="/material" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white"><Plus className="w-4 h-4" />{t("navMaterial")}</Link> : undefined} />
     {demo && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{t("errLoadData")}</div>}
     <FilterChips value={filter} onChange={setFilter} options={options} />
     <div className="mt-4 space-y-2">

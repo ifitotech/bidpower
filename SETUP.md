@@ -222,3 +222,12 @@ las instrucciones para borrarlos están en la cabecera del script.
 - El nombre de campo va en **apodos** ("cable 10 negro, #10 black") y el número de parte en su columna: después el material se encuentra escribiendo cualquiera de los dos.
 - Repetidos: se omite lo que ya existe por número de parte (un número de parte sin fabricante coincide con cualquier fabricante) o, sin número de parte, por nombre. Máximo 2000 filas por importación; se muestra vista previa antes de importar.
 - Requiere el permiso de administrar la biblioteca. El número de parte viaja a los Pricing Requests y a lo que ve el supplier.
+
+## 24. Orden de la app (vocabulario, menú y flujo de Material)
+
+- **Un nombre por cosa:** *Propuesta* (lo que se le manda al cliente), *Cotización* (la respuesta de un supplier; "Pedir cotización" es la acción), *Lista de material* (lo que pide el equipo), *Orden de compra (PO)*. "Quote" ya no se usa como nombre general. Mismo criterio en ES/EN/PT.
+- **Menú por áreas:** Inicio, Proyectos | Ventas (Propuestas, Facturas) | Compras (Material, Cotizaciones, Órdenes de compra, Listas, Materiales) | Dinero (Gastos, Reportes, Contabilidad) | Conexiones (Clientes, Suppliers, Equipo) | Empresa (Ajustes, Ayuda). El Employee ve solo lo suyo. En el teléfono: Inicio, Proyectos, Ventas, Compras, Más (Employee: Inicio, Proyectos, Material, Gastos, Más).
+- **Material es una sola puerta** (`/material`): eliges proyecto, armas la lista y decides: *Pedir cotización* a suppliers o *Comprar ya* (crea la orden de compra con las líneas de la lista, con las mismas reglas de límite y aprobación).
+- **Inicio** responde "¿Qué quieres hacer?" con cuatro acciones: Nuevo proyecto, Material, Propuesta, Gasto. El "+" repite esas cuatro.
+- **Nuevo proyecto** pide solo nombre, cliente y dirección (lo demás en "Más detalles") y aterriza en el proyecto.
+- **Se quitaron** las pantallas que solo decían que algo no existe (Estimator, Material list, Supply requests), la subida suelta de Archivos, el hub de Clientes, los tipos de Quote y la campana de notificaciones vacía. `/my-company` redirige a Ajustes.

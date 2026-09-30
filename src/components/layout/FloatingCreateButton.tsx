@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { CalendarPlus, ClipboardList, FileText, Plus, ShoppingCart, X } from "lucide-react";
+import { CalendarPlus, FileText, Plus, Receipt, ShoppingCart, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
 import { usePermissions } from "@/lib/permissions-context";
 
@@ -10,13 +10,12 @@ export function FloatingCreateButton() {
   const { t } = useI18n();
   const { isManagerOrAbove, permissions } = usePermissions();
   const [open, setOpen] = useState(false);
+  // Four things a contractor does; everything else starts from inside one of them.
   const actions = [
-    ...(isManagerOrAbove ? [
-      { href: "/quotes/new", label: t("createProposal"), icon: FileText },
-    ] : []),
-    ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: "/pricing/new", label: t("createPricingRequestShort"), icon: ShoppingCart }] : []),
-    ...(permissions.can_create_po ? [{ href: "/pos/new", label: t("newPurchaseOrder"), icon: ClipboardList }] : []),
     ...(isManagerOrAbove ? [{ href: "/projects/new", label: t("newProject"), icon: CalendarPlus }] : []),
+    ...(permissions.can_request_material ? [{ href: "/material", label: t("navMaterial"), icon: ShoppingCart }] : []),
+    ...(isManagerOrAbove ? [{ href: "/quotes/new", label: t("createProposal"), icon: FileText }] : []),
+    ...(isManagerOrAbove || permissions.can_upload_documents ? [{ href: "/expenses/new", label: t("newExpense"), icon: Receipt }] : []),
   ];
   if (actions.length === 0) return null;
 

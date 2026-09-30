@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getActionContext } from "@/lib/action-context";
 import { getRequestById } from "@/lib/services/material-requests";
+import { getSuppliers } from "@/lib/services/pricing-requests";
 import RequestDetail from "./RequestDetail";
 
 export const dynamic = "force-dynamic";
@@ -14,5 +15,6 @@ export default async function MaterialRequestPage({ params }: { params: Promise<
   const request = await getRequestById(requestId, id, c.companyId).catch(() => null);
   if (!request) notFound();
   const isReviewer = c.role === "owner" || c.role === "manager";
-  return <RequestDetail request={request} projectId={id} canReview={isReviewer} canCancel={isReviewer || request.requested_by === c.userId} />;
+  const suppliers = c.perms.can_create_po ? await getSuppliers(c.companyId).catch(() => []) : [];
+  return <RequestDetail request={request} projectId={id} canReview={isReviewer} canCancel={isReviewer || request.requested_by === c.userId} suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))} />;
 }

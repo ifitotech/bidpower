@@ -6,12 +6,13 @@ import {
   Home,
   FileSpreadsheet,
   Briefcase,
-  CalendarDays,
   Users,
   FileText,
   UserCog,
   Settings,
-  FolderOpen,
+  Receipt,
+  BarChart3,
+  MessageSquare,
   Package,
   ShoppingCart,
   LogOut,
@@ -30,31 +31,39 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
   const { permissions, isManagerOrAbove } = usePermissions();
 
   const isEmployee = role === "employee";
-  const workNav = [
-    { href: "/dashboard", label: t("navHome"), icon: Home },
-    { href: "/projects", label: t("navProjects"), icon: Briefcase },
-    ...(isEmployee ? [] : [
-      { href: "/clients", label: t("navClients"), icon: Users },
+  const canCosts = role === "owner" || (role === "manager" && permissions.can_view_costs);
+  // One area per question the person asks: what am I selling, buying, spending, who do I work with.
+  const sections: { label: string | null; items: { href: string; label: string; icon: typeof Home }[] }[] = [
+    { label: null, items: [
+      { href: "/dashboard", label: t("navHome"), icon: Home },
+      { href: "/projects", label: t("navProjects"), icon: Briefcase },
+    ] },
+    ...(isEmployee ? [] : [{ label: t("areaSales"), items: [
       { href: "/quotes", label: t("proposals"), icon: FileText },
-    ]),
-  ];
-
-  const operationsNav = [
-    ...(isManagerOrAbove || permissions.can_create_po ? [{ href: "/pos", label: t("navPurchaseOrders"), icon: ShoppingCart }] : []),
-    ...(isManagerOrAbove ? [{ href: "/suppliers", label: t("navSuppliers"), icon: Users }] : []),
-    ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: "/pricing", label: t("pricingRequests"), icon: Package }] : []),
-    ...(isManagerOrAbove ? [{ href: "/materials/requests", label: t("materialRequests"), icon: Package }] : []),
-    ...(permissions.can_manage_library ? [{ href: "/materials", label: t("materialsLibrary"), icon: Package }] : []),
-    { href: "/calendar", label: t("calendar"), icon: CalendarDays },
-    { href: "/files", label: t("navFiles"), icon: FolderOpen },
-  ];
-
-  const managementNav = [
-    ...(role === "owner" || (role === "manager" && permissions.can_view_costs) ? [{ href: "/accounting", label: t("accounting"), icon: FileSpreadsheet }] : []),
-    ...(role === "owner" ? [{ href: "/employees", label: t("navEmployees"), icon: UserCog }] : []),
-    ...(isEmployee ? [] : [{ href: "/my-company", label: t("myCompany"), icon: Settings }]),
-    { href: "/more", label: t("navMore"), icon: Settings },
-  ];
+      { href: "/invoices", label: t("navInvoices"), icon: FileSpreadsheet },
+    ] }]),
+    { label: t("areaPurchasing"), items: [
+      ...(permissions.can_request_material ? [{ href: "/material", label: t("navMaterial"), icon: Package }] : []),
+      ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: "/pricing", label: t("navPricing"), icon: Package }] : []),
+      ...(isManagerOrAbove || permissions.can_create_po ? [{ href: "/pos", label: t("navPurchaseOrders"), icon: ShoppingCart }] : []),
+      ...(isManagerOrAbove ? [{ href: "/materials/requests", label: t("materialRequests"), icon: Package }] : []),
+      ...(permissions.can_manage_library ? [{ href: "/materials", label: t("materialsLibrary"), icon: Package }] : []),
+    ] },
+    { label: t("areaMoney"), items: [
+      { href: "/expenses", label: t("navExpenses"), icon: Receipt },
+      ...(isManagerOrAbove ? [{ href: "/reports", label: t("navReports"), icon: BarChart3 }] : []),
+      ...(canCosts ? [{ href: "/accounting", label: t("accounting"), icon: FileSpreadsheet }] : []),
+    ] },
+    ...(isEmployee ? [] : [{ label: t("areaConnections"), items: [
+      { href: "/clients", label: t("navClients"), icon: Users },
+      ...(isManagerOrAbove ? [{ href: "/suppliers", label: t("navSuppliers"), icon: Users }] : []),
+      ...(role === "owner" ? [{ href: "/employees", label: t("navTeam"), icon: UserCog }] : []),
+    ] }]),
+    { label: t("areaCompany"), items: [
+      ...(role === "owner" ? [{ href: "/settings", label: t("navSettings"), icon: Settings }] : []),
+      { href: "/feedback", label: t("navHelp"), icon: MessageSquare },
+    ] },
+  ].filter((sec) => sec.items.length > 0);
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 flex-col z-30">
@@ -69,35 +78,7 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <NavSection label={t("navWork")} items={workNav} pathname={pathname} />
-        <NavSection label={t("navOperations")} items={operationsNav} pathname={pathname} />
-        {/* Keep management routes visible without removing any existing module. */}
-        <p className="px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-5 mb-2">
-          {t("managementSection")}
-        </p>
-        {managementNav.map((item) => {
-          const active = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition",
-                active
-                  ? "bg-brand-50 text-brand-700 font-semibold"
-                  : "text-slate-700 hover:bg-slate-50"
-              )}
-            >
-              <item.icon
-                className={cn(
-                  "w-5 h-5",
-                  active ? "text-brand-600" : "text-slate-400"
-                )}
-              />
-              {item.label}
-            </Link>
-          );
-        })}
+        {sections.map((sec, k) => <NavSection key={k} label={sec.label} items={sec.items} pathname={pathname} />)}
       </nav>
 
       <div className="p-4 border-t border-slate-100">
@@ -120,9 +101,9 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
   );
 }
 
-function NavSection({ label, items, pathname }: { label: string; items: { href: string; label: string; icon: typeof Home; badge?: number }[]; pathname: string }) {
+function NavSection({ label, items, pathname }: { label: string | null; items: { href: string; label: string; icon: typeof Home; badge?: number }[]; pathname: string }) {
   return <>
-    <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2 mt-5 first:mt-0">{label}</p>
+    {label && <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2 mt-5 first:mt-0">{label}</p>}
     {items.map((item) => {
       const active = pathname === item.href || pathname.startsWith(item.href + "/");
       return <Link key={item.href} href={item.href} className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition", active ? "bg-brand-50 text-brand-700 font-semibold" : "text-slate-700 hover:bg-slate-50")}><item.icon className={cn("h-5 w-5", active ? "text-brand-600" : "text-slate-400")} />{item.label}{item.badge ? <span className="ml-auto rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-700">{item.badge}</span> : null}</Link>;

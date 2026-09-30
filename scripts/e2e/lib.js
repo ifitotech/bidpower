@@ -29,11 +29,8 @@ exports.createProject = async (page, name, client) => {
   if (await page.locator("select[name=clientId]").count()) await page.locator("select[name=clientId]").selectOption("new");
   await page.locator("input[name=newClientName]").fill(client);
   await page.locator("input[name=address]").fill("123 Ocean Dr, Miami");
-  await page.locator("input[name=contractValue]").fill("0");
   await page.getByRole("button", { name: /Crear proyecto|Create project/ }).click();
-  await page.waitForURL("**/projects", { timeout: 30000 });
-  await page.locator("a[href^='/projects/']:not([href='/projects/new'])", { hasText: name }).first().click();
-  await page.waitForURL(/projects\/[0-9a-f-]{36}$/);
+  await page.waitForURL(/projects\/[0-9a-f-]{36}$/, { timeout: 30000 });
   return page.url().split("/").pop();
 };
 

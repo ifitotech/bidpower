@@ -48,6 +48,48 @@ export async function createPurchaseOrder(
 }
 
 /**
+ * "Buy now": the person already knows where to buy, so the material list becomes a purchase order with its lines.
+ * Same rules as a field purchase: inside the person's limit it waits for the receipt, over it waits for approval.
+ */
+export async function createPurchaseOrderFromMaterialRequest(
+  companyId: string, userId: string,
+  input: { requestId: string; supplierId?: string | null; vendorName?: string | null; estimatedAmount?: number | null; withinLimit: boolean },
+) {
+  const supabase = await createClient();
+  const { data: req, error: reqErr } = await supabase.from("material_requests").select("id, number, status, project_id").eq("id", input.requestId).eq("company_id", companyId).maybeSingle();
+  if (reqErr) throw reqErr;
+  if (!req || !req.project_id) throw new Error("forbidden");
+  if (!["requested", "reviewed"].includes(req.status as string)) throw new Error("request_not_pending");
+  const { data: items, error: itemsErr } = await supabase.from("material_request_items").select("material_id, description, quantity, unit, sort_order").eq("request_id", input.requestId).eq("company_id", companyId).order("sort_order");
+  if (itemsErr) throw itemsErr;
+  if (!items || items.length === 0) throw new Error("request_empty");
+
+  let vendorName = (input.vendorName ?? "").trim();
+  if (input.supplierId) {
+    const { data: sup } = await supabase.from("suppliers").select("name").eq("id", input.supplierId).eq("company_id", companyId).maybeSingle();
+    if (sup?.name) vendorName = sup.name as string;
+    else input.supplierId = null;
+  }
+  if (!vendorName) throw new Error("supplier_required");
+  const amount = input.estimatedAmount != null && Number.isFinite(input.estimatedAmount) && input.estimatedAmount >= 0 ? round2(input.estimatedAmount) : null;
+  const status: POStatus = input.withinLimit ? "pending_document" : "pending_approval";
+  const number = await nextPONumber(companyId);
+  const { data: po, error } = await supabase.from("purchase_orders").insert({
+    company_id: companyId, project_id: req.project_id, created_by: userId, number, vendor_name: vendorName.slice(0, 120), supplier_id: input.supplierId ?? null,
+    description: `${req.number ?? ""}`.trim() || null, estimated_amount: amount, status, waiting_on: input.withinLimit ? "employee" : "owner",
+  }).select().single();
+  if (error) throw error;
+  const { error: lineErr } = await supabase.from("purchase_order_items").insert(items.map((i, idx) => ({
+    company_id: companyId, purchase_order_id: po.id, material_id: i.material_id as string | null, description: String(i.description).slice(0, 300),
+    quantity: Number(i.quantity), unit: normalizeUnit(i.unit as string), unit_price: 0, sort_order: idx,
+  })));
+  if (lineErr) { await supabase.from("purchase_orders").delete().eq("id", po.id); throw lineErr; }
+  await addHistory(po.id, null, status, userId, null);
+  await supabase.from("material_requests").update({ status: "converted", waiting_on: "none", updated_at: new Date().toISOString() }).eq("id", input.requestId).eq("company_id", companyId).in("status", ["requested", "reviewed"]);
+  return { id: po.id as string, number: po.number as string, status };
+}
+
+/**
  * PO built from a supplier response: only priced, available lines come across, each keeping its origin
  * (request line + library item). Over the person's limit it waits for approval; otherwise it is approved.
  */

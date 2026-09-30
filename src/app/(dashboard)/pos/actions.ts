@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
 import { poAllowed } from "@/lib/permissions";
 import {
-  approvePurchaseOrder, cancelPurchaseOrder, completePurchaseOrder, createPurchaseOrderFromResponse, getPurchaseOrderDocumentUrl,
+  approvePurchaseOrder, cancelPurchaseOrder, completePurchaseOrder, createPurchaseOrderFromMaterialRequest, createPurchaseOrderFromResponse, getPurchaseOrderDocumentUrl,
   markPurchaseOrderReceived, markPurchaseOrderSent, recordPurchaseOrderReceipt, setPurchaseOrderExpectedDelivery, rejectPurchaseOrder, uploadPurchaseOrderDocument,
 } from "@/lib/services/purchase-orders";
 
@@ -20,7 +20,7 @@ function fail(e: unknown): POResult {
     ["po_locked", "errPoLocked"], ["po_needs_manager", "errPoNeedsManager"], ["po_needs_send_permission", "errPoNeedsSendPermission"],
     ["po_needs_document", "errPoNeedsDocument"], ["po_transition_invalid", "errPoTransition"], ["po_complete_via_function", "errPoTransition"],
     ["invalid_amount", "errPoAmount"], ["no_expense_category", "errPoNoCategory"], ["po_no_priced_lines", "errPoNoPricedLines"], ["po_exists", "errPoExists"],
-    ["invalid_qty", "errQtyInvalid"], ["check constraint", "errQtyInvalid"], ["file_type", "errFileType"], ["file_size", "errFileSize"], ["forbidden", "errForbidden"], ["row-level security", "errPoNotAllowed"],
+    ["invalid_qty", "errQtyInvalid"], ["supplier_required", "errSupplierRequired"], ["request_not_pending", "errRequestNotPending"], ["request_empty", "errRequestEmpty"], ["check constraint", "errQtyInvalid"], ["file_type", "errFileType"], ["file_size", "errFileSize"], ["forbidden", "errForbidden"], ["row-level security", "errPoNotAllowed"],
   ];
   const hit = rules.find(([k]) => msg.includes(k));
   return { errorCode: hit ? hit[1] : "errGeneric" };
@@ -35,6 +35,21 @@ function refresh(id?: string) {
   if (id) revalidatePath(`/pos/${id}`);
   revalidatePath("/dashboard");
   revalidatePath("/pricing");
+}
+
+export async function buyNowAction(requestId: string, supplierId: string | null, vendorName: string, estimatedAmount: number | null): Promise<POResult> {
+  const c = await ctx();
+  if (!c || !UUID.test(requestId) || (supplierId && !UUID.test(supplierId))) return { errorCode: "errGeneric" };
+  if (!c.perms.can_create_po) return { errorCode: "errPoNotAllowed" };
+  const amount = estimatedAmount != null && Number.isFinite(estimatedAmount) && estimatedAmount >= 0 ? estimatedAmount : null;
+  // A person with a PO limit must state the amount, otherwise the limit would mean nothing.
+  if (amount == null && !isReviewer(c.role) && c.perms.po_limit != null) return { errorCode: "errPoAmount" };
+  try {
+    const po = await createPurchaseOrderFromMaterialRequest(c.companyId, c.userId, { requestId, supplierId, vendorName, estimatedAmount: amount, withinLimit: poAllowed(c.perms, amount) });
+    refresh(po.id);
+    revalidatePath("/materials/requests");
+    return { success: true, id: po.id };
+  } catch (e) { return fail(e); }
 }
 
 export async function createPOFromResponseAction(requestId: string, responseId: string): Promise<POResult> {
