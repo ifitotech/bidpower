@@ -1110,6 +1110,8 @@ const en: Dictionary = {
   errInvalidEmail2: "The email is not valid.",
   errContactExists: "A contact with that email already exists for this supplier.",
   errContactName: "Enter the contact name.",
+  nextStepLabel: "Next step",
+  loginWho: "Contractors, teams and suppliers sign in here.",
 };
 
 export default en;

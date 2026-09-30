@@ -1111,6 +1111,8 @@ const pt: Dictionary = {
   errInvalidEmail2: "O e-mail não é válido.",
   errContactExists: "Já existe um contato com esse e-mail neste fornecedor.",
   errContactName: "Digite o nome do contato.",
+  nextStepLabel: "Próximo passo",
+  loginWho: "Contratantes, equipes e fornecedores entram aqui.",
 };
 
 export default pt;

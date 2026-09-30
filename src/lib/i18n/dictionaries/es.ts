@@ -536,10 +536,10 @@ const es = {
   poMarkReceived: "Marcar como recibido",
   poReceiptKind: "Tipo de documento",
   poKindReceipt: "Recibo",
-  poKindInvoice: "Invoice",
+  poKindInvoice: "Factura",
   poKindPacking: "Packing slip",
   poKindOther: "Otro",
-  poDocsRequired: "Sube el recibo, invoice o packing slip para poder completar el PO.",
+  poDocsRequired: "Sube el recibo, la factura o el packing slip para poder completar el PO.",
   poDocuments: "Documentos del PO",
   poFinalAmount: "Costo real (del documento)",
   poTaxAmount: "Del cual impuesto",
@@ -654,7 +654,7 @@ const es = {
   attnPRDueTomorrow: "{number} vence mañana (Bid Date)",
   attnPROverdue: "{number} pasó su Bid Date",
   attnPOApprove: "PO {number} de {vendor} por aprobar",
-  attnPODoc: "PO {number} ({vendor}) sin recibo/invoice",
+  attnPODoc: "PO {number} ({vendor}) sin recibo/factura",
   attnPORejected: "Rechazaron tu PO {number} ({vendor})",
   attnChange: "{name} pidió un cambio",
   attnProposalExpiring: "Propuesta {number} vence el {date}",
@@ -1124,6 +1124,8 @@ const es = {
   errInvalidEmail2: "El correo no es válido.",
   errContactExists: "Ya existe un contacto con ese correo en este supplier.",
   errContactName: "Escribe el nombre del contacto.",
+  nextStepLabel: "Siguiente paso",
+  loginWho: "Contratistas, equipos y suppliers entran aquí.",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

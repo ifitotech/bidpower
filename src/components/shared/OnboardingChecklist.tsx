@@ -17,6 +17,7 @@ export function OnboardingChecklist({ steps }: { steps: OnboardingStep[] }) {
         <span className="text-xs text-slate-500">{completed}/{steps.length}</span>
       </div>
       <div className="mb-4 h-1.5 w-full rounded-full bg-slate-100"><div className="h-1.5 rounded-full bg-brand-500 transition-all" style={{ width: `${(completed / steps.length) * 100}%` }} /></div>
+      {(() => { const next = steps.find((x) => !x.done); return next ? <Link href={next.href} className="mb-3 flex min-h-12 items-center justify-between rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700"><span>{t("nextStepLabel")}: {t(next.key)}</span><span aria-hidden>→</span></Link> : null; })()}
       <ul className="space-y-1">
         {steps.map((s) => (
           <li key={s.key}>

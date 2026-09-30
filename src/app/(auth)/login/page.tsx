@@ -64,6 +64,7 @@ export default function LoginPage() {
           <Logo variant="full" tone="dark" className="mx-auto mb-2 w-64 max-w-full" />
           <h1 className="sr-only">{t("appName")}</h1>
           <p className="text-brand-100 mt-2 text-sm">{t("appTagline")}</p>
+          <p className="text-brand-200 mt-1 text-xs">{t("loginWho")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
