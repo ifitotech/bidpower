@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
+  FileSpreadsheet,
   Briefcase,
   CalendarDays,
   Users,
@@ -49,6 +50,7 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
   ];
 
   const managementNav = [
+    ...(role === "owner" || (role === "manager" && permissions.can_view_costs) ? [{ href: "/accounting", label: t("accounting"), icon: FileSpreadsheet }] : []),
     ...(role === "owner" ? [{ href: "/employees", label: t("navEmployees"), icon: UserCog }] : []),
     ...(isEmployee ? [] : [{ href: "/my-company", label: t("myCompany"), icon: Settings }]),
     { href: "/more", label: "More", icon: Settings },

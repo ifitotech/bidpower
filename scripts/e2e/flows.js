@@ -421,6 +421,48 @@ async function phase9(browser) {
   ok("contractor: supplier shows as not connected after disconnect", (await o.getByText(/Sin cuenta|No account/).count()) > 0);
 }
 
+async function phase10(browser) {
+  const o = state.owner;
+  if (!state.emp) state.emp = await inviteEmployee(browser, o, "Luis Tester", `luis-${RUN}@bidpower-smoke.test`, "employee_basic", state.projectId);
+  const emp = state.emp;
+
+  // access: only the Owner (or a Manager who may view costs)
+  const denied = await emp.request.get(B + "/api/accounting/export?dataset=customers&format=csv");
+  ok("accounting: an employee gets 403 from the export endpoint", denied.status() === 403);
+  await emp.goto(B + "/accounting");
+  ok("accounting: an employee is redirected away from the page", !emp.url().includes("/accounting"));
+  const anon = await (await browser.newContext()).request.get(B + "/api/accounting/export?dataset=customers&format=csv", { maxRedirects: 0 });
+  ok("accounting: no session is refused", [307, 401, 403].includes(anon.status()));
+
+  // the Owner exports
+  await o.goto(B + "/accounting");
+  ok("accounting: the Owner sees the page with the QuickBooks note", (await o.getByText(/QuickBooks/).count()) > 0);
+  const csv = await o.request.get(B + "/api/accounting/export?dataset=customers&format=csv");
+  const text = await csv.text();
+  ok("accounting: customers CSV downloads with BOM, header and the customer", csv.status() === 200 && text.startsWith("\uFEFFid,name,contact_name") && text.includes("Cliente Miami") && text.includes("\r\n"));
+  ok("accounting: CSV has an attachment filename", /attachment; filename="bidpower-customers-\d{4}-\d{2}-\d{2}\.csv"/.test(csv.headers()["content-disposition"] || ""));
+  const exp = await o.request.get(B + "/api/accounting/export?dataset=expenses&format=json");
+  const expJson = await exp.json();
+  ok("accounting: expenses JSON only carries approved/reimbursed", exp.status() === 200 && expJson.rows.every((r) => ["approved", "reimbursed"].includes(r.status)));
+  const pc = await o.request.get(B + "/api/accounting/export?dataset=project_costs&format=csv");
+  ok("accounting: project costs CSV lists the project with forecast", pc.status() === 200 && (await pc.text()).includes("forecast_cost"));
+  const all = await o.request.get(B + "/api/accounting/export?dataset=all&format=json");
+  const allJson = await all.json();
+  ok("accounting: all-in-one JSON has the seven datasets", all.status() === 200 && Object.keys(allJson.datasets).length === 7);
+  ok("accounting: validation rejects bad dataset, all as CSV, bad and inverted dates", (await o.request.get(B + "/api/accounting/export?dataset=nope")).status() === 400 && (await o.request.get(B + "/api/accounting/export?dataset=all&format=csv")).status() === 400 && (await o.request.get(B + "/api/accounting/export?dataset=expenses&from=2026-13-99x")).status() === 400 && (await o.request.get(B + "/api/accounting/export?dataset=expenses&from=2026-02-01&to=2026-01-01")).status() === 400);
+  const filtered = await o.request.get(B + "/api/accounting/export?dataset=expenses&format=json&from=2001-01-01&to=2001-01-02");
+  ok("accounting: a date range with nothing returns zero rows", (await filtered.json()).rows.length === 0);
+
+  // the audit log records them and is visible on the page
+  await o.goto(B + "/accounting");
+  ok("accounting: the export history lists the downloads", (await o.getByText(/Clientes · CSV|Customers · CSV/).count()) > 0 && (await o.getByText(/Todo \(JSON\) · JSON|Everything \(JSON\) · JSON/).count()) > 0);
+  // mobile
+  const m = await page(browser, 390, 844);
+  await m.context().addCookies(await o.context().cookies());
+  await m.goto(B + "/accounting");
+  ok("accounting: mobile has no horizontal overflow", await m.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+}
+
 (async () => {
   const browser = await launch();
   try {
@@ -434,6 +476,7 @@ async function phase9(browser) {
     if (want("all") || want("6")) await phase6(browser);
     if (want("all") || want("78")) await phase78(browser);
     if (want("all") || want("9")) await phase9(browser);
+    if (want("all") || want("10")) await phase10(browser);
   } catch (e) {
     console.error("ERROR", e.message.split("\n").slice(0, 4).join(" | "));
     process.exitCode = 2;

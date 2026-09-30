@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260809000019_expense_review_rules.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260811000021_phase10_accounting_export.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -161,3 +161,20 @@ las instrucciones para borrarlos están en la cabecera del script.
 - **Proposals** (`/quotes`, `/quotes/new`): la lista y el formulario usaban datos de ejemplo (clientes "Juan Rivera"…) y no podían crear una Proposal real; ahora usan clientes y proyectos reales. "Supply & Purchase" ya no se mezcla con los quotes al cliente.
 - **Editar cliente** cargaba valores de ejemplo (habría sobrescrito datos reales); ahora parte del cliente guardado.
 - **Prueba local completa**: `scripts/e2e/` levanta Postgres + PostgREST real + las migraciones y ejecuta las fases 1–8 en un navegador (`up.sh`, `app.sh`, `flows.js`; ver su README). Encontró y corrigió, entre otros, la barra "Enviar pedido" tapada por la navegación móvil. No sustituye la prueba con el proyecto Supabase real.
+
+## 16. Cuentas Supply (Fase 9)
+
+- Un supply house se registra con su propio tipo de cuenta (`companies.kind = 'supply'`) y ve solo su bandeja `/supply`: solicitudes de precio, contratistas conectados y sus cotizaciones. Nunca ve el nombre del proyecto.
+- El contratista y el supply se conectan con un **código de un solo uso** (Suppliers → conectar). Al revocar, la bandeja del supply queda vacía y las solicitudes ya enviadas se conservan.
+- Las respuestas por cuenta y por enlace comparten la misma lógica en la base de datos, así que el contratista las compara igual.
+- Migración: `20260810000020_phase9_supply_premium.sql`.
+
+## 17. Exportación contable / QuickBooks (Fase 10)
+
+- BidPower **no es software de contabilidad**: exporta datos operativos para importarlos en QuickBooks u otro sistema.
+- Pantalla `/accounting` (solo Owner, o Manager con permiso de ver costos; lo decide la función `can_export_accounting` en la base de datos). Datasets: clientes, proveedores, proyectos, gastos (solo aprobados y reembolsados), órdenes de compra, facturas y costos por proyecto, en CSV o JSON; "Todo" solo en JSON. Filtros por fechas y proyecto.
+- El CSV usa BOM UTF-8 y saltos CRLF, y neutraliza fórmulas de hoja de cálculo. Los ids son estables.
+- Cada descarga queda en `accounting_export_log` (quién, cuándo, filtros, filas). Si la bitácora no se puede escribir, no se entrega el archivo.
+- `external_refs` queda lista para guardar el id de cada registro en QuickBooks, pero está vacía.
+- **Lo que NO existe:** la sincronización en vivo con QuickBooks. Necesita credenciales de una app de desarrollador de Intuit (OAuth); esas credenciales solo se cargan en las variables de entorno del despliegue, nunca en el chat ni con prefijo `NEXT_PUBLIC_`.
+- Migración: `20260811000021_phase10_accounting_export.sql`. Prueba: `node scripts/e2e/flows.js 10`.
