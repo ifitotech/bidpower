@@ -5,7 +5,7 @@ import { getActionContext } from "@/lib/action-context";
 import { poAllowed } from "@/lib/permissions";
 import {
   approvePurchaseOrder, cancelPurchaseOrder, completePurchaseOrder, createPurchaseOrderFromResponse, getPurchaseOrderDocumentUrl,
-  markPurchaseOrderReceived, markPurchaseOrderSent, rejectPurchaseOrder, uploadPurchaseOrderDocument,
+  markPurchaseOrderReceived, markPurchaseOrderSent, setPurchaseOrderExpectedDelivery, rejectPurchaseOrder, uploadPurchaseOrderDocument,
 } from "@/lib/services/purchase-orders";
 
 export type POResult = { errorCode?: string; success?: boolean; id?: string; url?: string };
@@ -57,7 +57,12 @@ async function step(poId: string, allow: (c: NonNullable<Awaited<ReturnType<type
 
 export const approvePOAction = async (poId: string, note?: string) => step(poId, (c) => isReviewer(c.role), (co, u) => approvePurchaseOrder(co, u, poId, note));
 export const rejectPOAction = async (poId: string, note?: string) => step(poId, (c) => isReviewer(c.role), (co, u) => rejectPurchaseOrder(co, u, poId, note));
-export const sendPOAction = async (poId: string) => step(poId, (c) => isReviewer(c.role) || c.perms.can_send_po, (co, u) => markPurchaseOrderSent(co, u, poId));
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const validDay = (d?: string | null) => !d || (DAY.test(d) && !Number.isNaN(Date.parse(d)));
+export const sendPOAction = async (poId: string, expectedDelivery?: string | null): Promise<POResult> =>
+  validDay(expectedDelivery) ? step(poId, (c) => isReviewer(c.role) || c.perms.can_send_po, (co, u) => markPurchaseOrderSent(co, u, poId, expectedDelivery || null)) : { errorCode: "errDateInvalid" };
+export const setPOExpectedDeliveryAction = async (poId: string, date: string | null): Promise<POResult> =>
+  validDay(date) ? step(poId, (c) => isReviewer(c.role) || c.perms.can_send_po, (co) => setPurchaseOrderExpectedDelivery(co, poId, date || null)) : { errorCode: "errDateInvalid" };
 export const receivePOAction = async (poId: string) => step(poId, () => true, (co, u) => markPurchaseOrderReceived(co, u, poId));
 export const cancelPOAction = async (poId: string) => step(poId, () => true, (co, u) => cancelPurchaseOrder(co, u, poId));
 

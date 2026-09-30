@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, FileText, Upload } from "lucide-react";
 import { POStatusBadge } from "@/components/shared/StatusBadge";
+import { DeliveryTag } from "@/components/shared/DeliveryTag";
 import { WaitingOn } from "@/components/shared/RequestStatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
@@ -12,7 +13,7 @@ import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { PO_STATUS_KEYS, PO_UPLOAD_STATUSES, isTerminal } from "@/lib/po-status";
 import type { POStatus } from "@/types/database";
 import type { PODetail as PO } from "@/lib/services/purchase-orders";
-import { approvePOAction, cancelPOAction, completePOAction, getPODocumentUrlAction, receivePOAction, rejectPOAction, sendPOAction, uploadPODocumentAction } from "../actions";
+import { approvePOAction, cancelPOAction, completePOAction, getPODocumentUrlAction, receivePOAction, rejectPOAction, sendPOAction, setPOExpectedDeliveryAction, uploadPODocumentAction } from "../actions";
 
 const KIND_KEYS: Record<string, keyof Dictionary> = { receipt: "poKindReceipt", invoice: "poKindInvoice", packing_slip: "poKindPacking", other: "poKindOther" };
 const btn = "min-h-11 rounded-xl px-4 text-sm font-semibold disabled:opacity-40";
@@ -27,6 +28,7 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
   const [note, setNote] = useState("");
   const [kind, setKind] = useState("receipt");
   const [finalAmount, setFinalAmount] = useState(po.estimated_amount != null ? String(po.estimated_amount) : "");
+  const [deliveryDate, setDeliveryDate] = useState(po.expected_delivery ?? "");
   const [tax, setTax] = useState(po.tax_amount != null ? String(po.tax_amount) : "");
   const fileRef = useRef<HTMLInputElement>(null);
   const money = (n: number | null | undefined) => (n == null ? "—" : formatCurrency(Number(n)));
@@ -73,6 +75,7 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
       {status === "completed" && <Row label={t("poFinal")} value={money(po.final_amount)} bold />}
       {po.tax_amount != null && <Row label={t("poTax")} value={money(po.tax_amount)} />}
       {po.freight != null && <Row label={t("freight")} value={money(po.freight)} />}
+      {po.expected_delivery && <Row label={t("poExpectedDelivery")} value={<span className="inline-flex items-center gap-2">{formatDate(po.expected_delivery)}<DeliveryTag date={po.expected_delivery} status={status} /></span>} />}
       <Row label={t("employees")} value={`${po.creator?.full_name ?? "—"} · ${formatDate(po.created_at)}`} />
       {!isTerminal(status) && po.waiting_on !== "none" && <Row label={t("waitingOn")} value={<WaitingOn value={po.waiting_on} />} />}
       {po.pricing && <p className="text-xs"><Link href={`/pricing/${po.pricing.id}`} className="text-brand-700 underline">{t("poFromPricing", { number: po.pricing.number ?? "" })}</Link></p>}
@@ -90,7 +93,8 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
     {status === "pending_approval" && !isReviewer && <p className="mb-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">{t("poWaitsApproval")}</p>}
 
     {(status === "approved" || status === "sent") && <div className="mb-4 space-y-2">
-      {status === "approved" && canSend && <button type="button" disabled={busy} onClick={() => run(() => sendPOAction(po.id))} className={`${btn} w-full bg-brand-600 text-white`}>{t("poMarkSent")}</button>}
+      {canSend && <div className="rounded-xl border border-slate-200 bg-white p-3"><label className="block text-xs font-medium text-slate-600">{t("poExpectedDelivery")}<input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className={`${field} mt-1`} /></label><p className="mt-1 text-xs text-slate-400">{t("poExpectedDeliveryHint")}</p>{status === "sent" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy || deliveryDate === (po.expected_delivery ?? "")} onClick={() => run(() => setPOExpectedDeliveryAction(po.id, deliveryDate || null))} className={`${btn} flex-1 border border-slate-200`}>{deliveryDate ? t("poSaveDate") : t("poClearDate")}</button></div>}</div>}
+      {status === "approved" && canSend && <button type="button" disabled={busy} onClick={() => run(() => sendPOAction(po.id, deliveryDate || null))} className={`${btn} w-full bg-brand-600 text-white`}>{t("poMarkSent")}</button>}
       <button type="button" disabled={busy} onClick={() => run(() => receivePOAction(po.id))} className={`${btn} w-full border border-slate-200`}>{t("poMarkReceived")}</button>
     </div>}
 

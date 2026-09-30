@@ -89,7 +89,7 @@ export async function createPurchaseOrderFromResponse(companyId: string, userId:
     supplier_id: resp.supplier_id, pricing_request_id: req.id, supplier_response_id: resp.id,
     description: `${req.number ?? ""}`.trim() || null, estimated_amount: total, freight, tax_amount: tax,
     status, waiting_on: "owner", approved_by: within ? userId : null, approved_at: within ? new Date().toISOString() : null,
-    approval_note: within ? "within PO limit" : null,
+    approval_note: null,
   }).select().single();
   if (error) {
     if ((error as { code?: string }).code === "23505") throw new Error("po_exists");
@@ -124,8 +124,17 @@ export const approvePurchaseOrder = (companyId: string, userId: string, poId: st
   move(companyId, userId, poId, ["pending_approval"], { approved_by: userId, approved_at: new Date().toISOString(), approval_note: note?.trim() || null, waiting_on: "owner" }, "approved", note);
 export const rejectPurchaseOrder = (companyId: string, userId: string, poId: string, note?: string | null) =>
   move(companyId, userId, poId, ["pending_approval"], { approved_by: userId, approved_at: new Date().toISOString(), approval_note: note?.trim() || null, waiting_on: "employee" }, "rejected", note);
-export const markPurchaseOrderSent = (companyId: string, userId: string, poId: string) =>
-  move(companyId, userId, poId, ["approved"], { sent_at: new Date().toISOString(), waiting_on: "supplier" }, "sent");
+export const markPurchaseOrderSent = (companyId: string, userId: string, poId: string, expectedDelivery?: string | null) =>
+  move(companyId, userId, poId, ["approved"], { sent_at: new Date().toISOString(), waiting_on: "supplier", ...(expectedDelivery ? { expected_delivery: expectedDelivery } : {}) }, "sent");
+
+/** Logistics: the date the material is expected. Only while the PO is approved or sent (after that it is history). */
+export async function setPurchaseOrderExpectedDelivery(companyId: string, poId: string, date: string | null) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("purchase_orders").update({ expected_delivery: date, updated_at: new Date().toISOString() })
+    .eq("id", poId).eq("company_id", companyId).in("status", ["approved", "sent"]).select("id");
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error("po_transition_invalid");
+}
 export const markPurchaseOrderReceived = (companyId: string, userId: string, poId: string) =>
   move(companyId, userId, poId, ["approved", "sent"], { received_at: new Date().toISOString(), waiting_on: "employee" }, "received");
 export const cancelPurchaseOrder = (companyId: string, userId: string, poId: string) =>
@@ -197,7 +206,7 @@ export async function requestException(poId: string, companyId: string, userId: 
   await supabase.from("purchase_orders").update({ exception_reason: reason, waiting_on: "owner" }).eq("id", poId);
 }
 
-const PO_LIST = `id, number, vendor_name, description, estimated_amount, final_amount, status, waiting_on, created_at, project_id, project:projects(id, name), creator:profiles!purchase_orders_created_by_fkey(full_name)`;
+const PO_LIST = `id, number, vendor_name, description, estimated_amount, final_amount, status, waiting_on, expected_delivery, created_at, project_id, project:projects(id, name), creator:profiles!purchase_orders_created_by_fkey(full_name)`;
 
 export async function getPurchaseOrders(companyId: string, statusFilter?: string) {
   const supabase = await createClient();
@@ -215,7 +224,7 @@ export async function getPurchaseOrderById(poId: string, companyId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("purchase_orders")
-    .select("id, number, vendor_name, category, description, estimated_amount, final_amount, tax_amount, freight, status, waiting_on, exception_reason, approval_note, approved_at, sent_at, received_at, completed_at, created_at, created_by, project_id, pricing_request_id, supplier_response_id, project:projects(id, name), creator:profiles!purchase_orders_created_by_fkey(full_name), pricing:supply_quote_requests(id, number)")
+    .select("id, number, vendor_name, category, description, estimated_amount, final_amount, tax_amount, freight, status, waiting_on, exception_reason, approval_note, expected_delivery, approved_at, sent_at, received_at, completed_at, created_at, created_by, project_id, pricing_request_id, supplier_response_id, project:projects(id, name), creator:profiles!purchase_orders_created_by_fkey(full_name), pricing:supply_quote_requests(id, number)")
     .eq("id", poId).eq("company_id", companyId).maybeSingle();
   if (error) throw error;
   if (!data) return null;
@@ -231,7 +240,7 @@ export async function getPurchaseOrderById(poId: string, companyId: string) {
     ...(raw as {
       id: string; number: string; vendor_name: string; category: string | null; description: string | null; estimated_amount: number | null;
       final_amount: number | null; tax_amount: number | null; freight: number | null; status: string; waiting_on: string; exception_reason: string | null;
-      approval_note: string | null; approved_at: string | null; sent_at: string | null; received_at: string | null; completed_at: string | null;
+      approval_note: string | null; expected_delivery: string | null; approved_at: string | null; sent_at: string | null; received_at: string | null; completed_at: string | null;
       created_at: string; created_by: string; project_id: string; pricing_request_id: string | null; supplier_response_id: string | null;
     }),
     project: one(raw.project as { id: string; name: string } | { id: string; name: string }[] | null),

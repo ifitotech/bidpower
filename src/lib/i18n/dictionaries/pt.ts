@@ -1026,6 +1026,17 @@ const pt: Dictionary = {
   notFoundHint: "O link pode estar digitado errado ou não existir mais.",
   goHome: "Ir para o início",
   errorPageTitle: "Algo deu errado",
+  poExpectedDelivery: "Entrega prevista",
+  poExpectedDeliveryHint: "Data em que o supplier deve entregar. Avisamos no Início se atrasar.",
+  poSaveDate: "Salvar data",
+  poClearDate: "Remover data",
+  poLate: "Atrasado",
+  poDueToday: "Entrega hoje",
+  poDueTomorrow: "Entrega amanhã",
+  errDateInvalid: "A data não é válida.",
+  attnPODeliveryLate: "PO {number} de {vendor}: entrega atrasada",
+  attnPODeliveryToday: "PO {number} de {vendor}: previsto para hoje",
+  attnPODeliveryTomorrow: "PO {number} de {vendor}: previsto para amanhã",
 };
 
 export default pt;

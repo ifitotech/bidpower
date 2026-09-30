@@ -4026,3 +4026,11 @@ CREATE POLICY "Exporters log their own exports" ON accounting_export_log FOR INS
 
 DROP POLICY IF EXISTS "External refs managed by exporters" ON external_refs;
 CREATE POLICY "External refs managed by exporters" ON external_refs FOR ALL USING (can_export_accounting(company_id)) WITH CHECK (can_export_accounting(company_id));
+
+-- ===== supabase/migrations/20260812000022_po_expected_delivery.sql =====
+-- BidPower — PO logistics: when is the material expected?
+-- The Owner/Manager (or whoever may send POs) sets the expected delivery date on an approved or sent PO.
+-- It feeds Needs Attention (late / due today / due tomorrow) and the PO screens. No status rule changes.
+
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS expected_delivery DATE;
+CREATE INDEX IF NOT EXISTS idx_po_expected_delivery ON purchase_orders(company_id, expected_delivery) WHERE expected_delivery IS NOT NULL;

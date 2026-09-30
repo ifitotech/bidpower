@@ -1039,6 +1039,17 @@ const es = {
   notFoundHint: "Puede que el enlace esté mal escrito o que ya no exista.",
   goHome: "Ir al inicio",
   errorPageTitle: "Algo salió mal",
+  poExpectedDelivery: "Entrega esperada",
+  poExpectedDeliveryHint: "Fecha en que el supplier debe entregar. Te avisamos en Inicio si se atrasa.",
+  poSaveDate: "Guardar fecha",
+  poClearDate: "Quitar fecha",
+  poLate: "Atrasado",
+  poDueToday: "Entrega hoy",
+  poDueTomorrow: "Entrega mañana",
+  errDateInvalid: "La fecha no es válida.",
+  attnPODeliveryLate: "PO {number} de {vendor}: entrega atrasada",
+  attnPODeliveryToday: "PO {number} de {vendor}: se espera hoy",
+  attnPODeliveryTomorrow: "PO {number} de {vendor}: se espera mañana",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

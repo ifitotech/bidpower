@@ -106,7 +106,7 @@ export async function getNeedsAttention(ctx: { companyId: string; userId: string
     const [mr, pr, po, cr, qs, ex, projects] = await Promise.all([
       supabase.from("material_requests").select("id, number, project_id, created_at, project:projects(name)").eq("company_id", ctx.companyId).eq("status", "requested").order("created_at").limit(8),
       supabase.from("supply_quote_requests").select("id, number, status, response_due_date").eq("company_id", ctx.companyId).in("status", ["draft", "sent", "question_open", "responded"]).limit(60),
-      supabase.from("purchase_orders").select("id, number, status, vendor_name, created_at").eq("company_id", ctx.companyId).in("status", ["pending_approval", "received", "pending_document"]).order("created_at").limit(20),
+      supabase.from("purchase_orders").select("id, number, status, vendor_name, created_at, expected_delivery").eq("company_id", ctx.companyId).in("status", ["pending_approval", "received", "pending_document", "approved", "sent"]).order("created_at").limit(20),
       supabase.from("change_requests").select("id, quote_id, requested_by_name, created_at").eq("company_id", ctx.companyId).eq("status", "open").order("created_at").limit(8),
       supabase.from("quotes").select("id, number, valid_until").eq("company_id", ctx.companyId).in("status", ["sent", "pending"]).not("valid_until", "is", null).lte("valid_until", soon).limit(8),
       supabase.from("expenses").select("id, vendor_name").eq("company_id", ctx.companyId).eq("status", "pending_review").order("created_at").limit(8),
@@ -124,6 +124,13 @@ export async function getNeedsAttention(ctx: { companyId: string; userId: string
     }
     for (const r of po.data ?? []) {
       if (r.status === "pending_approval") add({ id: `poa-${r.id}`, titleKey: "attnPOApprove", params: { number: r.number as string, vendor: r.vendor_name as string }, href: `/pos/${r.id}`, waitingOn: "owner", severity: "high", sort: 1 });
+      else if (r.status === "approved" || r.status === "sent") {
+        const d = r.expected_delivery as string | null;
+        if (d && d <= tomorrow) {
+          const key = d < isoDay(today) ? "attnPODeliveryLate" : d === isoDay(today) ? "attnPODeliveryToday" : "attnPODeliveryTomorrow";
+          add({ id: `pol-${r.id}`, titleKey: key, params: { number: r.number as string, vendor: r.vendor_name as string }, href: `/pos/${r.id}`, waitingOn: "supplier", severity: key === "attnPODeliveryTomorrow" ? "normal" : "high", sort: 0 });
+        }
+      }
       else add({ id: `pod-${r.id}`, titleKey: "attnPODoc", params: { number: r.number as string, vendor: r.vendor_name as string }, href: `/pos/${r.id}`, waitingOn: "employee", severity: "normal", sort: 4 });
     }
     for (const r of cr.data ?? []) add({ id: `cr-${r.id}`, titleKey: "attnChange", params: { name: (r.requested_by_name as string) || "" }, href: `/quotes/${r.quote_id}`, waitingOn: "owner", severity: "high", sort: 1 });

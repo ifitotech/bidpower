@@ -15,11 +15,6 @@ export async function getDashboardMetrics(companyId: string) {
     .select("id", { count: "exact", head: true })
     .eq("company_id", companyId)
     .eq("status", "completed");
-  const { count: employeesWorking } = await supabase
-    .from("company_members")
-    .select("id", { count: "exact", head: true })
-    .eq("company_id", companyId)
-    .eq("is_active", true);
   const { count: pendingInvoices } = await supabase
     .from("invoices")
     .select("id", { count: "exact", head: true })
@@ -35,12 +30,18 @@ export async function getDashboardMetrics(companyId: string) {
   let totalSpent = 0;
   let totalProfit = 0;
 
+  // Estimated profit uses the forecast (actual + committed in open POs), the same figure as the project screen.
+  const { data: costs } = activeProjects.length
+    ? await supabase.from("project_cost_summary").select("project_id, committed_cost").in("project_id", activeProjects.map((p) => p.id))
+    : { data: [] as { project_id: string; committed_cost: number }[] };
+  const committedBy = new Map((costs ?? []).map((c) => [c.project_id as string, Number(c.committed_cost)]));
+
   for (const p of activeProjects) {
     const spent = (p.expenses ?? [])
       .filter((e: { status?: string }) => e.status === "approved" || e.status === "reimbursed")
       .reduce((s: number, e: { amount: number }) => s + Number(e.amount), 0);
     totalSpent += spent;
-    totalProfit += Number(p.contract_value) - spent;
+    totalProfit += Number(p.contract_value) - (spent + (committedBy.get(p.id) ?? 0));
   }
 
   // Quotes pending
@@ -78,7 +79,6 @@ export async function getDashboardMetrics(companyId: string) {
   return {
     activeProjectsCount: activeProjects.length,
     completedProjectsCount: completedProjectsCount ?? 0,
-    employeesWorking: employeesWorking ?? 0,
     pendingInvoices: pendingInvoices ?? 0,
     totalContractValue,
     totalSpent,

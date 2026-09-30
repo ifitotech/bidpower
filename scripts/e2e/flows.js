@@ -125,8 +125,16 @@ async function phase45(browser) {
   state.poUrl = o.url();
   ok("po: created from the supplier response, approved (owner has no limit)", (await o.getByText(/Aprobado|Approved/).count()) > 0);
   ok("po: lines carried over with prices", (await o.locator("ul li").filter({ hasText: /×/ }).count()) >= 1);
+  // logistics: expected delivery date travels with "sent"; a past date is late and shows on Home
+  await o.locator("input[type=date]").fill("2020-01-02");
   await o.getByRole("button", { name: /Marcar como enviado al supplier|Mark as sent to supplier/ }).click();
-  await o.waitForTimeout(1200);
+  await o.waitForTimeout(1500);
+  ok("po logistics: expected delivery saved and flagged as late", (await o.getByText(/Atrasado|Late/).count()) > 0 && (await o.getByText(/Entrega esperada|Expected delivery/).count()) > 0);
+  await o.goto(B + "/dashboard");
+  ok("po logistics: a late delivery appears in Needs Attention", (await o.getByText(/entrega atrasada|delivery is late/).count()) > 0);
+  await o.goto(B + "/pos");
+  ok("po logistics: the PO list shows the expected date with the late tag", (await o.getByText(/Atrasado|Late/).count()) > 0);
+  await o.goto(state.poUrl);
   await o.getByRole("button", { name: /Marcar como recibido|Mark as received/ }).click();
   await o.waitForTimeout(1200);
   ok("po: received, receipt required to complete", (await o.getByText(/recibo, invoice o packing slip|receipt, invoice or packing slip/i).count()) > 0);

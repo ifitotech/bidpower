@@ -1025,6 +1025,17 @@ const en: Dictionary = {
   notFoundHint: "The link may be mistyped or may no longer exist.",
   goHome: "Go to home",
   errorPageTitle: "Something went wrong",
+  poExpectedDelivery: "Expected delivery",
+  poExpectedDeliveryHint: "The date the supplier should deliver. We flag it on Home if it runs late.",
+  poSaveDate: "Save date",
+  poClearDate: "Clear date",
+  poLate: "Late",
+  poDueToday: "Due today",
+  poDueTomorrow: "Due tomorrow",
+  errDateInvalid: "The date is not valid.",
+  attnPODeliveryLate: "PO {number} from {vendor}: delivery is late",
+  attnPODeliveryToday: "PO {number} from {vendor}: expected today",
+  attnPODeliveryTomorrow: "PO {number} from {vendor}: expected tomorrow",
 };
 
 export default en;
