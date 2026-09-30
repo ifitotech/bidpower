@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
+import { parseMaterialImport } from "@/lib/material-import";
 import { CATEGORY_CODES, normalizeUnit, type RequestLineInput } from "@/lib/materials";
 import {
-  archiveMaterial, createMaterial, getMaterialPriceHistory, type PricePoint, createSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
+  archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
 } from "@/lib/services/materials";
 import { cancelMaterialRequest, createMaterialRequest, reviewMaterialRequest } from "@/lib/services/material-requests";
 
@@ -27,6 +28,7 @@ function fail(e: unknown): MaterialResult {
   if (msg === "item_required") return { errorCode: "errItemRequired" };
   if (msg === "list_name_required" || msg === "list_empty") return { errorCode: "errListInvalid" };
   if (msg === "forbidden") return { errorCode: "errForbidden" };
+  if (msg === "import_invalid") return { errorCode: "errImportEmpty" };
   return { errorCode: "errGeneric" };
 }
 
@@ -58,6 +60,20 @@ export async function saveMaterialAction(raw: Record<string, unknown>): Promise<
     else await createMaterial(c.companyId, c.userId, item);
     revalidatePath("/materials");
     return { success: true };
+  } catch (e) { return fail(e); }
+}
+
+export async function importMaterialsAction(text: string): Promise<MaterialResult & { created?: number; skipped?: number }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
+  if (typeof text !== "string" || text.length > 2_000_000) return { errorCode: "errImportEmpty" };
+  const parsed = parseMaterialImport(text);
+  if (parsed.rows.length === 0) return { errorCode: "errImportEmpty" };
+  try {
+    const r = await importMaterials(c.companyId, c.userId, parsed.rows);
+    revalidatePath("/materials");
+    return { success: true, ...r };
   } catch (e) { return fail(e); }
 }
 

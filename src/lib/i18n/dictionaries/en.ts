@@ -1056,6 +1056,19 @@ const en: Dictionary = {
   feedbackMine: "Your previous comments",
   errFeedbackEmpty: "Write a comment first.",
   orDivider: "or",
+  importCsv: "Import list",
+  importHint: "Upload a CSV (or paste from Excel) with columns: description, part number, manufacturer, unit, category and aliases. Existing items are skipped by part number.",
+  importChooseFile: "Choose CSV file",
+  importPaste: "…or paste the rows here",
+  importTemplate: "Download template",
+  importPreview: "{count} items ready to import",
+  importInvalid: "{count} rows without a description are ignored.",
+  importNoDescription: "I did not find a description column. Use the template.",
+  importRun: "Import",
+  importDone: "Imported: {created}. Already existed: {skipped}.",
+  importTooMany: "Maximum 2000 rows per import.",
+  errImportEmpty: "There are no valid rows to import.",
+  partNumberShort: "P/N",
 };
 
 export default en;

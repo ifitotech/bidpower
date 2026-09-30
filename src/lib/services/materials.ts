@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buildLibraryIndex, isInLibrary, type ImportRow } from "@/lib/material-import";
 import { CATEGORY_CODES, normalizeText, normalizeUnit, type LibraryItem } from "@/lib/materials";
 
 type MaterialRow = {
@@ -193,4 +194,31 @@ export async function getMaterialPriceHistory(companyId: string, materialId: str
     }
   }
   return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit);
+}
+
+
+/** Bulk import: skips what the library already has (same part number + manufacturer, or same name when there is no part number). */
+export async function importMaterials(companyId: string, userId: string, rows: ImportRow[]): Promise<{ created: number; skipped: number }> {
+  if (!rows.length || rows.length > 2000) throw new Error("import_invalid");
+  const supabase = await createClient();
+  const { data: existing, error } = await supabase.from("company_materials").select("description, catalog_number, manufacturer").eq("company_id", companyId).eq("is_active", true).limit(20000);
+  if (error) throw error;
+  const index = buildLibraryIndex((existing ?? []) as { description: string; catalog_number: string | null; manufacturer: string | null }[]);
+  const fresh = rows.filter((r) => !isInLibrary(index, r));
+  let created = 0;
+  for (let i = 0; i < fresh.length; i += 200) {
+    const chunk = fresh.slice(i, i + 200);
+    const { data, error: insErr } = await supabase.from("company_materials").insert(chunk.map((r) => ({
+      company_id: companyId, created_by: userId, description: r.description.trim().slice(0, 300), unit: normalizeUnit(r.unit),
+      category: r.category && CATEGORY_CODES.includes(r.category) ? r.category : null, manufacturer: clean(r.manufacturer), catalog_number: clean(r.catalog_number),
+    }))).select("id");
+    if (insErr) throw insErr;
+    created += data?.length ?? 0;
+    const aliasRows = (data ?? []).flatMap((m, k) => cleanAliases(chunk[k].aliases, chunk[k].description).map((alias) => ({ company_id: companyId, material_id: m.id as string, alias })));
+    if (aliasRows.length) {
+      const { error: aErr } = await supabase.from("material_aliases").insert(aliasRows);
+      if (aErr) throw aErr;
+    }
+  }
+  return { created, skipped: rows.length - fresh.length };
 }

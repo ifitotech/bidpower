@@ -518,6 +518,24 @@ async function phaseLang(browser) {
   await o.getByRole("button", { name: /^Enviar$|^Send$/ }).click();
   await o.waitForTimeout(1500);
   ok("feedback: sent and listed under the person's previous comments", (await o.getByText(/Gracias, lo recibimos|Thank you, we got it/).count()) > 0 && (await o.getByText("Prueba de comentario: falta X").count()) > 0);
+  // import ready-made materials with part numbers; a field name finds the part number and the reverse
+  await o.goto(B + "/materials");
+  await o.getByRole("button", { name: /Importar lista|Import list/ }).click();
+  await o.getByLabel(/o pega aquí las filas|or paste the rows here|ou cole as linhas aqui/i).fill("description,part number,manufacturer,unit,category,aliases\r\nTHHN 10 AWG stranded black,THHN-10-STR-BLK,Southwire,FT,wire,\"cable 10 negro, #10 black\"\r\n20A single-pole breaker,BR120,Eaton,EA,breakers,");
+  ok("import: preview counts the ready rows", (await o.getByText(/2 materiales listos|2 items ready/).count()) > 0);
+  await o.getByRole("button", { name: /^Importar$|^Import$/ }).click();
+  await o.waitForTimeout(2000);
+  ok("import: created and reported", (await o.getByText(/Importados: 2|Imported: 2/).count()) > 0);
+  await o.getByPlaceholder(/Buscar|Search/).first().fill("cable 10 negro");
+  ok("import: finding it by the field name shows the part number", (await o.getByText(/THHN-10-STR-BLK/).count()) > 0);
+  await o.getByPlaceholder(/Buscar|Search/).first().fill("thhn-10-str-blk");
+  ok("import: finding it by the part number works too", (await o.getByText(/THHN 10 AWG stranded black/).count()) > 0);
+  await o.goto(B + "/materials");
+  await o.getByRole("button", { name: /Importar lista|Import list/ }).click();
+  await o.getByLabel(/o pega aquí las filas|or paste the rows here|ou cole as linhas aqui/i).fill("description,part number\r\nTHHN 10 AWG stranded black,thhn-10-str-blk\r\nNew item,NEW-1");
+  await o.getByRole("button", { name: /^Importar$|^Import$/ }).click();
+  await o.waitForTimeout(2000);
+  ok("import: an existing part number is skipped, the new one is created", (await o.getByText(/Importados: 1\. Ya existían: 1|Imported: 1\. Already existed: 1/).count()) > 0);
   // price history comes only from real POs and quotes; an empty history says so
   await o.goto(B + "/materials");
   if (await o.locator("ul li button.flex-1").count()) {

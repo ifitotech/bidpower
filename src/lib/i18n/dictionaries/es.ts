@@ -1070,6 +1070,19 @@ const es = {
   feedbackMine: "Tus comentarios anteriores",
   errFeedbackEmpty: "Escribe un comentario primero.",
   orDivider: "o",
+  importCsv: "Importar lista",
+  importHint: "Sube un CSV (o pega desde Excel) con columnas: descripción, número de parte, fabricante, unidad, categoría y apodos. Ya existentes se omiten por número de parte.",
+  importChooseFile: "Elegir archivo CSV",
+  importPaste: "…o pega aquí las filas",
+  importTemplate: "Descargar plantilla",
+  importPreview: "{count} materiales listos para importar",
+  importInvalid: "{count} filas sin descripción se ignoran.",
+  importNoDescription: "No encontré una columna de descripción. Usa la plantilla.",
+  importRun: "Importar",
+  importDone: "Importados: {created}. Ya existían: {skipped}.",
+  importTooMany: "Máximo 2000 filas por importación.",
+  errImportEmpty: "No hay filas válidas para importar.",
+  partNumberShort: "N/P",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

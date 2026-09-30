@@ -1057,6 +1057,19 @@ const pt: Dictionary = {
   feedbackMine: "Seus comentários anteriores",
   errFeedbackEmpty: "Escreva um comentário primeiro.",
   orDivider: "ou",
+  importCsv: "Importar lista",
+  importHint: "Envie um CSV (ou cole do Excel) com colunas: descrição, número da peça, fabricante, unidade, categoria e apelidos. Os já existentes são ignorados pelo número da peça.",
+  importChooseFile: "Escolher arquivo CSV",
+  importPaste: "…ou cole as linhas aqui",
+  importTemplate: "Baixar modelo",
+  importPreview: "{count} itens prontos para importar",
+  importInvalid: "{count} linhas sem descrição serão ignoradas.",
+  importNoDescription: "Não encontrei uma coluna de descrição. Use o modelo.",
+  importRun: "Importar",
+  importDone: "Importados: {created}. Já existiam: {skipped}.",
+  importTooMany: "Máximo de 2000 linhas por importação.",
+  errImportEmpty: "Não há linhas válidas para importar.",
+  partNumberShort: "N/P",
 };
 
 export default pt;

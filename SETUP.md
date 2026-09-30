@@ -215,3 +215,10 @@ las instrucciones para borrarlos están en la cabecera del script.
 - Los correos de Supabase (recuperar contraseña, confirmar correo) vuelven a la dirección real del sitio, nunca a localhost. En Supabase → Authentication → URL Configuration: pon Site URL = la URL de producción y agrega `https://<tu-dominio>/**` a Redirect URLs.
 - Google: el botón solo aparece con `NEXT_PUBLIC_GOOGLE_AUTH=true` (y el proveedor Google activado en Supabase).
 - Los previews piden iniciar sesión en Vercel (Deployment Protection); desactívalo para probar con otras personas.
+
+## 23. Materiales ya fabricados con número de parte (importar)
+
+- Biblioteca de materiales → **Importar lista**: sube un CSV/TSV (o pega filas desde Excel). Columnas reconocidas (español, inglés o portugués): descripción, número de parte (`part number`, `sku`, `pn`…), fabricante, unidad, categoría y apodos (separados por coma o `|`). Hay plantilla descargable con un ejemplo real (`THHN-10-STR-BLK`).
+- El nombre de campo va en **apodos** ("cable 10 negro, #10 black") y el número de parte en su columna: después el material se encuentra escribiendo cualquiera de los dos.
+- Repetidos: se omite lo que ya existe por número de parte (un número de parte sin fabricante coincide con cualquier fabricante) o, sin número de parte, por nombre. Máximo 2000 filas por importación; se muestra vista previa antes de importar.
+- Requiere el permiso de administrar la biblioteca. El número de parte viaja a los Pricing Requests y a lo que ve el supplier.
