@@ -1114,6 +1114,7 @@ const en: Dictionary = {
   loginWho: "Contractors, teams and suppliers sign in here.",
   howMany: "How many?",
   addToList: "Add to list",
+  lengthHint: "Wire: enter the feet you need (any amount) or add 500 or 1000 ft reels.",
 };
 
 export default en;

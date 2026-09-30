@@ -1115,6 +1115,7 @@ const pt: Dictionary = {
   loginWho: "Contratantes, equipes e fornecedores entram aqui.",
   howMany: "Quantos?",
   addToList: "Adicionar à lista",
+  lengthHint: "Cabo: digite os pés que precisa (qualquer quantidade) ou some bobinas de 500 ou 1000 pés.",
 };
 
 export default pt;

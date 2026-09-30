@@ -1128,6 +1128,7 @@ const es = {
   loginWho: "Contratistas, equipos y suppliers entran aquí.",
   howMany: "¿Cuántos?",
   addToList: "Agregar a la lista",
+  lengthHint: "Cable: escribe los pies que necesitas (cualquier cantidad) o suma carretes de 500 o 1000 pies.",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

@@ -6,13 +6,14 @@ import { ClipboardPaste, ListChecks, Minus, Plus, Search, Star, X } from "lucide
 import { useI18n } from "@/lib/i18n/provider";
 import { usePermissions } from "@/lib/permissions-context";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
-import { MATERIAL_UNITS, findExact, normalizeUnit, parsePastedList, searchLibrary, splitQuantity, type LibraryItem } from "@/lib/materials";
+import { MATERIAL_UNITS, findExact, isLengthItem, normalizeUnit, parsePastedList, searchLibrary, splitQuantity, type LibraryItem } from "@/lib/materials";
 import { createMaterialRequestAction } from "@/app/(dashboard)/materials/actions";
 
 type Line = { key: string; materialId: string | null; description: string; quantity: number; unit: string; category: string | null; notes: string; allowSubstitution: boolean; saveToLibrary: boolean };
 type Staged = { item: LibraryItem | null; description: string; quantity: number; unit: string };
 type SavedList = { id: string; name: string; items: { materialId: string; quantity: number }[] };
 
+const stepFor = (unit: string) => (unit === "FT" ? 50 : 1);
 let counter = 0;
 const nextKey = () => `l${++counter}`;
 
@@ -50,10 +51,14 @@ export default function RequestBuilder({ projectId, projectName, items, lists }:
   }
 
   // Tapping a suggestion asks for the quantity right away; nothing is added until that is confirmed.
-  function stageLibrary(item: LibraryItem) { setStaged({ item, description: item.description, quantity: typed.quantity ?? 1, unit: item.unit }); }
+  function stageLibrary(item: LibraryItem) {
+    const length = isLengthItem(item.description, item.category, item.unit);
+    setStaged({ item, description: item.description, quantity: typed.quantity ?? (length ? 100 : 1), unit: length && item.unit === "EA" ? "FT" : item.unit });
+  }
   function stageFreeText() {
     if (!typed.text) return;
-    setStaged({ item: null, description: typed.text, quantity: typed.quantity ?? 1, unit: "EA" });
+    const length = isLengthItem(typed.text);
+    setStaged({ item: null, description: typed.text, quantity: typed.quantity ?? (length ? 100 : 1), unit: length ? "FT" : "EA" });
   }
 
   function confirmStaged() {
@@ -131,13 +136,20 @@ export default function RequestBuilder({ projectId, projectName, items, lists }:
       <p className="mb-1 mt-3 text-xs font-medium text-slate-600">{t("howMany")}</p>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center rounded-lg border border-slate-300 bg-white">
-          <button type="button" aria-label="-" onClick={() => setStaged({ ...staged, quantity: Math.max(1, staged.quantity - 1) })} className="flex h-12 w-12 items-center justify-center"><Minus className="h-4 w-4" /></button>
+          <button type="button" aria-label="-" onClick={() => setStaged({ ...staged, quantity: Math.max(1, staged.quantity - stepFor(staged.unit)) })} className="flex h-12 w-12 items-center justify-center"><Minus className="h-4 w-4" /></button>
           <input autoFocus type="number" inputMode="decimal" min={0.01} step="any" value={staged.quantity} aria-label={t("quantity")} onFocus={(e) => e.currentTarget.select()} onChange={(e) => setStaged({ ...staged, quantity: Number(e.target.value) > 0 ? Number(e.target.value) : 0 })} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); confirmStaged(); } }} className="h-12 w-20 border-x border-slate-300 text-center text-lg font-semibold outline-none" />
-          <button type="button" aria-label="+" onClick={() => setStaged({ ...staged, quantity: staged.quantity + 1 })} className="flex h-12 w-12 items-center justify-center"><Plus className="h-4 w-4" /></button>
+          <button type="button" aria-label="+" onClick={() => setStaged({ ...staged, quantity: staged.quantity + stepFor(staged.unit) })} className="flex h-12 w-12 items-center justify-center"><Plus className="h-4 w-4" /></button>
         </div>
         <select value={staged.unit} aria-label={t("itemUnit")} onChange={(e) => setStaged({ ...staged, unit: normalizeUnit(e.target.value) })} className="h-12 rounded-lg border border-slate-300 bg-white px-2 text-sm">{MATERIAL_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}</select>
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">{[10, 50, 100, 500].map((n) => <button key={n} type="button" onClick={() => setStaged({ ...staged, quantity: staged.quantity + n })} className="min-h-9 rounded-full border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700">+{n}</button>)}</div>
+      {(() => {
+        const byLength = staged.unit === "FT" || staged.unit === "ROLL";
+        const steps = byLength ? [50, 100, 250, 500, 1000] : [5, 10, 50, 100];
+        return <>
+          <div className="mt-2 flex flex-wrap gap-2">{steps.map((n) => <button key={n} type="button" onClick={() => setStaged({ ...staged, quantity: staged.quantity + n })} className="min-h-9 rounded-full border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700">+{n}</button>)}</div>
+          {byLength && <p className="mt-2 text-xs text-slate-500">{t("lengthHint")}</p>}
+        </>;
+      })()}
       <div className="mt-3 flex gap-2">
         <button type="button" onClick={confirmStaged} disabled={staged.quantity <= 0} className="min-h-12 flex-1 rounded-xl bg-brand-600 px-4 font-semibold text-white disabled:opacity-40">{t("addToList")}</button>
         <button type="button" onClick={() => { setStaged(null); searchRef.current?.focus(); }} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-600">{t("cancel")}</button>
@@ -174,9 +186,9 @@ export default function RequestBuilder({ projectId, projectName, items, lists }:
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <div className="flex items-center rounded-lg border border-slate-200">
-            <button type="button" aria-label="-" onClick={() => patch(l.key, { quantity: Math.max(1, l.quantity - 1) })} className="flex h-10 w-10 items-center justify-center"><Minus className="h-4 w-4" /></button>
+            <button type="button" aria-label="-" onClick={() => patch(l.key, { quantity: Math.max(1, l.quantity - stepFor(l.unit)) })} className="flex h-10 w-10 items-center justify-center"><Minus className="h-4 w-4" /></button>
             <input type="number" inputMode="decimal" min={0.01} step="any" value={l.quantity} aria-label={t("quantity")} onChange={(e) => patch(l.key, { quantity: Number(e.target.value) > 0 ? Number(e.target.value) : 1 })} className="h-10 w-16 border-x border-slate-200 text-center text-base outline-none" />
-            <button type="button" aria-label="+" onClick={() => patch(l.key, { quantity: l.quantity + 1 })} className="flex h-10 w-10 items-center justify-center"><Plus className="h-4 w-4" /></button>
+            <button type="button" aria-label="+" onClick={() => patch(l.key, { quantity: l.quantity + stepFor(l.unit) })} className="flex h-10 w-10 items-center justify-center"><Plus className="h-4 w-4" /></button>
           </div>
           <select value={l.unit} aria-label={t("itemUnit")} onChange={(e) => patch(l.key, { unit: normalizeUnit(e.target.value) })} className="h-10 rounded-lg border border-slate-200 bg-white px-2 text-sm">{MATERIAL_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}</select>
           <label className="flex min-h-10 items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" checked={l.allowSubstitution} onChange={(e) => patch(l.key, { allowSubstitution: e.target.checked })} />{t("allowSubstitution")}</label>
