@@ -58,7 +58,7 @@ export default function InviteEmployeePage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
           <Input name="fullName" label={t("fullName")} placeholder="Luis Martínez" required />
-          <Input name="email" label={t("email")} type="email" placeholder="luis@empresa.com" required />
+          <Input name="email" label={t("email")} type="email" placeholder="name@example.com" required />
           <Select label={t("permTemplate")} name="template" defaultValue="employee_basic" options={[
             { value: "employee_basic", label: t("tplEmployeeBasic") },
             { value: "employee_purchasing", label: t("tplEmployeePurchasing") },

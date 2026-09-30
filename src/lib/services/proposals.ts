@@ -75,7 +75,7 @@ export async function createCustomerLink(companyId: string, userId: string, inpu
     const { data: moved, error: mvErr } = await supabase.from(table).update({ status: "sent", waiting_on: "customer", sent_at: now, updated_at: now }).eq("id", input.objectId).eq("company_id", companyId).eq("status", "draft").select("id");
     if (mvErr) throw mvErr;
     if (moved && moved.length && input.objectType === "proposal") {
-      await supabase.from("quote_status_history").insert({ quote_id: input.objectId, from_status: "draft", to_status: "sent", changed_by: userId, notes: "secure link" });
+      await supabase.from("quote_status_history").insert({ quote_id: input.objectId, from_status: "draft", to_status: "sent", changed_by: userId, notes: null });
     }
   }
   return token;

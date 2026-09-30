@@ -16,7 +16,7 @@ type Quote = {
 };
 
 export default function QuoteDetailClient({ quote: q, extras, canManage }: { quote: Quote; extras: Awaited<ReturnType<typeof getProposalExtras>> | null; canManage: boolean }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const items = [...(q.items ?? [])];
   return <div className="mx-auto max-w-2xl p-4 pb-16 md:p-8">
     <div className="mb-6 flex items-center gap-3">
@@ -41,7 +41,7 @@ export default function QuoteDetailClient({ quote: q, extras, canManage }: { quo
       </div>
     </div>
     {(q.notes || q.terms) && <div className="mb-4 rounded-xl border border-slate-200 bg-white p-5 text-sm"><p className="whitespace-pre-wrap">{q.notes}</p><p className="mt-3 whitespace-pre-wrap text-slate-500">{q.terms}</p></div>}
-    <a href={`/api/quotes/${q.id}/pdf`} className="mb-6 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"><Download className="h-4 w-4" />PDF</a>
+    <a href={`/api/quotes/${q.id}/pdf?lang=${locale}`} className="mb-6 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"><Download className="h-4 w-4" />PDF</a>
     {extras && <ProposalPanel quote={{ id: q.id, status: q.status, number: q.number, version: q.version ?? 1, clientName: q.client?.name ?? "" }} extras={extras} canManage={canManage} />}
   </div>;
 }

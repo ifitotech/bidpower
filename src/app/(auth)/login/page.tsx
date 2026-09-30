@@ -47,7 +47,7 @@ export default function LoginPage() {
     setError(null);
     try {
       const result = await signInWithGoogleAction();
-      if (result?.error) { setError(result.error); setLoading(false); }
+      if (result?.errorCode) { setError(t(result.errorCode as never)); setLoading(false); }
     } catch {
       setError(t("errGeneric"));
       setLoading(false);
@@ -74,7 +74,7 @@ export default function LoginPage() {
               name="email"
               type="email"
               required
-              placeholder="tu@empresa.com"
+              placeholder="name@example.com"
               className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40"
             />
           </div>

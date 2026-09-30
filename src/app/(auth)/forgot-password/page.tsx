@@ -19,8 +19,8 @@ export default function ForgotPasswordPage() {
     setMessage(null);
     setError(null);
     const result = await resetPasswordAction(new FormData(event.currentTarget));
-    if (result.error) setError(result.error);
-    if (result.success) setMessage(result.success);
+    if (result.errorCode) setError(t(result.errorCode as never));
+    if (result.successCode) setMessage(t(result.successCode as never));
     setLoading(false);
   }
 
@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
           <p className="text-brand-100 mt-2 text-sm">{t("forgotPasswordHint")}</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input name="email" type="email" required placeholder="tu@empresa.com" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40" />
+          <input name="email" type="email" required placeholder="name@example.com" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40" />
           {error && <div className="bg-red-500/20 rounded-xl px-4 py-3 text-sm">{error}</div>}
           {message && <div className="bg-green-500/20 rounded-xl px-4 py-3 text-sm">{message}</div>}
           <Button type="submit" size="lg" loading={loading} className="w-full bg-white text-brand-800 hover:bg-brand-50">{t("sendLink")}</Button>

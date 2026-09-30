@@ -69,7 +69,7 @@ export default function NewPOForm({ projects, canCreate, poLimit }: { projects: 
           name="category"
           options={[
             { value: "materials", label: t("materials") },
-            { value: "tools", label: "Herramientas" },
+            { value: "tools", label: t("expCatTools") },
             { value: "sub", label: t("subcontractors") },
             { value: "other", label: t("other") },
           ]}

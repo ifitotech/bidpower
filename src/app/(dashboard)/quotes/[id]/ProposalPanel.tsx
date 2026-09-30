@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Plus, Trash2 } from "lucide-react";
+import { QuoteStatusBadge } from "@/components/shared/StatusBadge";
 import { useI18n } from "@/lib/i18n/provider";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
@@ -64,7 +65,7 @@ export default function ProposalPanel({ quote, extras, canManage }: { quote: Quo
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
 
     {extras.versions.length > 1 && <section><h2 className="mb-2 font-semibold">{t("proposalVersions")}</h2>
-      <ul className="space-y-1.5 text-sm">{extras.versions.map((v) => <li key={v.id}>{v.id === quote.id ? <span className="font-semibold">{t("proposalVersion", { version: String(v.version) })}</span> : <Link href={`/quotes/${v.id}`} className="text-brand-700 underline">{t("proposalVersion", { version: String(v.version) })}</Link>} <span className="text-slate-400">· {formatCurrency(v.total)} · {v.status}</span></li>)}</ul></section>}
+      <ul className="space-y-1.5 text-sm">{extras.versions.map((v) => <li key={v.id}>{v.id === quote.id ? <span className="font-semibold">{t("proposalVersion", { version: String(v.version) })}</span> : <Link href={`/quotes/${v.id}`} className="text-brand-700 underline">{t("proposalVersion", { version: String(v.version) })}</Link>} <span className="text-slate-400">· {formatCurrency(v.total)} · </span><QuoteStatusBadge status={v.status} /></li>)}</ul></section>}
 
     {canManage && <section>
       <h2 className="mb-2 font-semibold">{t("customerLinks")}</h2>

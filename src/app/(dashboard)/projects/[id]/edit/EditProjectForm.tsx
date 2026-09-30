@@ -23,8 +23,8 @@ export default function EditProjectForm({ project }: { project: EditableProject 
     setError(null);
     const form = new FormData(event.currentTarget);
     form.set("id", project.id);
-    const result = await updateProjectAction(form).catch(() => ({ error: t("errGeneric") }));
-    if (result.error) { setError(result.error); setSaving(false); return; }
+    const result = await updateProjectAction(form).catch(() => ({ errorCode: "errGeneric" }));
+    if ("errorCode" in result && result.errorCode) { setError(t(result.errorCode as never)); setSaving(false); return; }
     router.push(`/projects/${project.id}`);
     router.refresh();
   }
@@ -33,8 +33,8 @@ export default function EditProjectForm({ project }: { project: EditableProject 
     setSaving(true);
     const form = new FormData();
     form.set("id", project.id);
-    const result = await archiveProjectAction(form).catch(() => ({ error: t("errGeneric") }));
-    if (result.error) { setError(result.error); setSaving(false); return; }
+    const result = await archiveProjectAction(form).catch(() => ({ errorCode: "errGeneric" }));
+    if ("errorCode" in result && result.errorCode) { setError(t(result.errorCode as never)); setSaving(false); return; }
     router.push("/projects");
     router.refresh();
   }

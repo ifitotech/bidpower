@@ -75,7 +75,7 @@ export async function uploadDocument(params: {
       from_status: "pending_document",
       to_status: "document_uploaded",
       changed_by: params.userId,
-      notes: "Documento subido",
+      notes: null,
     });
   }
 

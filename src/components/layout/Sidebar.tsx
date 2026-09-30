@@ -46,14 +46,14 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
     ...(isManagerOrAbove ? [{ href: "/materials/requests", label: t("materialRequests"), icon: Package }] : []),
     ...(permissions.can_manage_library ? [{ href: "/materials", label: t("materialsLibrary"), icon: Package }] : []),
     { href: "/calendar", label: t("calendar"), icon: CalendarDays },
-    { href: "/files", label: "Files & Photos", icon: FolderOpen },
+    { href: "/files", label: t("navFiles"), icon: FolderOpen },
   ];
 
   const managementNav = [
     ...(role === "owner" || (role === "manager" && permissions.can_view_costs) ? [{ href: "/accounting", label: t("accounting"), icon: FileSpreadsheet }] : []),
     ...(role === "owner" ? [{ href: "/employees", label: t("navEmployees"), icon: UserCog }] : []),
     ...(isEmployee ? [] : [{ href: "/my-company", label: t("myCompany"), icon: Settings }]),
-    { href: "/more", label: "More", icon: Settings },
+    { href: "/more", label: t("navMore"), icon: Settings },
   ];
 
   return (
@@ -69,8 +69,8 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <NavSection label="Work" items={workNav} pathname={pathname} />
-        <NavSection label="Operations" items={operationsNav} pathname={pathname} />
+        <NavSection label={t("navWork")} items={workNav} pathname={pathname} />
+        <NavSection label={t("navOperations")} items={operationsNav} pathname={pathname} />
         {/* Keep management routes visible without removing any existing module. */}
         <p className="px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-5 mb-2">
           {t("managementSection")}

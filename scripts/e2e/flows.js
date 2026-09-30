@@ -463,6 +463,41 @@ async function phase10(browser) {
   ok("accounting: mobile has no horizontal overflow", await m.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
 }
 
+async function phaseLang(browser) {
+  const o = state.owner;
+  // Settings start from the saved company (never from placeholders) and saving reports in the current language
+  await o.goto(B + "/settings");
+  ok("settings: the company form starts from the saved name", (await o.locator("input[name=name]").inputValue()) === "Smoke Electric");
+  ok("settings: no invented demo values", (await o.locator("body").innerText()).indexOf("ElectricPro") === -1 && (await o.locator("input[name=phone]").nth(0).inputValue()) !== "(305) 555-0142");
+  await o.locator("input[name=fullName]").fill("Ana Owner");
+  await o.getByRole("button", { name: /^Guardar$|^Save$/ }).first().click();
+  await o.waitForTimeout(1500);
+  ok("settings: profile saves with a translated confirmation", (await o.getByText(/Guardado correctamente|Saved successfully/).count()) > 0);
+  // Categories are real: a new one shows up in the expense form
+  await o.goto(B + "/settings/categories");
+  await o.getByPlaceholder(/Nombre de la categoría|Category name/).fill("Baterías");
+  await o.getByRole("button", { name: /^Crear$|^Create$/ }).first().click();
+  await o.waitForTimeout(1500);
+  await o.goto(B + "/expenses/new");
+  ok("categories: the new category is offered in the expense form", (await o.getByRole("button", { name: "Baterías" }).count()) > 0);
+  // Language: the whole shell follows the chosen language, first paint included
+  await o.goto(B + "/dashboard");
+  await o.evaluate(() => localStorage.setItem("bidpower-locale", "en"));
+  await o.reload({ waitUntil: "networkidle" });
+  const en = await o.locator("body").innerText();
+  ok("language EN: navigation is in English", /work/i.test(en) && /operations/i.test(en) && !/trabajo|operaciones/i.test(en));
+  await o.goto(B + "/settings/categories");
+  ok("language EN: system categories are translated", (await o.getByText("Materials").count()) > 0 && (await o.getByText("Materiales").count()) === 0);
+  const pdfEn = await o.request.get(B + "/api/quotes/00000000-0000-0000-0000-000000000000/pdf?lang=en");
+  ok("pdf: unknown quote is a clean 404", pdfEn.status() === 404);
+  await o.evaluate(() => localStorage.setItem("bidpower-locale", "es"));
+  await o.goto(B + "/dashboard", { waitUntil: "networkidle" });
+  const es = await o.locator("body").innerText();
+  ok("language ES: navigation is in Spanish", /trabajo/i.test(es) && /operaciones/i.test(es));
+  await o.goto(B + "/pagina-que-no-existe");
+  ok("404 page is translated", (await o.getByText(/No encontramos esta página/).count()) > 0);
+}
+
 (async () => {
   const browser = await launch();
   try {
@@ -477,6 +512,7 @@ async function phase10(browser) {
     if (want("all") || want("78")) await phase78(browser);
     if (want("all") || want("9")) await phase9(browser);
     if (want("all") || want("10")) await phase10(browser);
+    if (want("all") || want("lang")) await phaseLang(browser);
   } catch (e) {
     console.error("ERROR", e.message.split("\n").slice(0, 4).join(" | "));
     process.exitCode = 2;

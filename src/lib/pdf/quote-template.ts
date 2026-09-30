@@ -1,3 +1,4 @@
+import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 /**
  * Quote PDF data structure and HTML template generator.
  * Can be rendered with a library like @react-pdf/renderer or puppeteer later.
@@ -37,31 +38,37 @@ export interface QuotePDFData {
   notes?: string;
 }
 
-export function formatMoney(n: number) {
-  return new Intl.NumberFormat("en-US", {
+export function formatMoney(n: number, locale = "en-US") {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "USD",
   }).format(n);
 }
 
-export function buildQuoteHTML(data: QuotePDFData): string {
+/** Everything that comes from the database is escaped: this HTML is served from the app's own origin. */
+function esc(v: unknown): string {
+  return String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+export function buildQuoteHTML(data: QuotePDFData, t: (key: keyof Dictionary) => string = () => "", locale = "es"): string {
+  const money = (n: number) => formatMoney(n, locale === "es" ? "es-US" : locale === "pt" ? "pt-BR" : "en-US");
   const rows = data.items
     .map(
       (item) => `
     <tr>
-      <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${item.description}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${esc(item.description)}</td>
       <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;">${item.quantity}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;">${formatMoney(item.unitPrice)}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;">${formatMoney(item.amount)}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;">${money(item.unitPrice)}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;">${money(item.amount)}</td>
     </tr>`
     )
     .join("");
 
   return `<!DOCTYPE html>
-<html>
+<html lang="${esc(locale)}">
 <head>
   <meta charset="utf-8">
-  <title>Quote ${data.number}</title>
+  <title>${esc(t("navQuotes"))} ${esc(data.number)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; margin: 0; padding: 40px; }
     .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
@@ -80,33 +87,33 @@ export function buildQuoteHTML(data: QuotePDFData): string {
 <body>
   <div class="header">
     <div>
-      <div class="brand">${data.company.name}</div>
-      ${data.company.address ? `<div style="font-size:13px;color:#64748b;margin-top:4px;">${data.company.address}</div>` : ""}
-      ${data.company.phone ? `<div style="font-size:13px;color:#64748b;">${data.company.phone}</div>` : ""}
+      <div class="brand">${esc(data.company.name)}</div>
+      ${data.company.address ? `<div style="font-size:13px;color:#64748b;margin-top:4px;">${esc(data.company.address)}</div>` : ""}
+      ${data.company.phone ? `<div style="font-size:13px;color:#64748b;">${esc(data.company.phone)}</div>` : ""}
     </div>
     <div class="meta">
-      <div style="font-size:20px;font-weight:700;color:#0f172a;">QUOTE</div>
-      <div>${data.number}</div>
-      <div>Fecha: ${data.issueDate}</div>
-      ${data.validUntil ? `<div>Válido hasta: ${data.validUntil}</div>` : ""}
+      <div style="font-size:20px;font-weight:700;color:#0f172a;">${esc(t("navQuotes").toUpperCase())}</div>
+      <div>${esc(data.number)}</div>
+      <div>${esc(t("qIssueDate"))}: ${esc(data.issueDate)}</div>
+      ${data.validUntil ? `<div>${esc(t("qValidUntil"))}: ${esc(data.validUntil)}</div>` : ""}
     </div>
   </div>
 
   <div class="section">
-    <div class="label">Cliente</div>
-    <div style="font-weight:600;">${data.client.name}</div>
-    ${data.client.contactName ? `<div style="font-size:13px;">${data.client.contactName}</div>` : ""}
-    ${data.client.email ? `<div style="font-size:13px;color:#64748b;">${data.client.email}</div>` : ""}
-    ${data.client.address ? `<div style="font-size:13px;color:#64748b;">${data.client.address}</div>` : ""}
+    <div class="label">${esc(t("qClient"))}</div>
+    <div style="font-weight:600;">${esc(data.client.name)}</div>
+    ${data.client.contactName ? `<div style="font-size:13px;">${esc(data.client.contactName)}</div>` : ""}
+    ${data.client.email ? `<div style="font-size:13px;color:#64748b;">${esc(data.client.email)}</div>` : ""}
+    ${data.client.address ? `<div style="font-size:13px;color:#64748b;">${esc(data.client.address)}</div>` : ""}
   </div>
 
   <table>
     <thead>
       <tr>
-        <th>Descripción</th>
-        <th style="text-align:right;">Cant.</th>
-        <th style="text-align:right;">Precio</th>
-        <th style="text-align:right;">Importe</th>
+        <th>${esc(t("description"))}</th>
+        <th style="text-align:right;">${esc(t("quantity"))}</th>
+        <th style="text-align:right;">${esc(t("unitPrice"))}</th>
+        <th style="text-align:right;">${esc(t("amount"))}</th>
       </tr>
     </thead>
     <tbody>
@@ -115,17 +122,17 @@ export function buildQuoteHTML(data: QuotePDFData): string {
   </table>
 
   <div class="totals">
-    <div class="totals-row"><span>Subtotal</span><span>${formatMoney(data.subtotal)}</span></div>
-    ${data.taxAmount > 0 ? `<div class="totals-row"><span>Impuestos</span><span>${formatMoney(data.taxAmount)}</span></div>` : ""}
-    ${data.discountAmount > 0 ? `<div class="totals-row"><span>Descuento</span><span>-${formatMoney(data.discountAmount)}</span></div>` : ""}
-    <div class="totals-row grand"><span>Total</span><span>${formatMoney(data.total)}</span></div>
+    <div class="totals-row"><span>${esc(t("qSubtotal"))}</span><span>${money(data.subtotal)}</span></div>
+    ${data.taxAmount > 0 ? `<div class="totals-row"><span>${esc(t("qTax"))}</span><span>${money(data.taxAmount)}</span></div>` : ""}
+    ${data.discountAmount > 0 ? `<div class="totals-row"><span>${esc(t("qDiscount"))}</span><span>-${money(data.discountAmount)}</span></div>` : ""}
+    <div class="totals-row grand"><span>${esc(t("qTotal"))}</span><span>${money(data.total)}</span></div>
   </div>
 
-  ${data.terms ? `<div class="section" style="margin-top:32px;"><div class="label">Términos</div><div style="font-size:13px;">${data.terms}</div></div>` : ""}
-  ${data.notes ? `<div class="section"><div class="label">Notas</div><div style="font-size:13px;">${data.notes}</div></div>` : ""}
+  ${data.terms ? `<div class="section" style="margin-top:32px;"><div class="label">${esc(t("terms"))}</div><div style="font-size:13px;">${esc(data.terms)}</div></div>` : ""}
+  ${data.notes ? `<div class="section"><div class="label">${esc(t("notes"))}</div><div style="font-size:13px;">${esc(data.notes)}</div></div>` : ""}
 
   <div class="footer">
-    Generado con BidPower · ${data.company.name}
+    ${esc(t("pdfGeneratedWith"))} · ${esc(data.company.name)}
   </div>
 </body>
 </html>`;

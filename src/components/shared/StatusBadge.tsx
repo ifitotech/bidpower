@@ -6,14 +6,9 @@ import { PO_STATUS_KEYS, PO_STATUS_COLORS } from "@/lib/po-status";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import type { POStatus, QuoteStatus, ProjectStatus } from "@/types/database";
 
-const quoteLabels: Record<string, string> = {
-  draft: "Borrador",
-  sent: "Enviado",
-  pending: "Pendiente",
-  approved: "Aprobado",
-  rejected: "Rechazado",
-  expired: "Expirado",
-  cancelled: "Cancelado",
+const quoteKeys: Record<string, keyof Dictionary> = {
+  draft: "quoteStDraft", sent: "quoteStSent", pending: "quoteStPending", approved: "quoteStApproved", rejected: "quoteStRejected",
+  expired: "quoteStExpired", cancelled: "quoteStCancelled", changes_requested: "quoteStChangesRequested", superseded: "quoteStSuperseded",
 };
 
 const quoteColors: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
@@ -54,12 +49,10 @@ export function POStatusBadge({ status }: { status: string }) {
   return <Badge variant={variant}>{label}</Badge>;
 }
 
-const quoteKeys: Record<string, keyof Dictionary> = { changes_requested: "quoteStChangesRequested", superseded: "quoteStSuperseded" };
-
 export function QuoteStatusBadge({ status }: { status: string }) {
   const { t } = useI18n();
   const key = quoteKeys[status];
-  const label = key ? t(key) : quoteLabels[status] ?? status;
+  const label = key ? t(key) : status;
   const variant = quoteColors[status] ?? (status === "changes_requested" ? "warning" : "default");
   return <Badge variant={variant}>{label}</Badge>;
 }

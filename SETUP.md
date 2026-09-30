@@ -178,3 +178,12 @@ las instrucciones para borrarlos están en la cabecera del script.
 - `external_refs` queda lista para guardar el id de cada registro en QuickBooks, pero está vacía.
 - **Lo que NO existe:** la sincronización en vivo con QuickBooks. Necesita credenciales de una app de desarrollador de Intuit (OAuth); esas credenciales solo se cargan en las variables de entorno del despliegue, nunca en el chat ni con prefijo `NEXT_PUBLIC_`.
 - Migración: `20260811000021_phase10_accounting_export.sql`. Prueba: `node scripts/e2e/flows.js 10`.
+
+## 18. Idiomas (ES / EN / PT)
+
+- Todo el texto visible sale de `src/lib/i18n/dictionaries/{es,en,pt}.ts`. Las acciones del servidor devuelven códigos (`errorCode`), no mensajes: el cliente los traduce. Nunca se muestra un mensaje crudo de la base de datos.
+- El idioma se guarda en `localStorage` **y** en una cookie (`bidpower-locale`); el servidor la lee (o el `Accept-Language`) para que el primer render ya esté en el idioma correcto, sin parpadeo.
+- Las categorías de gasto del sistema se guardan en español en la base; la pantalla las muestra traducidas (`src/lib/category-label.ts`). Las categorías que crea la empresa se muestran tal como se escribieron.
+- El PDF/HTML de un Quote respeta el idioma (`?lang=`) y escapa todo el contenido.
+- Auditoría: `AUDIT_EMAIL=<usuario del e2e> node scripts/e2e/i18n-audit.js` recorre las pantallas en los 3 idiomas y marca texto de otro idioma. El vocabulario de producto (Owner, Manager, Quote, PO, Bid Date…) se mantiene en inglés a propósito en español.
+- Limpieza de pantallas que eran maquetas: Configuración (ya carga los datos reales de la empresa y del perfil; antes tenía valores de ejemplo que se habrían guardado encima de los reales), Categorías de gasto (ahora se guardan de verdad), Calendario (mes real), Facturas (cliente elegido de una lista), Archivos. Se quitaron los interruptores de notificaciones, el contador "0 análisis" y el botón de firma, que no hacían nada.

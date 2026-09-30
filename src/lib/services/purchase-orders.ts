@@ -43,7 +43,7 @@ export async function createPurchaseOrder(
     .select()
     .single();
   if (error) throw error;
-  await addHistory(po.id, null, status, userId, withinLimit ? "PO creado" : "PO creado, por aprobar");
+  await addHistory(po.id, null, status, userId, null);
   return po;
 }
 

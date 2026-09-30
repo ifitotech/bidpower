@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarDays, Package, Zap, ClipboardList, FileText, FolderOpen, MapPin, Pencil, Plus, Receipt, ShoppingCart, User } from "lucide-react";
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { categoryLabel } from "@/lib/category-label";
 import { useI18n } from "@/lib/i18n/provider";
 import { usePermissions } from "@/lib/permissions-context";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
@@ -122,7 +123,7 @@ export default function ProjectDetailClient({ project: p, error, team = [], canM
     {!costsHidden && <section className="mt-4">
       <div className="mb-2 flex items-center justify-between"><h2 className="font-semibold">{t("projectExpenses")}</h2><Link href={`/expenses/new?projectId=${p.id}`} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600"><Plus className="h-3.5 w-3.5" />{t("newExpense")}</Link></div>
       <div className="divide-y divide-slate-50 rounded-xl border border-slate-200 bg-white">
-        {(p.expenses || []).length === 0 ? <div className="px-4 py-8 text-center text-sm text-slate-400">{t("noResults")}</div> : p.expenses?.map((e) => <div key={e.id} className="flex justify-between gap-3 px-4 py-3 text-sm"><div className="min-w-0"><p className="truncate font-medium">{e.vendor_name || t("vendor")}</p><p className="truncate text-xs text-slate-500">{e.category?.name || t("category")}</p></div><p className="font-semibold">{formatCurrency(Number(e.amount))}</p></div>)}
+        {(p.expenses || []).length === 0 ? <div className="px-4 py-8 text-center text-sm text-slate-400">{t("noResults")}</div> : p.expenses?.map((e) => <div key={e.id} className="flex justify-between gap-3 px-4 py-3 text-sm"><div className="min-w-0"><p className="truncate font-medium">{e.vendor_name || t("vendor")}</p><p className="truncate text-xs text-slate-500">{categoryLabel(e.category?.name, t) || t("category")}</p></div><p className="font-semibold">{formatCurrency(Number(e.amount))}</p></div>)}
       </div>
     </section>}
   </div>;

@@ -92,7 +92,7 @@ export async function createQuote(
     from_status: null,
     to_status: "draft",
     changed_by: userId,
-    notes: "Quote creado",
+    notes: null,
   });
 
   return quote;

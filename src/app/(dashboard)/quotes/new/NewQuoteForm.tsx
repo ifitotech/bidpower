@@ -99,9 +99,9 @@ export default function NewQuoteForm({ clients, projects, defaultProjectId, defa
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h2 className="font-semibold mb-3">Quote type</h2>
+          <h2 className="font-semibold mb-3">{t("quoteTypeTitle")}</h2>
           <div className="grid grid-cols-2 gap-2">
-            {[{ value: "service", label: "Service Quote", hint: "Labor and service" }, { value: "materials", label: "Material Quote", hint: "Parts for supply house" }, { value: "plan_estimate", label: "Plan Estimate", hint: "From a PDF or plan" }, { value: "complete", label: "Complete Quote", hint: "Materials + labor + profit" }].map((type) => <button key={type.value} type="button" onClick={() => setQuoteType(type.value)} className={`text-left rounded-xl p-3 border transition ${quoteType === type.value ? "border-brand-500 bg-brand-50" : "border-slate-200"}`}><p className="text-sm font-semibold">{type.label}</p><p className="text-xs text-slate-500 mt-1">{type.hint}</p></button>)}
+            {[{ value: "service", label: t("quoteTypeService"), hint: t("qtServiceHint") }, { value: "materials", label: t("qtMaterials"), hint: t("qtMaterialsHint") }, { value: "plan_estimate", label: t("qtPlan"), hint: t("qtPlanHint") }, { value: "complete", label: t("qtComplete"), hint: t("qtCompleteHint") }].map((type) => <button key={type.value} type="button" onClick={() => setQuoteType(type.value)} className={`text-left rounded-xl p-3 border transition ${quoteType === type.value ? "border-brand-500 bg-brand-50" : "border-slate-200"}`}><p className="text-sm font-semibold">{type.label}</p><p className="text-xs text-slate-500 mt-1">{type.hint}</p></button>)}
           </div>
           <input type="hidden" name="quoteType" value={quoteType} />
         </div>
@@ -135,7 +135,7 @@ export default function NewQuoteForm({ clients, projects, defaultProjectId, defa
               <Plus className="w-4 h-4" /> {t("addLine")}
             </button>
           </div>
-          <p className="text-xs text-slate-500 mb-3">Add a catalog item when available, or enter any custom material/service manually.</p>
+          <p className="text-xs text-slate-500 mb-3">{t("quoteLinesHint")}</p>
 
           <div className="space-y-3">
             {items.map((item, idx) => (
@@ -160,18 +160,18 @@ export default function NewQuoteForm({ clients, projects, defaultProjectId, defa
                     type="text"
                     value={item.notes}
                     onChange={(e) => updateItem(item.id, "notes", e.target.value)}
-                    placeholder="Optional item notes"
+                    placeholder={t("itemNotesPh")}
                     className="w-full mt-2 border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
                 <div className="col-span-12 sm:col-span-3">
-                  {idx === 0 && <label className="text-[10px] text-slate-400 uppercase">Part Number</label>}
-                  <input type="text" value={item.part_number} onChange={(e) => updateItem(item.id, "part_number", e.target.value)} placeholder="E.g. BR120" className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                  {idx === 0 && <label className="text-[10px] text-slate-400 uppercase">{t("partNumber")}</label>}
+                  <input type="text" value={item.part_number} onChange={(e) => updateItem(item.id, "part_number", e.target.value)} placeholder={t("partNumberPh")} className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
                 </div>
                 <div className="col-span-6 sm:col-span-2">
-                  {idx === 0 && <label className="text-[10px] text-slate-400 uppercase">Unit</label>}
+                  {idx === 0 && <label className="text-[10px] text-slate-400 uppercase">{t("unitLabel")}</label>}
                   <select value={item.unit} onChange={(e) => updateItem(item.id, "unit", e.target.value)} className="w-full border border-slate-200 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-                    <option value="each">Each</option><option value="ft">ft</option><option value="box">Box</option><option value="roll">Roll</option><option value="hour">Hour</option><option value="lot">Lot</option>
+                    <option value="each">{t("unitEach")}</option><option value="ft">{t("unitFt")}</option><option value="box">{t("unitBox")}</option><option value="roll">{t("unitRoll")}</option><option value="hour">{t("unitHour")}</option><option value="lot">{t("unitLot")}</option>
                   </select>
                 </div>
                 <div className="col-span-4 sm:col-span-2">

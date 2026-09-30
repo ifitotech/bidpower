@@ -43,7 +43,7 @@ export async function registerAction(formData: FormData): Promise<AuthResult> {
 
   if (authError) {
     if (/already registered|already exists/i.test(authError.message)) return { errorCode: "errEmailExists" };
-    return { error: authError.message };
+    return { errorCode: "errGeneric" };
   }
   if (!authData.user) return { errorCode: "errGeneric" };
 
@@ -87,7 +87,7 @@ async function registerInvitedAction(formData: FormData, inviteToken: string): P
   });
   if (error) {
     if (/already registered|already exists/i.test(error.message)) return { errorCode: "errEmailExists" };
-    return { error: error.message };
+    return { errorCode: "errGeneric" };
   }
   if (!data.user || (data.user.identities && data.user.identities.length === 0)) return { errorCode: "errEmailExists" };
   // Email confirmation on: the invitation is accepted on first sign-in (see getCurrentMember).
@@ -110,7 +110,7 @@ export async function loginAction(formData: FormData): Promise<AuthResult> {
 
   if (error) {
     if (/invalid login credentials/i.test(error.message)) return { errorCode: "errInvalidCredentials" };
-    return { error: error.message };
+    return { errorCode: "errGeneric" };
   }
 
   // Coming from an invitation link: go back to it so it can be accepted.
@@ -127,30 +127,30 @@ export async function signInWithGoogleAction() {
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"}/auth/callback`,
     },
   });
-  if (error) return { error: error.message };
+  if (error) return { errorCode: "errGoogleSignIn" };
   if (data.url) redirect(data.url);
-  return { error: "No se pudo iniciar sesión con Google." };
+  return { errorCode: "errGoogleSignIn" };
 }
 
 export async function resetPasswordAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
-  if (!email) return { error: "El email es obligatorio." };
+  if (!email) return { errorCode: "errEmailRequired" };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"}/reset-password`,
   });
 
-  if (error) return { error: error.message };
-  return { success: "Revisa tu correo para continuar." };
+  if (error) return { errorCode: "errGeneric" };
+  return { successCode: "resetEmailSent" };
 }
 
 export async function updatePasswordAction(formData: FormData) {
   const password = String(formData.get("password") || "");
-  if (password.length < 8) return { error: "La contraseña debe tener al menos 8 caracteres." };
+  if (password.length < 8) return { errorCode: "errPasswordShort" };
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
-  if (error) return { error: error.message };
+  if (error) return { errorCode: "errGeneric" };
   redirect("/dashboard");
 }
 

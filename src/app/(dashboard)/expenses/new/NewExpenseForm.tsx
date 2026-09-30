@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { categoryLabel } from "@/lib/category-label";
 import { useI18n } from "@/lib/i18n/provider";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { createExpenseAction } from "@/app/(dashboard)/actions";
@@ -38,7 +39,7 @@ export default function NewExpenseForm({ projects, categories, defaultProjectId,
       <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">{t("navProjects")}
         <select name="projectId" defaultValue={defaultProjectId} className={field}><option value="">{t("noProjectOption")}</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <div><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{t("category")}</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{categories.map((c) => <button key={c.id} type="button" aria-pressed={categoryId === c.id} onClick={() => setCategoryId(c.id)} className={`min-h-11 rounded-xl px-2 py-2 text-xs font-medium transition ${categoryId === c.id ? "bg-brand-600 text-white" : "border border-slate-200 bg-slate-50 text-slate-600"}`}>{c.name}</button>)}</div></div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{categories.map((c) => <button key={c.id} type="button" aria-pressed={categoryId === c.id} onClick={() => setCategoryId(c.id)} className={`min-h-11 rounded-xl px-2 py-2 text-xs font-medium transition ${categoryId === c.id ? "bg-brand-600 text-white" : "border border-slate-200 bg-slate-50 text-slate-600"}`}>{categoryLabel(c.name, t)}</button>)}</div></div>
       <div className="grid grid-cols-2 gap-3">
         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">{t("vendor")}<input name="vendorName" maxLength={160} className={field} /></label>
         <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">{t("amount")}<input name="amount" inputMode="decimal" required placeholder="0.00" className={`${field} font-semibold`} /></label>

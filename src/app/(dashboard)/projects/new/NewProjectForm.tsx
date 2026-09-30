@@ -24,8 +24,8 @@ export default function NewProjectForm({ clients }: { clients: { id: string; nam
     try {
       const result = await createProjectAction(new FormData(e.currentTarget));
       // On success the server action redirects to /projects.
-      if (result?.errorCode || result?.error) {
-        setError(result.errorCode ? t(result.errorCode as keyof Dictionary) : (result.error as string));
+      if (result?.errorCode) {
+        setError(t(result.errorCode as keyof Dictionary));
         setSaving(false);
       }
     } catch {

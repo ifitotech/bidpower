@@ -1,7 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { cookies, headers } from "next/headers";
 import { I18nProvider } from "@/lib/i18n/provider";
 import { ThemeProvider } from "@/lib/theme/provider";
+import { defaultLocale, locales, type Locale } from "@/lib/i18n";
 import "./globals.css";
+
+async function initialLocale(): Promise<Locale> {
+  const saved = (await cookies()).get("bidpower-locale")?.value as Locale | undefined;
+  if (saved && locales.includes(saved)) return saved;
+  const accepted = ((await headers()).get("accept-language") ?? "").slice(0, 2).toLowerCase();
+  return locales.includes(accepted as Locale) ? (accepted as Locale) : defaultLocale;
+}
 
 export const metadata: Metadata = {
   title: "BidPower",
@@ -35,15 +44,16 @@ export const viewport: Viewport = {
   themeColor: "#0B1F3B",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await initialLocale();
   return (
-    <html lang="es">
+    <html lang={locale}>
       <body>
-        <ThemeProvider><I18nProvider>{children}</I18nProvider></ThemeProvider>
+        <ThemeProvider><I18nProvider initialLocale={locale}>{children}</I18nProvider></ThemeProvider>
       </body>
     </html>
   );

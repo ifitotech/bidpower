@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { categoryLabel } from "@/lib/category-label";
 import { useI18n } from "@/lib/i18n/provider";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import type { getExpenseById } from "@/lib/services/expenses";
@@ -46,7 +47,7 @@ export default function ExpenseDetail({ expense: e, isReviewer, canCancel, recei
     <div className="mb-4 space-y-3 rounded-xl border border-slate-200 bg-white p-5 text-sm">
       <div className="flex justify-between"><span className="text-slate-500">{t("amount")}</span><strong className="text-lg">{formatCurrency(e.amount)}</strong></div>
       <div className="flex justify-between"><span className="text-slate-500">{t("navProjects")}</span><span>{e.project ? <Link href={`/projects/${e.project.id}`} className="text-brand-700 underline">{e.project.name}</Link> : "—"}</span></div>
-      <div className="flex justify-between"><span className="text-slate-500">{t("category")}</span><span>{e.category?.name ?? "—"}</span></div>
+      <div className="flex justify-between"><span className="text-slate-500">{t("category")}</span><span>{categoryLabel(e.category?.name, t) || "—"}</span></div>
       <div className="flex justify-between"><span className="text-slate-500">{t("employees")}</span><span>{e.creator?.full_name ?? "—"}</span></div>
       {e.purchase_order_id && <div className="flex justify-between"><span className="text-slate-500">{t("kindPurchaseOrder")}</span><Link href={`/pos/${e.purchase_order_id}`} className="text-brand-700 underline">{e.notes ?? "PO"}</Link></div>}
       {e.notes && !e.purchase_order_id && <p className="whitespace-pre-wrap border-t border-slate-100 pt-3 text-slate-700">{e.notes}</p>}

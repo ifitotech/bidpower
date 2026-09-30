@@ -19,7 +19,7 @@ export function BottomNav() {
       { href: "/clients", label: t("navClients"), icon: Users },
       { href: "/quotes", label: t("proposals"), icon: FileText },
     ]),
-    { href: "/more", label: "More", icon: Menu },
+    { href: "/more", label: t("navMore"), icon: Menu },
   ];
 
   return (

@@ -23,11 +23,20 @@ import {
 import { INVITE_TEMPLATES, PERMISSION_KEYS, PERMISSION_TEMPLATES, isTemplate, poAllowed, type PermissionTemplate, type Permissions } from "@/lib/permissions";
 import { getMyPermissions } from "@/lib/auth";
 
+/** Server actions never return raw messages (they would arrive in one language, often English from the database);
+ *  the client translates the code. */
+function errCodeOf(err: unknown): string {
+  const m = err instanceof Error ? err.message : "";
+  if (m.includes("NEXT_REDIRECT")) throw err;
+  if (m === "no_company" || m.includes("Unauthorized")) return "errNoCompany";
+  return "errGeneric";
+}
+
 async function getContext() {
   const user = await requireAuth();
   const member = await getCurrentMember();
   if (!member?.company_id) {
-    throw new Error("No perteneces a ninguna empresa");
+    throw new Error("no_company");
   }
   return {
     userId: user.id,
@@ -45,12 +54,12 @@ export async function updateCompanyAction(formData: FormData) {
     const logo = formData.get("logo");
     let logoUrl: string | undefined;
     if (logo instanceof File && logo.size > 0) {
-      if (logo.size > 5 * 1024 * 1024) return { error: "El logo no puede superar 5 MB." };
-      if (!logo.type.startsWith("image/")) return { error: "El logo debe ser una imagen." };
+      if (logo.size > 5 * 1024 * 1024) return { errorCode: "errLogoSize" };
+      if (!logo.type.startsWith("image/")) return { errorCode: "errLogoType" };
       const extension = logo.name.split(".").pop()?.toLowerCase() || "png";
       const path = `${companyId}/company-logo-${Date.now()}.${extension}`;
       const upload = await client.storage.from("documents").upload(path, logo, { upsert: true, contentType: logo.type });
-      if (upload.error) return { error: upload.error.message };
+      if (upload.error) return { errorCode: "errGeneric" };
       logoUrl = path;
     }
     const { error } = await client.from("companies").update({
@@ -63,11 +72,11 @@ export async function updateCompanyAction(formData: FormData) {
       ...(logoUrl ? { logo_url: logoUrl } : {}),
       updated_at: new Date().toISOString(),
     }).eq("id", companyId);
-    if (error) return { error: error.message };
+    if (error) return { errorCode: "errGeneric" };
     revalidatePath("/settings");
-    return { success: "Datos guardados correctamente." };
+    return { success: true };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : "No se pudieron guardar los datos." };
+    return { errorCode: errCodeOf(err) };
   }
 }
 
@@ -81,12 +90,37 @@ export async function updateProfileAction(formData: FormData) {
       phone: String(formData.get("profilePhone") || "").trim() || null,
       updated_at: new Date().toISOString(),
     }).eq("id", user.id);
-    if (error) return { error: error.message };
+    if (error) return { errorCode: "errGeneric" };
     revalidatePath("/settings");
-    return { success: "Perfil guardado correctamente." };
+    return { success: true };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : "No se pudo guardar el perfil." };
+    return { errorCode: errCodeOf(err) };
   }
+}
+
+// ---- Expense categories (Owner only; RLS enforces it again) ----
+export async function addExpenseCategoryAction(formData: FormData) {
+  try {
+    const member = await requireRole(["owner"]);
+    const name = String(formData.get("name") || "").trim();
+    if (!name || name.length > 60) return { errorCode: "errNameRequired" };
+    const supabase = await (await import("@/lib/supabase/server")).createClient();
+    const { error } = await supabase.from("expense_categories").insert({ company_id: member.company_id as string, name, is_system: false, is_active: true, sort_order: 100 });
+    if (error) return { errorCode: "errGeneric" };
+    revalidatePath("/settings/categories");
+    return { success: true };
+  } catch (err) { return { errorCode: errCodeOf(err) }; }
+}
+
+export async function setExpenseCategoryActiveAction(formData: FormData) {
+  try {
+    const member = await requireRole(["owner"]);
+    const supabase = await (await import("@/lib/supabase/server")).createClient();
+    const { error } = await supabase.from("expense_categories").update({ is_active: formData.get("active") === "true" }).eq("id", String(formData.get("id") || "")).eq("company_id", member.company_id as string);
+    if (error) return { errorCode: "errGeneric" };
+    revalidatePath("/settings/categories");
+    return { success: true };
+  } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
 // ---- Team & permissions (Phase 2). Owner only; RLS enforces it again in the database. ----
@@ -205,7 +239,7 @@ export async function createClientAction(formData: FormData) {
   try {
     const { userId, companyId } = await getContext();
     const name = formData.get("name") as string;
-    if (!name?.trim()) return { error: "El nombre es obligatorio" };
+    if (!name?.trim()) return { errorCode: "errNameRequired" };
 
     const client = await createClientRecord(companyId, {
       name: name.trim(),
@@ -228,10 +262,7 @@ export async function createClientAction(formData: FormData) {
     revalidatePath("/clients");
     redirect("/clients");
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Error al crear cliente";
-    // Don't return error on redirect
-    if (message.includes("NEXT_REDIRECT")) throw err;
-    return { error: message };
+    return { errorCode: errCodeOf(err) };
   }
 }
 
@@ -239,11 +270,11 @@ export async function updateClientAction(formData: FormData) {
   try {
     const { companyId } = await getContext();
     const id = String(formData.get("id") || "");
-    if (!id) return { error: "Cliente inválido" };
+    if (!id) return { errorCode: "errGeneric" };
     await updateClientRecord(id, companyId, { name: String(formData.get("name") || "").trim(), contact_name: String(formData.get("contactName") || "").trim(), email: String(formData.get("email") || "").trim(), phone: String(formData.get("phone") || "").trim(), address: String(formData.get("address") || "").trim(), notes: String(formData.get("notes") || "").trim() });
     revalidatePath("/clients");
     return { success: true };
-  } catch (err) { return { error: err instanceof Error ? err.message : "Error al actualizar cliente" }; }
+  } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
 export async function archiveClientAction(formData: FormData) {
@@ -252,7 +283,7 @@ export async function archiveClientAction(formData: FormData) {
     await archiveClient(String(formData.get("id") || ""), companyId);
     revalidatePath("/clients");
     return { success: true };
-  } catch (err) { return { error: err instanceof Error ? err.message : "Error al archivar cliente" }; }
+  } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
 const PROJECT_STATUSES = ["lead", "quoted", "approved", "active", "on_hold", "completed", "cancelled"] as const;
@@ -298,7 +329,7 @@ export async function createProjectAction(formData: FormData) {
       newValues: { name },
     }).catch(() => undefined);
   } catch (err) {
-    return { error: err instanceof Error ? err.message : (err as { message?: string })?.message || undefined, errorCode: "errGeneric" };
+    return { errorCode: errCodeOf(err) };
   }
 
   revalidatePath("/projects");
@@ -311,44 +342,42 @@ export async function createInvoiceAction(formData: FormData) {
     const { userId, companyId } = await getContext();
     const description = String(formData.get("description") || "").trim();
     const amount = Number(formData.get("amount") || 0);
-    if (!description || amount <= 0) return { error: "Description and amount are required." };
+    if (!description || amount <= 0) return { errorCode: "errInvoiceRequired" };
     const invoice = await createInvoice(companyId, userId, { number: String(formData.get("number") || `INV-${Date.now()}`), clientId: String(formData.get("clientId") || "") || undefined, dueDate: String(formData.get("dueDate") || "") || undefined, notes: String(formData.get("notes") || "") || undefined, items: [{ description, quantity: 1, unitPrice: amount }] });
     await logActivity({ companyId, userId, action: "create", entityType: "invoice", entityId: invoice.id, newValues: { number: invoice.number } });
     revalidatePath("/invoices");
     redirect("/invoices");
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Could not create invoice.";
-    if (message.includes("NEXT_REDIRECT")) throw err;
-    return { error: message };
+    return { errorCode: errCodeOf(err) };
   }
 }
 
 export async function recordInvoicePaymentAction(formData: FormData) {
-  try { const { companyId } = await getContext(); await recordInvoicePayment(String(formData.get("invoiceId") || ""), companyId, Number(formData.get("amount") || 0)); revalidatePath("/invoices"); revalidatePath(`/invoices/${String(formData.get("invoiceId") || "")}`); return { success: true }; } catch (err) { return { error: err instanceof Error ? err.message : "Could not record payment." }; }
+  try { const { companyId } = await getContext(); await recordInvoicePayment(String(formData.get("invoiceId") || ""), companyId, Number(formData.get("amount") || 0)); revalidatePath("/invoices"); revalidatePath(`/invoices/${String(formData.get("invoiceId") || "")}`); return { success: true }; } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
 export async function updateInvoiceStatusAction(formData: FormData) {
-  try { const { companyId } = await getContext(); const id = String(formData.get("invoiceId") || ""); await updateInvoiceStatus(id, companyId, String(formData.get("status") || "draft")); revalidatePath("/invoices"); revalidatePath(`/invoices/${id}`); return { success: true }; } catch (err) { return { error: err instanceof Error ? err.message : "Could not update invoice status." }; }
+  try { const { companyId } = await getContext(); const id = String(formData.get("invoiceId") || ""); await updateInvoiceStatus(id, companyId, String(formData.get("status") || "draft")); revalidatePath("/invoices"); revalidatePath(`/invoices/${id}`); return { success: true }; } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
 export async function clockInAction(formData: FormData) {
-  try { const { userId, companyId } = await getContext(); await clockIn(companyId, userId, String(formData.get("projectId") || "") || undefined); revalidatePath("/employees"); return { success: true }; } catch (err) { return { error: err instanceof Error ? err.message : "Could not clock in." }; }
+  try { const { userId, companyId } = await getContext(); await clockIn(companyId, userId, String(formData.get("projectId") || "") || undefined); revalidatePath("/employees"); return { success: true }; } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
 export async function clockOutAction(formData: FormData) {
-  try { const { userId, companyId } = await getContext(); await clockOut(companyId, userId, String(formData.get("entryId") || "")); revalidatePath("/employees"); return { success: true }; } catch (err) { return { error: err instanceof Error ? err.message : "Could not clock out." }; }
+  try { const { userId, companyId } = await getContext(); await clockOut(companyId, userId, String(formData.get("entryId") || "")); revalidatePath("/employees"); return { success: true }; } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
 export async function uploadDocumentAction(formData: FormData) {
-  try { const { userId, companyId } = await getContext(); const file = formData.get("file"); if (!(file instanceof File) || file.size === 0) return { error: "Select a file first." }; const doc = await uploadDocument({ companyId, userId, file, relatedType: String(formData.get("relatedType") || "company") as "project" | "quote" | "purchase_order" | "expense" | "client" | "company", relatedId: String(formData.get("relatedId") || companyId) }); revalidatePath("/files"); return { success: true, id: doc.id, name: doc.name };
-  } catch (err) { return { error: err instanceof Error ? err.message : "Could not upload file." }; }
+  try { const { userId, companyId } = await getContext(); const file = formData.get("file"); if (!(file instanceof File) || file.size === 0) return { errorCode: "errFileRequired" }; const doc = await uploadDocument({ companyId, userId, file, relatedType: String(formData.get("relatedType") || "company") as "project" | "quote" | "purchase_order" | "expense" | "client" | "company", relatedId: String(formData.get("relatedId") || companyId) }); revalidatePath("/files"); return { success: true, id: doc.id, name: doc.name };
+  } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
-export async function markNotificationReadAction(formData: FormData) { try { const user = await requireAuth(); await markAsRead(String(formData.get("notificationId") || ""), user.id); revalidatePath("/notifications"); return { success: true }; } catch (err) { return { error: err instanceof Error ? err.message : "Could not mark notification." }; } }
-export async function markAllNotificationsReadAction() { try { const { userId, companyId } = await getContext(); await markAllAsRead(userId, companyId); revalidatePath("/notifications"); return { success: true }; } catch (err) { return { error: err instanceof Error ? err.message : "Could not mark notifications." }; } }
+export async function markNotificationReadAction(formData: FormData) { try { const user = await requireAuth(); await markAsRead(String(formData.get("notificationId") || ""), user.id); revalidatePath("/notifications"); return { success: true }; } catch (err) { return { errorCode: errCodeOf(err) }; } }
+export async function markAllNotificationsReadAction() { try { const { userId, companyId } = await getContext(); await markAllAsRead(userId, companyId); revalidatePath("/notifications"); return { success: true }; } catch (err) { return { errorCode: errCodeOf(err) }; } }
 
 export async function updateQuoteStatusAction(formData: FormData) {
-  try { const { userId, companyId } = await getContext(); const quoteId = String(formData.get("quoteId") || ""); const status = String(formData.get("status") || "draft"); await updateQuoteStatus(quoteId, companyId, userId, status); revalidatePath("/quotes"); revalidatePath(`/quotes/${quoteId}`); return { success: true }; } catch (err) { return { error: err instanceof Error ? err.message : "Could not update quote." }; }
+  try { const { userId, companyId } = await getContext(); const quoteId = String(formData.get("quoteId") || ""); const status = String(formData.get("status") || "draft"); await updateQuoteStatus(quoteId, companyId, userId, status); revalidatePath("/quotes"); revalidatePath(`/quotes/${quoteId}`); return { success: true }; } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
 export async function updateProjectAction(formData: FormData) {
@@ -359,7 +388,7 @@ export async function updateProjectAction(formData: FormData) {
     revalidatePath("/dashboard");
     revalidatePath(`/projects/${String(formData.get("id") || "")}`);
     return { success: true };
-  } catch (err) { return { error: err instanceof Error ? err.message : "Could not update project." }; }
+  } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
 export async function archiveProjectAction(formData: FormData) {
@@ -368,7 +397,7 @@ export async function archiveProjectAction(formData: FormData) {
     await archiveProject(String(formData.get("id") || ""), companyId);
     revalidatePath("/projects");
     return { success: true };
-  } catch (err) { return { error: err instanceof Error ? err.message : "Could not archive project." }; }
+  } catch (err) { return { errorCode: errCodeOf(err) }; }
 }
 
 export async function createExpenseAction(formData: FormData): Promise<{ errorCode?: string; error?: string } | undefined> {
@@ -413,7 +442,7 @@ export async function createExpenseAction(formData: FormData): Promise<{ errorCo
     const message = err instanceof Error ? err.message : (err as { message?: string })?.message || "Error al crear gasto";
     if (message.includes("NEXT_REDIRECT")) throw err;
     if (message.includes("row-level security")) return { errorCode: "errForbidden" };
-    if (message.includes("límite")) return { error: message };
+    if (message.includes("límite")) return { errorCode: "errPlanLimit" };
     return { errorCode: "errGeneric" };
   }
 }
@@ -499,7 +528,7 @@ export async function createQuoteAction(formData: FormData): Promise<{ errorCode
     const message = err instanceof Error ? err.message : (err as { message?: string })?.message || "Error al crear quote";
     if (message.includes("NEXT_REDIRECT")) throw err;
     if (message.includes("row-level security")) return { errorCode: "errForbidden" };
-    if (message.includes("límite")) return { error: message };
+    if (message.includes("límite")) return { errorCode: "errPlanLimit" };
     return { errorCode: "errGeneric" };
   }
 }

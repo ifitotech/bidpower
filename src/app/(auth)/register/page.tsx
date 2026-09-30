@@ -163,13 +163,13 @@ export default function RegisterPage() {
                   name="businessType"
                   className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-white/40"
                 >
-                  <option value="electrical" className="text-slate-900">Electricista</option>
-                  <option value="hvac" className="text-slate-900">HVAC</option>
-                  <option value="plumbing" className="text-slate-900">Plomería</option>
-                  <option value="remodeling" className="text-slate-900">Remodelación</option>
-                  <option value="construction" className="text-slate-900">Construcción</option>
-                  <option value="general" className="text-slate-900">General Contractor</option>
-                  <option value="other" className="text-slate-900">Otro</option>
+                  <option value="electrical" className="text-slate-900">{t("btElectrical")}</option>
+                  <option value="hvac" className="text-slate-900">{t("btHvac")}</option>
+                  <option value="plumbing" className="text-slate-900">{t("btPlumbing")}</option>
+                  <option value="remodeling" className="text-slate-900">{t("btRemodeling")}</option>
+                  <option value="construction" className="text-slate-900">{t("btConstruction")}</option>
+                  <option value="general" className="text-slate-900">{t("btGeneral")}</option>
+                  <option value="other" className="text-slate-900">{t("btOther")}</option>
                 </select>
               </div>}
             </>
