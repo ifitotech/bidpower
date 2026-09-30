@@ -1056,6 +1056,7 @@ const pt: Dictionary = {
   feedbackThanks: "Obrigado, recebemos.",
   feedbackMine: "Seus comentários anteriores",
   errFeedbackEmpty: "Escreva um comentário primeiro.",
+  orDivider: "ou",
 };
 
 export default pt;

@@ -509,7 +509,10 @@ async function phaseLang(browser) {
   ok("language ES: navigation is in Spanish", /trabajo/i.test(es) && /operaciones/i.test(es));
   // first steps come from what really exists; feedback is stored for the team
   await o.goto(B + "/dashboard");
-  ok("onboarding: the checklist shows real progress (company + client + project done = 3/6)", (await o.getByText(/Primeros pasos|First steps/).count()) > 0 && (await o.getByText("3/6").count()) > 0);
+  const fresh = await page(browser);
+  await register(fresh, "Nuevo Owner", `fresh-${RUN}@bidpower-smoke.test`, "Fresh Co");
+  await fresh.goto(B + "/dashboard");
+  ok("onboarding: a brand-new company sees the checklist at 1/6 (only 'create company' is done)", (await fresh.getByText(/Primeros pasos|First steps/).count()) > 0 && (await fresh.getByText("1/6").count()) > 0);
   await o.goto(B + "/feedback");
   await o.getByRole("textbox").first().fill("Prueba de comentario: falta X");
   await o.getByRole("button", { name: /^Enviar$|^Send$/ }).click();

@@ -1055,6 +1055,7 @@ const en: Dictionary = {
   feedbackThanks: "Thank you, we got it.",
   feedbackMine: "Your previous comments",
   errFeedbackEmpty: "Write a comment first.",
+  orDivider: "or",
 };
 
 export default en;

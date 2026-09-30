@@ -110,10 +110,13 @@ export default function LoginPage() {
             {t("login")}
           </Button>
 
-          <div className="flex items-center gap-3 my-4"><div className="h-px bg-white/20 flex-1" /><span className="text-xs text-brand-200">o</span><div className="h-px bg-white/20 flex-1" /></div>
+          {/* Google sign-in shows only when the provider is enabled in Supabase (NEXT_PUBLIC_GOOGLE_AUTH=true). */}
+          {process.env.NEXT_PUBLIC_GOOGLE_AUTH === "true" && <>
+          <div className="flex items-center gap-3 my-4"><div className="h-px bg-white/20 flex-1" /><span className="text-xs text-brand-200">{t("orDivider")}</span><div className="h-px bg-white/20 flex-1" /></div>
           <button type="button" onClick={handleGoogle} disabled={loading} className="w-full rounded-xl bg-white text-slate-700 py-3.5 font-medium text-sm flex items-center justify-center gap-3 hover:bg-slate-100 disabled:opacity-60">
             <span className="font-bold text-lg">G</span> {t("continueWithGoogle")}
           </button>
+          </>}
         </form>
 
         <p className="text-center text-brand-200 text-sm mt-8">

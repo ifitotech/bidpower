@@ -208,3 +208,10 @@ las instrucciones para borrarlos están en la cabecera del script.
 - **Enviar comentarios** (Más → Enviar comentarios): guarda en la tabla `feedback` (`20260814000024`). Cada persona ve solo los suyos; el equipo los lee en Supabase → Table Editor.
 - **Guía de entrevistas:** `docs/INTERVIEW_GUIDE.md` (tareas por rol, qué observar, preguntas finales).
 - No hay datos de ejemplo: lo que se ve es lo que se crea.
+
+## 22. Conexión real: Vercel y Supabase
+
+- Vercel (`bidpower`): `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` en Production, Preview y Development; `NEXT_PUBLIC_SITE_URL` en Production. Los previews usan la dirección con la que se abren.
+- Los correos de Supabase (recuperar contraseña, confirmar correo) vuelven a la dirección real del sitio, nunca a localhost. En Supabase → Authentication → URL Configuration: pon Site URL = la URL de producción y agrega `https://<tu-dominio>/**` a Redirect URLs.
+- Google: el botón solo aparece con `NEXT_PUBLIC_GOOGLE_AUTH=true` (y el proveedor Google activado en Supabase).
+- Los previews piden iniciar sesión en Vercel (Deployment Protection); desactívalo para probar con otras personas.

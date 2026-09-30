@@ -1069,6 +1069,7 @@ const es = {
   feedbackThanks: "Gracias, lo recibimos.",
   feedbackMine: "Tus comentarios anteriores",
   errFeedbackEmpty: "Escribe un comentario primero.",
+  orDivider: "o",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

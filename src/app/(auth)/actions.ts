@@ -3,9 +3,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { createCompanyWithOwner } from "@/lib/services/companies";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 // Error codes are translated on the client through the i18n dictionaries.
 export type AuthResult = { error?: string; errorCode?: string; successCode?: string } | undefined;
+
+/** Where auth emails and OAuth return to: the configured site URL, else the address the person is using right now (never localhost in production). */
+async function siteOrigin(): Promise<string> {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  if (configured) return configured;
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
 
 function hasSupabaseEnv() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -37,7 +48,7 @@ export async function registerAction(formData: FormData): Promise<AuthResult> {
     password,
     options: {
       data: { full_name: fullName, company_name: companyName, phone: phone ?? "", account_kind: accountKind },
-      ...(process.env.NEXT_PUBLIC_SITE_URL ? { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` } : {}),
+      emailRedirectTo: `${await siteOrigin()}/auth/callback`,
     },
   });
 
@@ -82,7 +93,7 @@ async function registerInvitedAction(formData: FormData, inviteToken: string): P
     password,
     options: {
       data: { full_name: fullName, invite_token: inviteToken },
-      ...(process.env.NEXT_PUBLIC_SITE_URL ? { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` } : {}),
+      emailRedirectTo: `${await siteOrigin()}/auth/callback`,
     },
   });
   if (error) {
@@ -124,7 +135,7 @@ export async function signInWithGoogleAction() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"}/auth/callback`,
+      redirectTo: `${await siteOrigin()}/auth/callback`,
     },
   });
   if (error) return { errorCode: "errGoogleSignIn" };
@@ -138,7 +149,7 @@ export async function resetPasswordAction(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"}/reset-password`,
+    redirectTo: `${await siteOrigin()}/reset-password`,
   });
 
   if (error) return { errorCode: "errGeneric" };
