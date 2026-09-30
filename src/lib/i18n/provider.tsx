@@ -15,8 +15,14 @@ import {
   type Dictionary,
   type Locale,
 } from "./index";
+import "@/lib/storage";
 
-const STORAGE_KEY = "contractoros-locale";
+const STORAGE_KEY = "bidpower-locale";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+function writeCookie(locale: Locale) {
+  document.cookie = `${STORAGE_KEY}=${locale}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
+}
 
 type I18nContextValue = {
   locale: Locale;
@@ -37,18 +43,22 @@ function detectLocale(): Locale {
   return "es";
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
+/** `initialLocale` comes from the cookie (or the browser language) on the server, so the first paint is already in the right language. */
+export function I18nProvider({ children, initialLocale = defaultLocale }: { children: React.ReactNode; initialLocale?: Locale }) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setLocaleState(detectLocale());
+    const detected = detectLocale();
+    setLocaleState(detected);
+    writeCookie(detected);
     setReady(true);
   }, []);
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
     localStorage.setItem(STORAGE_KEY, next);
+    writeCookie(next);
     document.documentElement.lang = next;
   }, []);
 

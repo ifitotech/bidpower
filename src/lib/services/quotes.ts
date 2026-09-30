@@ -3,16 +3,9 @@ import { canCreate } from "@/lib/plans";
 
 async function generateQuoteNumber(companyId: string): Promise<string> {
   const supabase = await createClient();
-  const year = new Date().getFullYear();
-
-  const { count } = await supabase
-    .from("quotes")
-    .select("*", { count: "exact", head: true })
-    .eq("company_id", companyId)
-    .like("number", `QT-${year}-%`);
-
-  const next = (count ?? 0) + 1;
-  return `QT-${year}-${String(next).padStart(4, "0")}`;
+  const { data, error } = await supabase.rpc("next_quote_number", { p_company: companyId });
+  if (error) throw error;
+  return data as string;
 }
 
 export async function createQuote(
@@ -74,9 +67,9 @@ export async function createQuote(
 
   if (error) throw error;
 
-  // Insert line items
+  // Insert line items (the quote is removed if they cannot be saved, so no empty Proposal is left behind)
   if (data.items.length > 0) {
-    await supabase.from("quote_items").insert(
+    const { error: itemsError } = await supabase.from("quote_items").insert(
       data.items.map((item, i) => ({
         quote_id: quote.id,
         description: item.description,
@@ -87,6 +80,10 @@ export async function createQuote(
         sort_order: i,
       }))
     );
+    if (itemsError) {
+      await supabase.from("quotes").delete().eq("id", quote.id);
+      throw itemsError;
+    }
   }
 
   // Status history
@@ -95,7 +92,7 @@ export async function createQuote(
     from_status: null,
     to_status: "draft",
     changed_by: userId,
-    notes: "Quote creado",
+    notes: null,
   });
 
   return quote;
@@ -132,6 +129,15 @@ export async function getQuoteById(quoteId: string, companyId: string) {
   return data;
 }
 
+// Manual decisions recorded by the contractor (the customer answered outside the app).
+// Customer approvals through the secure link go through customer_respond() in the database.
+const MANUAL_TRANSITIONS: Record<string, { to: string[]; waiting: Record<string, string> }> = {
+  draft: { to: ["cancelled"], waiting: { cancelled: "none" } },
+  sent: { to: ["approved", "rejected", "cancelled"], waiting: { approved: "none", rejected: "none", cancelled: "none" } },
+  pending: { to: ["approved", "rejected", "cancelled"], waiting: { approved: "none", rejected: "none", cancelled: "none" } },
+  changes_requested: { to: ["cancelled"], waiting: { cancelled: "none" } },
+};
+
 export async function updateQuoteStatus(
   quoteId: string,
   companyId: string,
@@ -140,26 +146,19 @@ export async function updateQuoteStatus(
   notes?: string
 ) {
   const supabase = await createClient();
-
-  const { data: quote } = await supabase
-    .from("quotes")
-    .select("status")
-    .eq("id", quoteId)
-    .eq("company_id", companyId)
-    .single();
-
+  const { data: quote, error } = await supabase.from("quotes").select("status").eq("id", quoteId).eq("company_id", companyId).maybeSingle();
+  if (error) throw error;
   if (!quote) throw new Error("Quote no encontrado");
+  const rule = MANUAL_TRANSITIONS[quote.status as string];
+  if (!rule || !rule.to.includes(toStatus)) throw new Error("quote_transition_invalid");
 
-  await supabase
-    .from("quotes")
-    .update({ status: toStatus, updated_at: new Date().toISOString() })
-    .eq("id", quoteId);
+  const patch: Record<string, unknown> = { status: toStatus, waiting_on: rule.waiting[toStatus] ?? "none", updated_at: new Date().toISOString() };
+  if (toStatus === "approved") patch.approved_at = new Date().toISOString();
+  const { data: updated, error: upErr } = await supabase.from("quotes").update(patch).eq("id", quoteId).eq("company_id", companyId).eq("status", quote.status).select("id");
+  if (upErr) throw upErr;
+  if (!updated || updated.length === 0) throw new Error("quote_transition_invalid");
 
   await supabase.from("quote_status_history").insert({
-    quote_id: quoteId,
-    from_status: quote.status,
-    to_status: toStatus,
-    changed_by: userId,
-    notes: notes ?? null,
+    quote_id: quoteId, from_status: quote.status, to_status: toStatus, changed_by: userId, notes: notes ?? "manual",
   });
 }

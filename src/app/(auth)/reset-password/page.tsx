@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { updatePasswordAction } from "../actions";
 import { useI18n } from "@/lib/i18n/provider";
+import { Logo } from "@/components/shared/Logo";
 
 export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
@@ -16,16 +17,17 @@ export default function ResetPasswordPage() {
     setLoading(true);
     setError(null);
     const result = await updatePasswordAction(new FormData(event.currentTarget));
-    if (result?.error) { setError(result.error); setLoading(false); }
+    if (result?.errorCode) { setError(t(result.errorCode as never)); setLoading(false); }
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center px-6 bg-gradient-to-br from-brand-800 to-brand-900 text-white">
+    <div className="min-h-screen flex flex-col justify-center px-6 bg-gradient-to-br from-[#0B2A5C] to-[#07152B] text-white">
       <div className="w-full max-w-md mx-auto">
+        <Logo variant="symbol" tone="dark" className="mb-5 h-12" />
         <h1 className="text-2xl font-bold mb-2">{t("newPassword")}</h1>
         <p className="text-brand-100 text-sm mb-8">{t("newPasswordHint")}</p>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input name="password" type="password" minLength={8} required placeholder="Nueva contraseña" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40" />
+          <input name="password" type="password" minLength={8} required placeholder={t("newPassword")} className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40" />
           {error && <div className="bg-red-500/20 rounded-xl px-4 py-3 text-sm">{error}</div>}
           <Button type="submit" size="lg" loading={loading} className="w-full bg-white text-brand-800 hover:bg-brand-50">{t("savePassword")}</Button>
         </form>

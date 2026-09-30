@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { HardHat } from "lucide-react";
+import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/Button";
 import { loginAction, signInWithGoogleAction } from "../actions";
 import { useI18n } from "@/lib/i18n/provider";
+import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 
 export default function LoginPage() {
@@ -13,7 +14,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [invite, setInvite] = useState("");
+
   useEffect(() => {
+    // Keep only the invitation token, then remove the query string from the address bar.
+    setInvite(new URLSearchParams(window.location.search).get("invite") ?? "");
     if (window.location.search) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -24,9 +29,15 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     const formData = new FormData(e.currentTarget);
-    const result = await loginAction(formData);
-    if (result?.error) {
-      setError(result.error);
+    try {
+      const result = await loginAction(formData);
+      if (result?.errorCode || result?.error) {
+        setError(result.errorCode ? t(result.errorCode as keyof Dictionary) : (result.error as string));
+        setLoading(false);
+      }
+      // On success the server action redirects to /dashboard.
+    } catch {
+      setError(t("errGeneric"));
       setLoading(false);
     }
   }
@@ -34,32 +45,36 @@ export default function LoginPage() {
   async function handleGoogle() {
     setLoading(true);
     setError(null);
-    const result = await signInWithGoogleAction();
-    if (result?.error) { setError(result.error); setLoading(false); }
+    try {
+      const result = await signInWithGoogleAction();
+      if (result?.errorCode) { setError(t(result.errorCode as never)); setLoading(false); }
+    } catch {
+      setError(t("errGeneric"));
+      setLoading(false);
+    }
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-brand-800 to-brand-900 text-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0B2A5C] to-[#07152B] text-white">
       <div className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-10">
         <LanguageSwitcher />
       </div>
       <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full">
         <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-5 backdrop-blur">
-            <HardHat className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("appName")}</h1>
+          <Logo variant="full" tone="dark" className="mx-auto mb-2 w-64 max-w-full" />
+          <h1 className="sr-only">{t("appName")}</h1>
           <p className="text-brand-100 mt-2 text-sm">{t("appTagline")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <input type="hidden" name="invite" value={invite} />
           <div>
             <label className="text-xs text-brand-200 mb-1 block">{t("email")}</label>
             <input
               name="email"
               type="email"
               required
-              placeholder="tu@empresa.com"
+              placeholder="name@example.com"
               className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-white/40"
             />
           </div>

@@ -1,11 +1,13 @@
-# ContractorOS — Guía de conexión (cuando toque)
+# BidPower — Guía de conexión
 
 ## 1. Supabase
 
 1. Crea un proyecto en https://supabase.com
-2. SQL Editor → ejecuta en orden:
-   - `supabase/migrations/20260728000000_initial_schema.sql`
-   - `supabase/migrations/20260728000001_rls_and_storage.sql`
+2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
+   O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
+   (de `20260728000000_initial_schema.sql` a `20260811000021_phase10_accounting_export.sql`).
+   La última crea la función `create_company_with_owner`, necesaria para que el registro
+   cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
    - Nombre: `documents`
    - Public: **No**
@@ -61,5 +63,134 @@ Abre http://localhost:3000/register y crea la primera empresa.
 2. Import en Vercel
 3. Añadir env vars
 4. Deploy
-EOF
-cd /home/workdir/artifacts && rm -f ContractorOS-Base.zip && zip -r ContractorOS-Base.zip contractoros -x "contractoros/node_modules/*" && ls -lh ContractorOS-Base.zip && find contractoros -type f | wc -l && find contractoros/src/app -name "page.tsx" | wc -l
+
+## 7. Equipo y permisos (Fase 2)
+
+- Invitar: Owner → Empleados → Invitar. Se genera un enlace seguro de un solo uso (vence en 7 días, se muestra una vez).
+  Compártelo (p. ej. por WhatsApp); la persona crea su cuenta o inicia sesión con **ese mismo email** y acepta.
+  No se envía email desde la app (no hay proveedor de correo configurado).
+- Los empleados solo ven proyectos asignados; sin "ver costos" no reciben montos; sin "ver ganancia" no reciben ganancia.
+- Límite de PO: por encima del límite el PO no se puede crear (el Owner lo crea). El flujo de aprobación llega en Compras (Fase 5).
+- Una persona con cuenta en dos empresas ve la primera a la que se unió (no hay selector de empresa todavía).
+
+## 8. Prueba de humo (Fases 1 y 2)
+
+`scripts/smoke-phase1-2.js` recorre en un navegador real: registro, empresa, proyecto, refresco, logout/login,
+aislamiento entre empresas, invitación, permisos, asignación y desactivación (21 comprobaciones).
+
+```bash
+BASE_URL=https://TU-APP.vercel.app node scripts/smoke-phase1-2.js
+```
+
+Requiere Playwright + Chromium y "Confirm email" desactivado en Supabase Auth. Crea usuarios `@bidpower-smoke.test`;
+las instrucciones para borrarlos están en la cabecera del script.
+
+## 9. Materiales (Fase 3)
+
+- **Biblioteca** (`/materials`): ítems de uso frecuente con unidad, categoría, apodos de campo (romex, mud ring…) y favoritos. La gestiona quien tenga el permiso *Gestionar biblioteca* (Owner y Manager por plantilla).
+- **Pedido de material** (`Proyecto → Pedidos de material`): buscar en favoritos/recientes/apodos, agregar texto libre, pegar una lista (WhatsApp/correo/Excel) o usar una lista guardada. Requiere el permiso *Pedir material* y un proyecto visible para la persona.
+- Owner/Manager revisan en `/materials/requests` (también aparece en Inicio → "Necesita atención"). Un pedido es distinto de una Solicitud a proveedores: no envía nada a nadie ni genera precios.
+- Migración nueva: `20260802000011_phase3_materials.sql` (ya incluida en `apply_all_migrations.sql`).
+
+## 10. Supplier Pricing (Fase 4, primera parte)
+
+- **Pricing Request** (`/pricing`): se crea desde un pedido de material revisado (las líneas se copian, no se reescriben) o pegando líneas. Tipo Gear/Lighting/Material/Otro, Bid Date, notas/specs, links y archivos (PDF/imagen, máx. 10 MB). Requiere el permiso *Crear Pricing Request*.
+- **Envío**: no se envían correos (no hay proveedor de correo). Crea un enlace seguro por supplier y compártelo tú (WhatsApp/correo), o copia el texto y márcalo "enviado".
+- **Respuesta del supplier**: Owner/Manager registran precio, disponibilidad y lead time por línea, número y total del quote, y el PDF. La comparación resalta el mejor precio por línea. "Adjudicar" marca la respuesta ganadora; el PO llega en la Fase 5.
+- **Precios privados**: solo Owner/Manager, o quien tenga *Crear Pricing Request* **y** *Ver costos*, ve respuestas y PDFs de precios.
+- Migraciones nuevas: `20260803000012_phase4_supplier_pricing.sql` y `20260803000013_pricing_attachment_visibility.sql`.
+
+### Enlace seguro para el supplier (sin cuenta)
+
+- En el Pricing Request → *Enlaces para suppliers* → *Crear enlace seguro*. Se muestra **una sola vez** (solo se guarda su hash), vence en 14 días por defecto y se puede revocar.
+- El supplier abre `/supplier/<token>`: ve las líneas, Bid Date, notas y links; responde con precio/disponibilidad/lead time por línea, quote number, total, flete e impuesto (puede corregir mientras esté abierto); y puede hacer preguntas. **No** ve proyecto, cliente, otros suppliers ni lo que cobras.
+- Una pregunta pone el Pricing Request en *Pregunta abierta* (espera al Owner); al responderla vuelve a esperar al supplier. Una respuesta lo pasa a *Respondió*.
+- Límites de esta versión: el supplier no sube el PDF él mismo (súbelo tú en su respuesta) ni ve archivos subidos, solo links; no hay límite de intentos por IP (el token tiene 256 bits); no hay avisos por correo.
+- Migración: `20260804000014_phase4_supplier_link.sql`.
+
+## 11. Compras / Purchase Orders (Fase 5)
+
+- **Desde una respuesta de supplier**: en el Pricing Request, botón *Crear Purchase Order* en la respuesta elegida. El PO copia las líneas con precio y disponibles (no las no disponibles), guarda el origen (línea del pedido y del catálogo) y usa el total del quote (o líneas + flete + impuesto). Un PO por respuesta.
+- **Compra rápida** (`/pos/new`): sigue igual (se compra y el recibo llega después).
+- **Aprobación**: dentro de tu límite el PO queda aprobado; por encima queda *Por aprobar* (espera al Owner/Manager, aparece en Inicio) en vez de bloquearse. Solo Owner/Manager aprueban o rechazan; nadie aprueba su propio PO. Tras aprobarse, solo Owner/Manager cambian monto o proveedor.
+- **Flujo**: por aprobar → aprobado → enviado (permiso *Enviar PO*; no se envía correo, se marca cuando lo compartes) → recibido → documento → completado. Estas reglas viven en la base de datos (`trg_enforce_po_rules`), no solo en la pantalla.
+- **Documento obligatorio**: recibo, invoice o packing slip (PDF/imagen, 10 MB). Sin documento no se puede completar.
+- **Costo real**: al completar (`complete_purchase_order`) se registra el costo real como gasto del proyecto (un solo gasto por PO). Owner/Manager completan cualquier PO; quien lo creó, solo si el costo real está dentro de su límite.
+- **Privacidad**: los documentos de un PO solo los ve quien puede ver ese PO.
+- Pendiente en esta fase: flujo de *excepción* sin documento (el estado existe pero no hay pantalla), correo al supplier y recepción parcial por línea.
+- Migración: `20260805000015_phase5_purchasing.sql`.
+
+## 12. Cliente: Proposal, aprobación y Change Orders (Fase 6)
+
+- **Proposal** = el quote al cliente que ya existía (sigue separado de los pedidos a suppliers). En el detalle: *Enlaces para el cliente* → crear enlace. Crear el primer enlace de un borrador es "enviar": pasa a *Enviado* y espera al cliente. El enlace se muestra **una sola vez** (solo se guarda su hash), vence en 30 días y se puede revocar. No se envía correo: lo compartes tú (WhatsApp/correo).
+- **El cliente** abre `/customer/<token>` sin cuenta: ve su Proposal (líneas, total, términos, contacto de la empresa) y puede **aprobar**, **pedir cambios** o **rechazar**. Al aprobar se guardan su nombre, fecha/hora e IP (según la reporta el servidor de la app). **No es una firma manuscrita** y así se le indica. No ve costos, suppliers, POs ni ganancia.
+- **Al aprobarse**: la Proposal queda *Aprobada*; si el proyecto no tenía valor de contrato, se toma el total aprobado, y un proyecto en *lead/quoted* pasa a *aprobado*.
+- **Una Proposal enviada no se edita**: para cambiarla, *Nueva versión* (copia las líneas, la anterior queda *Reemplazada* y sus enlaces dejan de funcionar; mismo número, versión 2, 3…). Esto lo impone la base de datos.
+- **Pedir cambios**: antes de aprobar, la Proposal pasa a *Cambios pedidos* (espera al Owner) y se crea un **Change Request**; después de aprobada, el Change Request queda abierto sin cambiar la Proposal. Sale en Inicio → "Clientes pidieron cambios".
+- **Change Order**: desde un Change Request (o nuevo) en una Proposal aprobada; líneas con precio (negativo = crédito). Se envía al cliente con su propio enlace; al aprobarse, la diferencia se suma al valor del contrato del proyecto (una sola vez).
+- **Decisión manual**: si el cliente respondió fuera de la app, se puede registrar (queda marcado como manual).
+- Pendiente: PDF/versión imprimible para el cliente en el enlace, avisos por correo y un límite de intentos por IP.
+- Migración: `20260806000016_phase6_customer.sql`.
+
+## 13. Control del proyecto y Needs Attention (Fase 7)
+
+- **Una sola fuente de números** (vista `project_cost_summary`, calculada al momento, nada duplicado):
+  - **Costo real** = gastos aprobados/reembolsados (los borradores, rechazados y cancelados no cuentan). Un PO completado ya es un gasto, así que no se cuenta dos veces.
+  - **Comprometido** = POs aprobados que aún no se completan (enviado, recibido, esperando documento…). Los POs *por aprobar* se muestran aparte y **no** se comprometen.
+  - **Costo proyectado** = real + comprometido. **Ganancia estimada** = valor del contrato − costo proyectado; es una estimación hasta que se completen los POs.
+  - El **valor del contrato** sube solo con lo que el cliente aprobó (Proposal y Change Orders).
+- En cada proyecto: panel de control (solo con permiso de *ver costos*; la ganancia solo con *ver ganancia*), **Esperando a** (todo lo pendiente agrupado por Owner / Empleado / Supplier / Cliente, con enlace) y **Actividad** (línea de tiempo armada con registros reales, sin montos; `project_timeline`).
+- **Needs Attention** en Inicio, según el rol: Owner/Manager ven pedidos por revisar, suppliers que respondieron o preguntaron, Bid Dates de hoy/mañana/vencidos, POs por aprobar o sin recibo, clientes que pidieron cambios, Proposals por vencer y proyectos sobre presupuesto; el Empleado ve lo que le devolvieron y los POs suyos sin documento.
+- Ambas vistas usan `security_invoker`: cada persona ve solo lo que ya podía ver por RLS.
+- `/reports` ahora es solo para Owner/Manager y cuenta solo gastos reales.
+- Migración: `20260807000017_phase7_project_control.sql`.
+
+## 14. Takeoff eléctrico manual (Fase 8) — todo PRELIMINAR
+
+- **No hay IA ni análisis automático de planos, y no se inventa ninguna cantidad.** Lo que existe es una herramienta para que tú cuentes y midas y BidPower sume. (La pantalla vieja "Plan Estimator" era una maqueta que solo guardaba un nombre de archivo; ahora explica esto y lleva a los proyectos.)
+- En cada proyecto → *Takeoffs* (Owner/Manager, o con permiso *Crear Pricing Request*): subir planos como referencia (PDF/imagen, 25 MB), **conteos** por tipo (luminarias, dispositivos, gear, otros), **paneles con circuitos** (breaker A y polos) y **feeders** con longitud, calibre y conduit.
+- **Lista preliminar de materiales** = suma de lo ingresado: conteos iguales se suman; breakers por amperaje y polos (más el main de cada panel: 2 polos monofásico, 3 polos trifásico); un panel por panel; cable = longitud × conductores, tierra y conduit = longitud, todos con un **desperdicio % editable** (supuesto por defecto 10 %, visible). Cada línea muestra su base. No se estiman cable/conduit de circuitos ramales, cajas ni accesorios (se avisa en pantalla).
+- **Verificación**: solo Owner/Manager marcan *Verificado* (queda quién y cuándo). Cualquier cambio a los números lo devuelve a *Sin verificar*; esto lo impone la base de datos.
+- **Envío**: *Enviar como pedido de material* crea un Material Request (líneas de texto, nota PRELIMINAR) que sigue el flujo normal → Pricing Request → PO. Nunca lleva precios.
+- Pendiente: editar filas en su lugar (hoy se borra y se agrega), lectura asistida de planos (requiere proveedor de IA y verificación humana), exportar CSV/PDF.
+- Migración: `20260808000018_phase8_electrical_takeoff.sql`.
+
+## 15. Gastos, Proposals reales y prueba de extremo a extremo local
+
+- **Gastos** (`/expenses/new`): ahora son reales (proyecto, categoría de la empresa, monto, fecha, recibo). Antes la pantalla era una maqueta que no guardaba nada. El gasto de un Empleado queda **por aprobar** y **no cuenta** como costo real hasta que el Owner/Manager lo aprueba (regla en la base de datos, `20260809000019_expense_review_rules.sql`); los de Owner/Manager entran aprobados. Aparece en Inicio → Needs Attention.
+- **Proposals** (`/quotes`, `/quotes/new`): la lista y el formulario usaban datos de ejemplo (clientes "Juan Rivera"…) y no podían crear una Proposal real; ahora usan clientes y proyectos reales. "Supply & Purchase" ya no se mezcla con los quotes al cliente.
+- **Editar cliente** cargaba valores de ejemplo (habría sobrescrito datos reales); ahora parte del cliente guardado.
+- **Prueba local completa**: `scripts/e2e/` levanta Postgres + PostgREST real + las migraciones y ejecuta las fases 1–8 en un navegador (`up.sh`, `app.sh`, `flows.js`; ver su README). Encontró y corrigió, entre otros, la barra "Enviar pedido" tapada por la navegación móvil. No sustituye la prueba con el proyecto Supabase real.
+
+## 16. Cuentas Supply (Fase 9)
+
+- Un supply house se registra con su propio tipo de cuenta (`companies.kind = 'supply'`) y ve solo su bandeja `/supply`: solicitudes de precio, contratistas conectados y sus cotizaciones. Nunca ve el nombre del proyecto.
+- El contratista y el supply se conectan con un **código de un solo uso** (Suppliers → conectar). Al revocar, la bandeja del supply queda vacía y las solicitudes ya enviadas se conservan.
+- Las respuestas por cuenta y por enlace comparten la misma lógica en la base de datos, así que el contratista las compara igual.
+- Migración: `20260810000020_phase9_supply_premium.sql`.
+
+## 17. Exportación contable / QuickBooks (Fase 10)
+
+- BidPower **no es software de contabilidad**: exporta datos operativos para importarlos en QuickBooks u otro sistema.
+- Pantalla `/accounting` (solo Owner, o Manager con permiso de ver costos; lo decide la función `can_export_accounting` en la base de datos). Datasets: clientes, proveedores, proyectos, gastos (solo aprobados y reembolsados), órdenes de compra, facturas y costos por proyecto, en CSV o JSON; "Todo" solo en JSON. Filtros por fechas y proyecto.
+- El CSV usa BOM UTF-8 y saltos CRLF, y neutraliza fórmulas de hoja de cálculo. Los ids son estables.
+- Cada descarga queda en `accounting_export_log` (quién, cuándo, filtros, filas). Si la bitácora no se puede escribir, no se entrega el archivo.
+- `external_refs` queda lista para guardar el id de cada registro en QuickBooks, pero está vacía.
+- **Lo que NO existe:** la sincronización en vivo con QuickBooks. Necesita credenciales de una app de desarrollador de Intuit (OAuth); esas credenciales solo se cargan en las variables de entorno del despliegue, nunca en el chat ni con prefijo `NEXT_PUBLIC_`.
+- Migración: `20260811000021_phase10_accounting_export.sql`. Prueba: `node scripts/e2e/flows.js 10`.
+
+## 18. Idiomas (ES / EN / PT)
+
+- Todo el texto visible sale de `src/lib/i18n/dictionaries/{es,en,pt}.ts`. Las acciones del servidor devuelven códigos (`errorCode`), no mensajes: el cliente los traduce. Nunca se muestra un mensaje crudo de la base de datos.
+- El idioma se guarda en `localStorage` **y** en una cookie (`bidpower-locale`); el servidor la lee (o el `Accept-Language`) para que el primer render ya esté en el idioma correcto, sin parpadeo.
+- Las categorías de gasto del sistema se guardan en español en la base; la pantalla las muestra traducidas (`src/lib/category-label.ts`). Las categorías que crea la empresa se muestran tal como se escribieron.
+- El PDF/HTML de un Quote respeta el idioma (`?lang=`) y escapa todo el contenido.
+- Auditoría: `AUDIT_EMAIL=<usuario del e2e> node scripts/e2e/i18n-audit.js` recorre las pantallas en los 3 idiomas y marca texto de otro idioma. El vocabulario de producto (Owner, Manager, Quote, PO, Bid Date…) se mantiene en inglés a propósito en español.
+- Limpieza de pantallas que eran maquetas: Configuración (ya carga los datos reales de la empresa y del perfil; antes tenía valores de ejemplo que se habrían guardado encima de los reales), Categorías de gasto (ahora se guardan de verdad), Calendario (mes real), Facturas (cliente elegido de una lista), Archivos. Se quitaron los interruptores de notificaciones, el contador "0 análisis" y el botón de firma, que no hacían nada.
+
+## 19. Cuentas de prueba (sin correos reales y sin puertas traseras)
+
+- No existe ni existirá un "bypass" de login dentro de la app: en un sistema multiempresa sería una puerta abierta a los datos de todos.
+- Para revisar la app sin registrar correos reales: `scripts/seed-test-users.js` crea cuentas ya confirmadas (`owner@prueba.test`, `supply@prueba.test`) con la API de administración de Supabase. Se ejecuta en tu máquina con `SUPABASE_SERVICE_ROLE_KEY` en el entorno (nunca en el chat ni con prefijo `NEXT_PUBLIC_`) y `--yes`. La empresa se crea sola en el primer login.
+- Manager y Employee se invitan desde el Owner (Empleados → Invitar), como en producción.
+- Alternativa sin script: desactiva "Confirm email" en Supabase y regístrate en `/register` con correos inventados.

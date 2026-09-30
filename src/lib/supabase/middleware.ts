@@ -1,69 +1,57 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Routes reachable without a session. Everything else requires authentication.
+const PUBLIC_PREFIXES = ["/login", "/register", "/forgot-password", "/reset-password", "/auth", "/invite", "/supplier", "/customer", "/api/health"];
+// Auth screens that a signed-in user should never be stuck on.
+const AUTH_ONLY_PREFIXES = ["/login", "/register", "/forgot-password"];
+
+const matches = (pathname: string, prefixes: string[]) =>
+  prefixes.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  // The app includes a demo mode so it can be previewed locally before a
-  // Supabase project is configured. In that mode, leave the request alone.
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnonKey) {
+    // Not configured: nothing to authenticate against. Auth pages show a clear error.
     return supabaseResponse;
   }
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    }
-  );
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options));
+      },
+    },
+  });
 
-  // Refresh session if needed
+  // Validates the JWT with Supabase and refreshes the session cookies if needed.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect dashboard routes
-  const isAuthPage =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/register");
+  const { pathname } = request.nextUrl;
+  const isPublic = matches(pathname, PUBLIC_PREFIXES);
 
-  const isDashboard = request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/projects") ||
-    request.nextUrl.pathname.startsWith("/clients") ||
-    request.nextUrl.pathname.startsWith("/quotes") ||
-    request.nextUrl.pathname.startsWith("/expenses") ||
-    request.nextUrl.pathname.startsWith("/pos") ||
-    request.nextUrl.pathname.startsWith("/employees") ||
-    request.nextUrl.pathname.startsWith("/reports") ||
-    request.nextUrl.pathname.startsWith("/settings");
-
-  if (!user && isDashboard) {
+  const redirectTo = (path: string) => {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
+    url.pathname = path;
+    url.search = "";
+    const response = NextResponse.redirect(url);
+    // Keep any refreshed auth cookies on the redirect response.
+    supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+    return response;
+  };
 
-  if (user && isAuthPage) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
+  if (!user && !isPublic) return redirectTo("/login");
+  if (user && (pathname === "/" || matches(pathname, AUTH_ONLY_PREFIXES))) return redirectTo("/dashboard");
 
   return supabaseResponse;
 }

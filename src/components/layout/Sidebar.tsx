@@ -4,57 +4,73 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
+  FileSpreadsheet,
   Briefcase,
   CalendarDays,
   Users,
   FileText,
   UserCog,
   Settings,
-  HardHat,
   FolderOpen,
+  Package,
+  ShoppingCart,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
+import { usePermissions } from "@/lib/permissions-context";
+import { Logo } from "@/components/shared/Logo";
+import { logoutAction } from "@/app/(auth)/actions";
 
-export function Sidebar() {
+const roleLabel: Record<string, "owner" | "manager" | "employee"> = { owner: "owner", manager: "manager", employee: "employee" };
+
+export function Sidebar({ companyName = "", userName = "", role = "" }: { companyName?: string; userName?: string; role?: string }) {
   const pathname = usePathname();
   const { t } = useI18n();
+  const { permissions, isManagerOrAbove } = usePermissions();
 
+  const isEmployee = role === "employee";
   const workNav = [
     { href: "/dashboard", label: t("navHome"), icon: Home },
     { href: "/projects", label: t("navProjects"), icon: Briefcase },
-    { href: "/clients", label: t("navClients"), icon: Users },
-    { href: "/quotes", label: "Supply & Purchase", icon: FileText },
+    ...(isEmployee ? [] : [
+      { href: "/clients", label: t("navClients"), icon: Users },
+      { href: "/quotes", label: t("proposals"), icon: FileText },
+    ]),
   ];
 
   const operationsNav = [
+    ...(isManagerOrAbove || permissions.can_create_po ? [{ href: "/pos", label: t("navPurchaseOrders"), icon: ShoppingCart }] : []),
+    ...(isManagerOrAbove ? [{ href: "/suppliers", label: t("navSuppliers"), icon: Users }] : []),
+    ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: "/pricing", label: t("pricingRequests"), icon: Package }] : []),
+    ...(isManagerOrAbove ? [{ href: "/materials/requests", label: t("materialRequests"), icon: Package }] : []),
+    ...(permissions.can_manage_library ? [{ href: "/materials", label: t("materialsLibrary"), icon: Package }] : []),
     { href: "/calendar", label: t("calendar"), icon: CalendarDays },
-    { href: "/files", label: "Files & Photos", icon: FolderOpen },
+    { href: "/files", label: t("navFiles"), icon: FolderOpen },
   ];
 
   const managementNav = [
-    { href: "/employees", label: t("navEmployees"), icon: UserCog },
-    { href: "/my-company", label: t("myCompany"), icon: Settings },
-    { href: "/more", label: "More", icon: Settings },
+    ...(role === "owner" || (role === "manager" && permissions.can_view_costs) ? [{ href: "/accounting", label: t("accounting"), icon: FileSpreadsheet }] : []),
+    ...(role === "owner" ? [{ href: "/employees", label: t("navEmployees"), icon: UserCog }] : []),
+    ...(isEmployee ? [] : [{ href: "/my-company", label: t("myCompany"), icon: Settings }]),
+    { href: "/more", label: t("navMore"), icon: Settings },
   ];
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-200 flex-col z-30">
       <div className="px-5 py-5 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center">
-            <HardHat className="w-5 h-5 text-white" />
-          </div>
+          <Logo variant="mark" className="h-10 w-10 shrink-0" />
           <div>
-            <h1 className="font-bold text-lg leading-tight">{t("appName")}</h1>
-            <p className="text-xs text-slate-500">ElectricPro LLC</p>
+            <p className="font-bold text-lg leading-tight">{t("appName")}</p>
+            <p className="max-w-[9.5rem] truncate text-xs text-slate-500">{companyName}</p>
           </div>
         </div>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <NavSection label="Work" items={workNav} pathname={pathname} />
-        <NavSection label="Operations" items={operationsNav} pathname={pathname} />
+        <NavSection label={t("navWork")} items={workNav} pathname={pathname} />
+        <NavSection label={t("navOperations")} items={operationsNav} pathname={pathname} />
         {/* Keep management routes visible without removing any existing module. */}
         <p className="px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-5 mb-2">
           {t("managementSection")}
@@ -86,13 +102,18 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-sm">
-            U
+          <div className="w-9 h-9 shrink-0 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-sm">
+            {(userName || "?").charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">Usuario</p>
-            <p className="text-xs text-slate-500">Owner · {t("freePlan")}</p>
+            <p className="text-sm font-medium truncate">{userName || t("userFallback")}</p>
+            <p className="text-xs text-slate-500 truncate">{role && roleLabel[role] ? t(roleLabel[role]) : ""}</p>
           </div>
+          <form action={logoutAction}>
+            <button type="submit" aria-label={t("logout")} title={t("logout")} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-red-600">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </form>
         </div>
       </div>
     </aside>

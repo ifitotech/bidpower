@@ -22,21 +22,14 @@ export default function NewClientPage() {
     const formData = new FormData(e.currentTarget);
     try {
       const result = await createClientAction(formData);
-      if (result?.error) {
-        // If Supabase not connected, soft-succeed for demo
-        if (result.error.includes("Unauthorized") || result.error.includes("empresa")) {
-          toast(t("save"), "success");
-          router.push("/clients");
-          return;
-        }
-        setError(result.error);
+      // On success the action redirects to /clients; only failures come back here.
+      if (result?.errorCode) {
+        setError(t(result.errorCode as never));
         setSaving(false);
-        return;
       }
     } catch {
-      // redirect or network — treat as success for demo UX
-      toast(t("save"), "success");
-      router.push("/clients");
+      setError(t("errGeneric"));
+      setSaving(false);
     }
   }
 

@@ -1,4 +1,4 @@
--- ContractorOS - Supply Quotes foundation
+-- BidPower - Supply Quotes foundation
 -- Incremental migration. Does not replace or remove existing objects.
 
 -- Ensure the existing multi-tenant helper functions are available even when

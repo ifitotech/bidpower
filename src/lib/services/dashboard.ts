@@ -7,7 +7,7 @@ export async function getDashboardMetrics(companyId: string) {
   // Active projects
   const { data: projects } = await supabase
     .from("projects")
-    .select("id, contract_value, budget_total, status, expenses(amount)")
+    .select("id, contract_value, budget_total, status, expenses(amount, status)")
     .eq("company_id", companyId)
     .in("status", ["active", "approved", "quoted"]);
   const { count: completedProjectsCount } = await supabase
@@ -36,10 +36,9 @@ export async function getDashboardMetrics(companyId: string) {
   let totalProfit = 0;
 
   for (const p of activeProjects) {
-    const spent = (p.expenses ?? []).reduce(
-      (s: number, e: { amount: number }) => s + Number(e.amount),
-      0
-    );
+    const spent = (p.expenses ?? [])
+      .filter((e: { status?: string }) => e.status === "approved" || e.status === "reimbursed")
+      .reduce((s: number, e: { amount: number }) => s + Number(e.amount), 0);
     totalSpent += spent;
     totalProfit += Number(p.contract_value) - spent;
   }
@@ -56,7 +55,7 @@ export async function getDashboardMetrics(companyId: string) {
     .from("purchase_orders")
     .select("*", { count: "exact", head: true })
     .eq("company_id", companyId)
-    .eq("status", "pending_document");
+    .in("status", ["pending_document", "received"]);
 
   // Expenses this month
   const now = new Date();
@@ -68,6 +67,7 @@ export async function getDashboardMetrics(companyId: string) {
     .from("expenses")
     .select("amount")
     .eq("company_id", companyId)
+    .in("status", ["approved", "reimbursed"])
     .gte("date", monthStart);
 
   const expensesThisMonth = (monthExpenses ?? []).reduce(

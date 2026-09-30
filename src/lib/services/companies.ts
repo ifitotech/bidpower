@@ -1,95 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * Creates the company for the signed-in user (profile, company, owner
+ * membership, settings, Free plan and default categories) atomically through
+ * the `create_company_with_owner` database function. RLS stays enabled; the
+ * function only ever acts for auth.uid() and is idempotent.
+ */
 export async function createCompanyWithOwner(params: {
-  userId: string;
-  fullName: string;
-  email: string;
+  fullName?: string;
   companyName: string;
   phone?: string;
-}) {
+  kind?: "contractor" | "supply";
+}): Promise<string> {
   const supabase = await createClient();
-
-  // 1. Upsert profile
-  const { error: profileError } = await supabase.from("profiles").upsert({
-    id: params.userId,
-    full_name: params.fullName,
-    email: params.email,
-    phone: params.phone ?? null,
+  const { data, error } = await supabase.rpc("create_company_with_owner", {
+    p_company_name: params.companyName,
+    p_full_name: params.fullName ?? null,
+    p_phone: params.phone ?? null,
+    p_kind: params.kind ?? "contractor",
   });
-
-  if (profileError) throw profileError;
-
-  // 2. Create company
-  const { data: company, error: companyError } = await supabase
-    .from("companies")
-    .insert({
-      name: params.companyName,
-      phone: params.phone ?? null,
-      email: params.email,
-    })
-    .select()
-    .single();
-
-  if (companyError) throw companyError;
-
-  // 3. Add owner membership before settings so RLS can verify ownership.
-  const { error: memberError } = await supabase.from("company_members").insert({
-    company_id: company.id,
-    user_id: params.userId,
-    role: "owner",
-    is_active: true,
-    joined_at: new Date().toISOString(),
-  });
-
-  if (memberError) throw memberError;
-
-  // 4. Create company settings
-  const { error: settingsError } = await supabase.from("company_settings").insert({
-    company_id: company.id,
-  });
-  if (settingsError) throw settingsError;
-
-  // 5. Create Free subscription
-  const { data: freePlan } = await supabase
-    .from("plans")
-    .select("id")
-    .eq("name", "free")
-    .single();
-
-  if (freePlan) {
-    await supabase.from("subscriptions").insert({
-      company_id: company.id,
-      plan_id: freePlan.id,
-      status: "active",
-    });
-  }
-
-  // 6. Seed default expense categories
-  const defaultCategories = [
-    "Materiales",
-    "Herramientas",
-    "Combustible",
-    "Permisos",
-    "Subcontratistas",
-    "Equipos",
-    "Alquiler",
-    "Comidas",
-    "Transporte",
-    "Oficina",
-    "Otros",
-  ];
-
-  await supabase.from("expense_categories").insert(
-    defaultCategories.map((name, i) => ({
-      company_id: company.id,
-      name,
-      is_system: true,
-      is_active: true,
-      sort_order: i,
-    }))
-  );
-
-  return company;
+  if (error) throw error;
+  return data as string;
 }
 
 export async function getCompanyById(companyId: string) {

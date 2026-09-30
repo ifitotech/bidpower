@@ -1,9 +1,11 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import "@/lib/storage";
 
 export type Theme = "light" | "dark" | "system";
-const STORAGE_KEY = "contractoros-theme";
+
+const STORAGE_KEY = "bidpower-theme";
 
 const ThemeContext = createContext<{
   theme: Theme;

@@ -45,5 +45,5 @@ export const BUSINESS_TYPES = [
   { value: "other", label: "Otro" },
 ] as const;
 
-export const APP_NAME = "ContractorOS";
+export const APP_NAME = "BidPower";
 export const APP_TAGLINE = "El sistema operativo de tu empresa";

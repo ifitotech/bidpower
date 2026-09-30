@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { buildQuoteHTML, type QuotePDFData } from "@/lib/pdf/quote-template";
+import { getDictionary, locales, defaultLocale, type Locale } from "@/lib/i18n";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -14,7 +15,7 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const { data: quote, error } = await supabase
@@ -31,7 +32,7 @@ export async function GET(
     .single();
 
   if (error || !quote) {
-    return NextResponse.json({ error: "Quote not found" }, { status: 404 });
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,13 +44,13 @@ export async function GET(
     validUntil: q.valid_until ?? undefined,
     status: q.status,
     company: {
-      name: q.company?.name ?? "Empresa",
+      name: q.company?.name ?? "",
       address: q.company?.address ?? undefined,
       phone: q.company?.phone ?? undefined,
       email: q.company?.email ?? undefined,
     },
     client: {
-      name: q.client?.name ?? "Cliente",
+      name: q.client?.name ?? "",
       contactName: q.client?.contact_name ?? undefined,
       email: q.client?.email ?? undefined,
       phone: q.client?.phone ?? undefined,
@@ -76,12 +77,15 @@ export async function GET(
     notes: q.notes ?? undefined,
   };
 
-  const html = buildQuoteHTML(pdfData);
+  const lang = request.nextUrl.searchParams.get("lang") as Locale;
+  const locale = locales.includes(lang) ? lang : defaultLocale;
+  const dict = getDictionary(locale);
+  const html = buildQuoteHTML(pdfData, (key) => dict[key], locale);
 
   return new NextResponse(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Content-Disposition": `inline; filename="${q.number}.html"`,
+      "Content-Disposition": `inline; filename="${String(q.number).replace(/[^A-Za-z0-9._-]/g, "_")}.html"`, "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:",
     },
   });
 }

@@ -1,8 +1,8 @@
-# ContractorOS — Contexto para desarrolladores e IAs
+# BidPower (antes ContractorOS) — Contexto para desarrolladores e IAs
 
 ## Objetivo del producto
 
-ContractorOS ayuda al dueño de una empresa de servicios a operar el negocio completo: captar clientes, organizar jobs, preparar quotes, pedir precios a suppliers, facturar, registrar gastos, controlar purchase orders, asignar empleados, guardar archivos y revisar reportes.
+BidPower ayuda al dueño de una empresa de servicios a operar el negocio completo: captar clientes, organizar jobs, preparar quotes, pedir precios a suppliers, facturar, registrar gastos, controlar purchase orders, asignar empleados, guardar archivos y revisar reportes.
 
 La prioridad es que una persona trabajando desde el teléfono pueda hacer las tareas principales rápidamente.
 
@@ -26,7 +26,9 @@ Es el trabajo operativo del cliente. Contiene cliente, dirección, descripción,
 - Manager: puede operar jobs, quotes y revisar operaciones según permisos.
 - Employee: debe ver solo la información necesaria para realizar su trabajo.
 
-## Fases
+## Fases (historial de construcción inicial)
+
+> La hoja de ruta vigente y su numeración están en `PRODUCT_DIRECTION.md` (fases 0–10). Esta lista solo describe lo que se construyó primero.
 
 - Fase 1: Auth y empresa — núcleo completado.
 - Fase 2: Dashboard — métricas reales y estados vacíos.
@@ -73,4 +75,4 @@ No exponer nunca secrets, service role keys o API keys de proveedores en el clie
 
 ## Instrucción para otra IA
 
-Antes de modificar ContractorOS, leer `README.md`, este archivo y las migraciones Supabase. Preservar la interfaz existente, comprobar rutas relacionadas, crear migraciones nuevas para cambios de DB y ejecutar typecheck/build antes de entregar.
+Antes de modificar BidPower, leer `README.md`, este archivo y las migraciones Supabase. Preservar la interfaz existente, comprobar rutas relacionadas, crear migraciones nuevas para cambios de DB y ejecutar typecheck/build antes de entregar.

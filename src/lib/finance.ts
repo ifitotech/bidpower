@@ -68,3 +68,34 @@ export function getProjectFinancials(project: ProjectFinancials) {
     nearBudget,
   };
 }
+
+// ---- Project control (Phase 7) ----
+
+/** Expense statuses that count as real cost. Drafts, rejected and cancelled expenses never do. */
+export const COUNTED_EXPENSE_STATUSES = ["approved", "reimbursed"] as const;
+
+export interface ControlInput {
+  contractValue: number;
+  budgetTotal: number;
+  actualCost: number;
+  committedCost: number;
+}
+
+/**
+ * Actual = money already spent. Committed = POs approved but not yet completed (they turn into actual when
+ * completed, so the two never overlap). Forecast = actual + committed. Estimated profit is the contract value
+ * minus that forecast; it is an estimate until every PO is completed.
+ */
+export function getControlFinancials(i: ControlInput) {
+  const forecastCost = i.actualCost + i.committedCost;
+  const estimatedProfit = i.contractValue - forecastCost;
+  return {
+    forecastCost,
+    estimatedProfit,
+    estimatedMargin: i.contractValue > 0 ? (estimatedProfit / i.contractValue) * 100 : 0,
+    budgetRemaining: i.budgetTotal - forecastCost,
+    budgetUsage: i.budgetTotal > 0 ? Math.min(100, (forecastCost / i.budgetTotal) * 100) : 0,
+    overBudget: i.budgetTotal > 0 && forecastCost > i.budgetTotal,
+    nearBudget: i.budgetTotal > 0 && forecastCost <= i.budgetTotal && forecastCost / i.budgetTotal >= 0.9,
+  };
+}

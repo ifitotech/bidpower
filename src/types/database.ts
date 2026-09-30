@@ -1,4 +1,4 @@
-// ContractorOS - Core Database Types
+// BidPower - Core Database Types
 // Prepared for multi-tenant SaaS architecture
 
 export type UserRole = "owner" | "manager" | "employee";
@@ -25,6 +25,11 @@ export type QuoteStatus =
 
 export type POStatus =
   | "open"
+  | "pending_approval"
+  | "approved"
+  | "rejected"
+  | "sent"
+  | "received"
   | "pending_document"
   | "document_uploaded"
   | "pending_review"

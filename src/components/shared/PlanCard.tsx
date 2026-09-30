@@ -1,56 +1,20 @@
+"use client";
+
 import { Button } from "@/components/ui/Button";
 import { Check } from "lucide-react";
+import { useI18n } from "@/lib/i18n/provider";
+import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 
-const plans = [
-  {
-    name: "Free",
-    price: "$0",
-    description: "Para probar de verdad",
-    features: [
-      "3 proyectos activos",
-      "3 empleados",
-      "3 quotes / mes",
-      "Dashboard básico",
-      "Presupuesto vs gastos",
-    ],
-    cta: "Plan actual",
-    current: true,
-  },
-  {
-    name: "Pro",
-    price: "$49",
-    period: "/mes",
-    description: "El plan principal",
-    features: [
-      "Proyectos ilimitados",
-      "Empleados ilimitados",
-      "Quotes ilimitados",
-      "Exportación PDF / Excel",
-      "Reportes avanzados",
-      "Notificaciones",
-      "Categorías personalizadas",
-    ],
-    cta: "Actualizar a Pro",
-    highlighted: true,
-  },
-  {
-    name: "Ultra",
-    price: "$99",
-    period: "/mes",
-    description: "Próximamente con IA",
-    features: [
-      "Todo de Pro",
-      "Asistente IA",
-      "OCR de invoices",
-      "Reportes inteligentes",
-      "Integración QuickBooks",
-    ],
-    cta: "Próximamente",
-    disabled: true,
-  },
+type Plan = { name: string; price: string; period?: string; description: keyof Dictionary; features: (keyof Dictionary)[]; cta: keyof Dictionary; current?: boolean; highlighted?: boolean; disabled?: boolean };
+
+const plans: Plan[] = [
+  { name: "Free", price: "$0", description: "planFreeDesc", features: ["pfProjects3", "pfEmployees3", "pfQuotes3", "pfBasicDashboard", "pfBudgetVsExpenses"], cta: "currentPlan", current: true },
+  { name: "Pro", price: "$49", period: "perMonth", description: "planProDesc", features: ["unlimitedProjects", "unlimitedEmployees", "unlimitedQuotes", "pfExports", "pfAdvancedReports", "pfNotifications", "pfCustomCategories"], cta: "upgradeToPro", highlighted: true },
+  { name: "Ultra", price: "$99", period: "perMonth", description: "planUltraDesc", features: ["pfEverythingPro", "pfAI", "pfInvoiceOcr", "pfSmartReports", "pfQuickbooks"], cta: "comingSoon", disabled: true },
 ];
 
 export function PlanCards() {
+  const { t } = useI18n();
   return (
     <div className="grid md:grid-cols-3 gap-4">
       {plans.map((plan) => (
@@ -64,11 +28,11 @@ export function PlanCards() {
         >
           <div className="mb-4">
             <h3 className="font-bold text-lg">{plan.name}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">{plan.description}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{t(plan.description)}</p>
             <p className="mt-3">
               <span className="text-2xl font-bold">{plan.price}</span>
               {plan.period && (
-                <span className="text-sm text-slate-500">{plan.period}</span>
+                <span className="text-sm text-slate-500">{t(plan.period as keyof Dictionary)}</span>
               )}
             </p>
           </div>
@@ -76,7 +40,7 @@ export function PlanCards() {
             {plan.features.map((f) => (
               <li key={f} className="flex items-start gap-2 text-sm">
                 <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                <span>{f}</span>
+                <span>{t(f)}</span>
               </li>
             ))}
           </ul>
@@ -85,7 +49,7 @@ export function PlanCards() {
             className="w-full"
             disabled={plan.disabled || plan.current}
           >
-            {plan.cta}
+            {t(plan.cta)}
           </Button>
         </div>
       ))}

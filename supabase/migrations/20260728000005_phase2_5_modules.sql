@@ -1,4 +1,4 @@
--- ContractorOS Phase 2-5 supporting modules
+-- BidPower Phase 2-5 supporting modules
 
 CREATE TABLE IF NOT EXISTS invoices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

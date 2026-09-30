@@ -1,4 +1,4 @@
--- ContractorOS Initial Schema
+-- BidPower Initial Schema
 -- Multi-tenant SaaS foundation
 -- Run this in your Supabase SQL Editor
 

@@ -1,5 +1,35 @@
 import { createClient } from "@/lib/supabase/server";
-import { getProjectFinancials } from "@/lib/finance";
+import { COUNTED_EXPENSE_STATUSES, getProjectFinancials } from "@/lib/finance";
+
+/** Only approved/reimbursed expenses are real cost; drafts, rejected and cancelled ones are ignored. */
+const countedTotal = (expenses: { amount: number; status?: string }[] | null | undefined) =>
+  (expenses ?? []).filter((e) => !e.status || (COUNTED_EXPENSE_STATUSES as readonly string[]).includes(e.status)).reduce((sum, e) => sum + Number(e.amount), 0);
+import type { ProjectStatus } from "@/types/database";
+import { getMyPermissions } from "@/lib/auth";
+import type { Permissions } from "@/lib/permissions";
+
+type Financial = {
+  contract_value: number; budget_total: number; budget_materials: number; budget_labor: number;
+  budget_subcontractors: number; budget_other: number; spentTotal: number; profit: number; margin: number;
+  overBudget: boolean; expenses?: unknown[] | null;
+};
+
+/**
+ * People without "view costs" must not receive money fields at all; without "view profit"
+ * they must not receive profit/margin. Row visibility itself is enforced by RLS.
+ */
+function applyVisibility<T extends Financial>(project: T, perms: Permissions): T & { costsHidden: boolean; profitHidden: boolean } {
+  const costsHidden = !perms.can_view_costs;
+  const profitHidden = costsHidden || !perms.can_view_profit;
+  const out = { ...project, costsHidden, profitHidden } as T & { costsHidden: boolean; profitHidden: boolean };
+  if (costsHidden) {
+    out.contract_value = 0; out.budget_total = 0; out.budget_materials = 0; out.budget_labor = 0;
+    out.budget_subcontractors = 0; out.budget_other = 0; out.spentTotal = 0; out.overBudget = false;
+    if ("expenses" in out) out.expenses = [];
+  }
+  if (profitHidden) { out.profit = 0; out.margin = 0; }
+  return out;
+}
 
 export async function getProjects(companyId: string) {
   const supabase = await createClient();
@@ -10,19 +40,17 @@ export async function getProjects(companyId: string) {
       `
       *,
       client:clients(id, name, contact_name),
-      expenses(amount)
+      expenses(amount, status)
     `
     )
     .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
+  const perms = await getMyPermissions();
 
   return (projects ?? []).map((p) => {
-    const spentTotal = (p.expenses ?? []).reduce(
-      (sum: number, e: { amount: number }) => sum + Number(e.amount),
-      0
-    );
+    const spentTotal = countedTotal(p.expenses);
 
     const financials = getProjectFinancials({
       contractValue: Number(p.contract_value),
@@ -34,11 +62,7 @@ export async function getProjects(companyId: string) {
       spentTotal,
     });
 
-    return {
-      ...p,
-      spentTotal,
-      ...financials,
-    };
+    return applyVisibility({ ...p, spentTotal, ...financials }, perms);
   });
 }
 
@@ -57,14 +81,12 @@ export async function getProjectById(projectId: string, companyId: string) {
     )
     .eq("id", projectId)
     .eq("company_id", companyId)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) return null;
 
-  const spentTotal = (data.expenses ?? []).reduce(
-    (sum: number, e: { amount: number }) => sum + Number(e.amount),
-    0
-  );
+  const spentTotal = countedTotal(data.expenses);
 
   const financials = getProjectFinancials({
     contractValue: Number(data.contract_value),
@@ -76,7 +98,7 @@ export async function getProjectById(projectId: string, companyId: string) {
     spentTotal,
   });
 
-  return { ...data, spentTotal, ...financials };
+  return applyVisibility({ ...data, spentTotal, ...financials }, await getMyPermissions());
 }
 
 export async function createProject(
@@ -92,6 +114,7 @@ export async function createProject(
     budget_subcontractors?: number;
     budget_other?: number;
     start_date?: string;
+    status?: ProjectStatus;
   }
 ) {
   const supabase = await createClient();
@@ -110,7 +133,7 @@ export async function createProject(
       name: data.name,
       description: data.description ?? null,
       address: data.address ?? null,
-      status: "lead",
+      status: data.status ?? "lead",
       contract_value: data.contract_value,
       budget_total: budgetTotal,
       budget_materials: data.budget_materials ?? 0,
