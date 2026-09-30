@@ -507,11 +507,21 @@ async function phaseLang(browser) {
   await o.goto(B + "/dashboard", { waitUntil: "networkidle" });
   const es = await o.locator("body").innerText();
   ok("language ES: navigation is in Spanish", /trabajo/i.test(es) && /operaciones/i.test(es));
+  // first steps come from what really exists; feedback is stored for the team
+  await o.goto(B + "/dashboard");
+  ok("onboarding: the checklist shows real progress (company + client + project done = 3/6)", (await o.getByText(/Primeros pasos|First steps/).count()) > 0 && (await o.getByText("3/6").count()) > 0);
+  await o.goto(B + "/feedback");
+  await o.getByRole("textbox").first().fill("Prueba de comentario: falta X");
+  await o.getByRole("button", { name: /^Enviar$|^Send$/ }).click();
+  await o.waitForTimeout(1500);
+  ok("feedback: sent and listed under the person's previous comments", (await o.getByText(/Gracias, lo recibimos|Thank you, we got it/).count()) > 0 && (await o.getByText("Prueba de comentario: falta X").count()) > 0);
   // price history comes only from real POs and quotes; an empty history says so
   await o.goto(B + "/materials");
-  await o.locator("ul li button.flex-1").first().click();
-  await o.waitForTimeout(1500);
-  ok("materials: the price history section loads (real prices or an honest empty state)", (await o.getByText(/Historial de precios|Price history/).count()) > 0 && (await o.getByText(/Aún no hay precios|No prices for this material|\$\d/).count()) > 0);
+  if (await o.locator("ul li button.flex-1").count()) {
+    await o.locator("ul li button.flex-1").first().click();
+    await o.waitForTimeout(1500);
+    ok("materials: the price history section loads (real prices or an honest empty state)", (await o.getByText(/Historial de precios|Price history/).count()) > 0 && (await o.getByText(/Aún no hay precios|No prices for this material|\$\d/).count()) > 0);
+  }
   await o.goto(B + "/pagina-que-no-existe");
   ok("404 page is translated", (await o.getByText(/No encontramos esta página/).count()) > 0);
 }

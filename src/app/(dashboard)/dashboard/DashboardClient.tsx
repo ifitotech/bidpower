@@ -10,6 +10,8 @@ import { usePermissions } from "@/lib/permissions-context";
 import { WaitingOn } from "@/components/shared/RequestStatusBadge";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import type { AttentionItem } from "@/lib/services/project-control";
+import type { OnboardingStep } from "@/lib/services/dashboard";
+import { OnboardingChecklist } from "@/components/shared/OnboardingChecklist";
 
 type HomeProject = { id: string; name: string; status: string; address?: string | null; clientName?: string | null };
 
@@ -20,6 +22,7 @@ export default function DashboardClient({
   totalProjects = projects.length,
   attention,
   items = [],
+  onboarding = [],
   error,
 }: {
   firstName: string;
@@ -28,6 +31,7 @@ export default function DashboardClient({
   totalProjects?: number;
   attention: { invoices: number; quotes: number };
   items?: AttentionItem[];
+  onboarding?: OnboardingStep[];
   error?: "errNoSupabase" | "errLoadProjects";
 }) {
   const { t } = useI18n();
@@ -48,6 +52,8 @@ export default function DashboardClient({
       </header>
 
       {error && <div role="alert" className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{t(error)}</div>}
+
+      {onboarding.length > 0 && <OnboardingChecklist steps={onboarding} />}
 
       {(attentionItems.length > 0 || items.length > 0) && (
         <section className="mb-6">

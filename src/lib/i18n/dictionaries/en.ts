@@ -1048,6 +1048,13 @@ const en: Dictionary = {
   priceFromPO: "Ordered",
   priceFromQuote: "Quoted",
   priceLowest: "Lowest recent: {price} ({vendor})",
+  feedbackTitle: "Send feedback",
+  feedbackHint: "Tell us what is confusing, what is missing or what you do not need. We read everything.",
+  feedbackPh: "Write your comment…",
+  feedbackSend: "Send",
+  feedbackThanks: "Thank you, we got it.",
+  feedbackMine: "Your previous comments",
+  errFeedbackEmpty: "Write a comment first.",
 };
 
 export default en;

@@ -102,3 +102,26 @@ export async function getRecentActivity(companyId: string, limit = 10) {
   if (error) throw error;
   return data;
 }
+
+export type OnboardingStep = { key: "stepCreateCompany" | "stepAddClient" | "stepCreateProject" | "stepSendQuote" | "stepAddExpense" | "stepInviteEmployee"; href: string; done: boolean };
+
+/** First steps for a new Owner, from what really exists in the company (nothing is ticked by hand). */
+export async function getOnboardingProgress(companyId: string): Promise<OnboardingStep[]> {
+  const supabase = await createClient();
+  const count = async (table: string, extra?: (q: ReturnType<ReturnType<typeof supabase.from>["select"]>) => unknown) => {
+    const base = supabase.from(table).select("id", { count: "exact", head: true }).eq("company_id", companyId);
+    const { count: n } = await (extra ? (extra(base as never) as PromiseLike<{ count: number | null }>) : base);
+    return n ?? 0;
+  };
+  const [clients, projects, quotes, expenses, members, invites] = await Promise.all([
+    count("clients"), count("projects"), count("quotes"), count("expenses"), count("company_members"), count("member_invitations"),
+  ]);
+  return [
+    { key: "stepCreateCompany", href: "/settings", done: true },
+    { key: "stepAddClient", href: "/clients/new", done: clients > 0 },
+    { key: "stepCreateProject", href: "/projects/new", done: projects > 0 },
+    { key: "stepSendQuote", href: "/quotes/new", done: quotes > 0 },
+    { key: "stepAddExpense", href: "/expenses/new", done: expenses > 0 },
+    { key: "stepInviteEmployee", href: "/employees/invite", done: members > 1 || invites > 0 },
+  ];
+}

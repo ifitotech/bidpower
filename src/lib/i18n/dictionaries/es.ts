@@ -1062,6 +1062,13 @@ const es = {
   priceFromPO: "Comprado",
   priceFromQuote: "Cotizado",
   priceLowest: "Más bajo reciente: {price} ({vendor})",
+  feedbackTitle: "Enviar comentarios",
+  feedbackHint: "Cuéntanos qué no se entiende, qué falta o qué te sobra. Lo leemos todo.",
+  feedbackPh: "Escribe tu comentario…",
+  feedbackSend: "Enviar",
+  feedbackThanks: "Gracias, lo recibimos.",
+  feedbackMine: "Tus comentarios anteriores",
+  errFeedbackEmpty: "Escribe un comentario primero.",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

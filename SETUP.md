@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260813000023_po_partial_receiving.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260814000024_feedback.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -201,3 +201,10 @@ las instrucciones para borrarlos están en la cabecera del script.
 - **Recepción parcial** (`20260813000023`): se registra cuánto llegó de cada línea (`received_quantity`). El estado del PO no cambia; "Marcar como recibido" sigue siendo la decisión que cierra la entrega. Una regla en la base impide cambiar cualquier otro dato de la línea y recibir más de lo pedido.
 - **Historial de precios** por material (Biblioteca de materiales → editar): solo con datos reales, líneas de POs y cotizaciones de suppliers, y solo para quien puede ver costos. Un material sin historial lo dice.
 - La ganancia estimada de Reportes usa el pronóstico (real + comprometido), igual que la pantalla del proyecto.
+
+## 21. Listo para las primeras entrevistas
+
+- **Primeros pasos reales** en Inicio (solo Owner): cada paso se marca cuando el registro existe de verdad (cliente, proyecto, Quote, gasto, invitación). La tarjeta desaparece al completar todo.
+- **Enviar comentarios** (Más → Enviar comentarios): guarda en la tabla `feedback` (`20260814000024`). Cada persona ve solo los suyos; el equipo los lee en Supabase → Table Editor.
+- **Guía de entrevistas:** `docs/INTERVIEW_GUIDE.md` (tareas por rol, qué observar, preguntas finales).
+- No hay datos de ejemplo: lo que se ve es lo que se crea.

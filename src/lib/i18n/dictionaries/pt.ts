@@ -1049,6 +1049,13 @@ const pt: Dictionary = {
   priceFromPO: "Comprado",
   priceFromQuote: "Cotado",
   priceLowest: "Menor recente: {price} ({vendor})",
+  feedbackTitle: "Enviar comentários",
+  feedbackHint: "Conte o que não é claro, o que falta ou o que sobra. Lemos tudo.",
+  feedbackPh: "Escreva seu comentário…",
+  feedbackSend: "Enviar",
+  feedbackThanks: "Obrigado, recebemos.",
+  feedbackMine: "Seus comentários anteriores",
+  errFeedbackEmpty: "Escreva um comentário primeiro.",
 };
 
 export default pt;
