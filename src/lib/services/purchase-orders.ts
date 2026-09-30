@@ -127,6 +127,20 @@ export const rejectPurchaseOrder = (companyId: string, userId: string, poId: str
 export const markPurchaseOrderSent = (companyId: string, userId: string, poId: string, expectedDelivery?: string | null) =>
   move(companyId, userId, poId, ["approved"], { sent_at: new Date().toISOString(), waiting_on: "supplier", ...(expectedDelivery ? { expected_delivery: expectedDelivery } : {}) }, "sent");
 
+/** Logistics: how much of each line has arrived. Only while the PO waits for delivery; the database enforces it too. */
+export async function recordPurchaseOrderReceipt(companyId: string, poId: string, lines: { id: string; received: number }[]) {
+  const supabase = await createClient();
+  const { data: po } = await supabase.from("purchase_orders").select("id, status").eq("id", poId).eq("company_id", companyId).maybeSingle();
+  if (!po) throw new Error("forbidden");
+  if (po.status !== "approved" && po.status !== "sent") throw new Error("po_transition_invalid");
+  for (const l of lines) {
+    if (!Number.isFinite(l.received) || l.received < 0) throw new Error("invalid_qty");
+    const { data, error } = await supabase.from("purchase_order_items").update({ received_quantity: l.received }).eq("id", l.id).eq("purchase_order_id", poId).eq("company_id", companyId).select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("forbidden");
+  }
+}
+
 /** Logistics: the date the material is expected. Only while the PO is approved or sent (after that it is history). */
 export async function setPurchaseOrderExpectedDelivery(companyId: string, poId: string, date: string | null) {
   const supabase = await createClient();
@@ -229,7 +243,7 @@ export async function getPurchaseOrderById(poId: string, companyId: string) {
   if (error) throw error;
   if (!data) return null;
   const [items, docs, history] = await Promise.all([
-    supabase.from("purchase_order_items").select("id, description, quantity, unit, unit_price, lead_time, sort_order").eq("purchase_order_id", poId).order("sort_order"),
+    supabase.from("purchase_order_items").select("id, description, quantity, unit, unit_price, lead_time, sort_order, received_quantity").eq("purchase_order_id", poId).order("sort_order"),
     supabase.from("documents").select("id, name, mime_type, document_kind, created_at").eq("related_type", "purchase_order").eq("related_id", poId).order("created_at"),
     supabase.from("purchase_order_status_history").select("id, from_status, to_status, notes, created_at, changer:profiles(full_name)").eq("purchase_order_id", poId).order("created_at"),
   ]);
@@ -246,7 +260,7 @@ export async function getPurchaseOrderById(poId: string, companyId: string) {
     project: one(raw.project as { id: string; name: string } | { id: string; name: string }[] | null),
     creator: one(raw.creator as { full_name: string | null } | { full_name: string | null }[] | null),
     pricing: one(raw.pricing as { id: string; number: string | null } | { id: string; number: string | null }[] | null),
-    items: (items.data ?? []).map((i) => ({ ...i, quantity: Number(i.quantity), unit_price: Number(i.unit_price) })) as { id: string; description: string; quantity: number; unit: string; unit_price: number; lead_time: string | null }[],
+    items: (items.data ?? []).map((i) => ({ ...i, quantity: Number(i.quantity), unit_price: Number(i.unit_price), received_quantity: Number(i.received_quantity ?? 0) })) as { id: string; description: string; quantity: number; unit: string; unit_price: number; lead_time: string | null; received_quantity: number }[],
     documents: (docs.data ?? []) as { id: string; name: string; mime_type: string; document_kind: string | null; created_at: string }[],
     history: ((history.data ?? []) as unknown as { id: string; from_status: string | null; to_status: string; notes: string | null; created_at: string; changer: { full_name: string | null } | { full_name: string | null }[] | null }[]).map((h) => ({ ...h, changer: one(h.changer) })),
   };

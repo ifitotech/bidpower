@@ -10,7 +10,7 @@ export default async function MaterialsPage() {
   if (!c || !c.perms.can_manage_library) redirect("/dashboard");
   try {
     const [items, lists] = await Promise.all([getMaterials(c.companyId), getSavedLists(c.companyId)]);
-    return <MaterialsClient items={items} lists={lists} />;
+    return <MaterialsClient items={items} lists={lists} canViewCosts={c.perms.can_view_costs || c.role === "owner"} />;
   } catch {
     return <MaterialsClient items={[]} lists={[]} error />;
   }

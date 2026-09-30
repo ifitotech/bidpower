@@ -4,9 +4,16 @@ import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
 import { CATEGORY_CODES, normalizeUnit, type RequestLineInput } from "@/lib/materials";
 import {
-  archiveMaterial, createMaterial, createSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
+  archiveMaterial, createMaterial, getMaterialPriceHistory, type PricePoint, createSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
 } from "@/lib/services/materials";
 import { cancelMaterialRequest, createMaterialRequest, reviewMaterialRequest } from "@/lib/services/material-requests";
+
+export async function getMaterialPricesAction(materialId: string): Promise<{ errorCode?: string; prices?: PricePoint[] }> {
+  const c = await ctx();
+  if (!c || !UUID.test(materialId)) return { errorCode: "errGeneric" };
+  if (!c.perms.can_view_costs && c.role !== "owner") return { errorCode: "errForbidden" };
+  try { return { prices: await getMaterialPriceHistory(c.companyId, materialId) }; } catch { return { errorCode: "errGeneric" }; }
+}
 
 export type MaterialResult = { errorCode?: string; success?: boolean; id?: string; number?: string };
 

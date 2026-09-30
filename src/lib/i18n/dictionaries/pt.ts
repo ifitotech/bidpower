@@ -1037,6 +1037,18 @@ const pt: Dictionary = {
   attnPODeliveryLate: "PO {number} de {vendor}: entrega atrasada",
   attnPODeliveryToday: "PO {number} de {vendor}: previsto para hoje",
   attnPODeliveryTomorrow: "PO {number} de {vendor}: previsto para amanhã",
+  poReceivedOf: "Recebido {received} de {total}",
+  poReceivedQty: "Quantidade recebida",
+  poSaveReceived: "Salvar o que chegou",
+  poPartial: "Entrega parcial",
+  poAllArrived: "Tudo chegou",
+  poReceivedSaved: "Recebimento salvo.",
+  errQtyInvalid: "A quantidade não é válida.",
+  priceHistory: "Histórico de preços",
+  priceHistoryEmpty: "Ainda não há preços deste material.",
+  priceFromPO: "Comprado",
+  priceFromQuote: "Cotado",
+  priceLowest: "Menor recente: {price} ({vendor})",
 };
 
 export default pt;

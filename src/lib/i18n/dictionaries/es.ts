@@ -1050,6 +1050,18 @@ const es = {
   attnPODeliveryLate: "PO {number} de {vendor}: entrega atrasada",
   attnPODeliveryToday: "PO {number} de {vendor}: se espera hoy",
   attnPODeliveryTomorrow: "PO {number} de {vendor}: se espera mañana",
+  poReceivedOf: "Recibido {received} de {total}",
+  poReceivedQty: "Cantidad recibida",
+  poSaveReceived: "Guardar lo recibido",
+  poPartial: "Entrega parcial",
+  poAllArrived: "Todo llegó",
+  poReceivedSaved: "Recepción guardada.",
+  errQtyInvalid: "La cantidad no es válida.",
+  priceHistory: "Historial de precios",
+  priceHistoryEmpty: "Aún no hay precios de este material.",
+  priceFromPO: "Comprado",
+  priceFromQuote: "Cotizado",
+  priceLowest: "Más bajo reciente: {price} ({vendor})",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

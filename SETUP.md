@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260812000022_po_expected_delivery.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260813000023_po_partial_receiving.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -194,3 +194,10 @@ las instrucciones para borrarlos están en la cabecera del script.
 - Para revisar la app sin registrar correos reales: `scripts/seed-test-users.js` crea cuentas ya confirmadas (`owner@prueba.test`, `supply@prueba.test`) con la API de administración de Supabase. Se ejecuta en tu máquina con `SUPABASE_SERVICE_ROLE_KEY` en el entorno (nunca en el chat ni con prefijo `NEXT_PUBLIC_`) y `--yes`. La empresa se crea sola en el primer login.
 - Manager y Employee se invitan desde el Owner (Empleados → Invitar), como en producción.
 - Alternativa sin script: desactiva "Confirm email" en Supabase y regístrate en `/register` con correos inventados.
+
+## 20. Logística de compras y precios reales
+
+- **Entrega esperada** en cada PO (`20260812000022`): se fija al marcar como enviado o después. Aparece atrasada / hoy / mañana en la lista, el detalle y en Inicio → Necesita atención.
+- **Recepción parcial** (`20260813000023`): se registra cuánto llegó de cada línea (`received_quantity`). El estado del PO no cambia; "Marcar como recibido" sigue siendo la decisión que cierra la entrega. Una regla en la base impide cambiar cualquier otro dato de la línea y recibir más de lo pedido.
+- **Historial de precios** por material (Biblioteca de materiales → editar): solo con datos reales, líneas de POs y cotizaciones de suppliers, y solo para quien puede ver costos. Un material sin historial lo dice.
+- La ganancia estimada de Reportes usa el pronóstico (real + comprometido), igual que la pantalla del proyecto.

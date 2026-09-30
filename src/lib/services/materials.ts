@@ -160,3 +160,37 @@ export async function deleteSavedList(companyId: string, listId: string) {
   if (error) throw error;
   if (!data || data.length === 0) throw new Error("forbidden");
 }
+
+export type PricePoint = { source: "po" | "quote"; vendor: string; price: number; date: string; unit: string | null };
+
+/**
+ * What this material actually cost or was quoted at before: real purchase order lines and real supplier quotes, newest first.
+ * Nothing is estimated; a material with no history returns an empty list.
+ */
+export async function getMaterialPriceHistory(companyId: string, materialId: string, limit = 10): Promise<PricePoint[]> {
+  const supabase = await createClient();
+  const [pos, reqItems] = await Promise.all([
+    supabase.from("purchase_order_items").select("unit_price, unit, po:purchase_orders(vendor_name, status, created_at)").eq("company_id", companyId).eq("material_id", materialId).limit(50),
+    supabase.from("supply_quote_request_items").select("id").eq("company_id", companyId).eq("material_id", materialId).limit(200),
+  ]);
+  if (pos.error) throw pos.error;
+  if (reqItems.error) throw reqItems.error;
+  const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
+  const out: PricePoint[] = [];
+  for (const r of pos.data ?? []) {
+    const po = one(r.po as { vendor_name: string; status: string; created_at: string } | { vendor_name: string; status: string; created_at: string }[] | null);
+    if (!po || ["cancelled", "rejected"].includes(po.status)) continue;
+    out.push({ source: "po", vendor: po.vendor_name, price: Number(r.unit_price), date: po.created_at, unit: r.unit as string });
+  }
+  const ids = (reqItems.data ?? []).map((r) => r.id as string);
+  if (ids.length) {
+    const { data, error } = await supabase.from("supplier_quote_response_items").select("unit_price, response:supplier_quote_responses(supplier_name, status, submitted_at, created_at)").eq("company_id", companyId).in("request_item_id", ids).not("unit_price", "is", null).limit(100);
+    if (error) throw error;
+    for (const r of data ?? []) {
+      const resp = one(r.response as { supplier_name: string; status: string; submitted_at: string | null; created_at: string } | { supplier_name: string; status: string; submitted_at: string | null; created_at: string }[] | null);
+      if (!resp || !["submitted", "accepted"].includes(resp.status)) continue;
+      out.push({ source: "quote", vendor: resp.supplier_name, price: Number(r.unit_price), date: resp.submitted_at ?? resp.created_at, unit: null });
+    }
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, limit);
+}

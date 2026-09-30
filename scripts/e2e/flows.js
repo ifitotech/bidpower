@@ -135,6 +135,11 @@ async function phase45(browser) {
   await o.goto(B + "/pos");
   ok("po logistics: the PO list shows the expected date with the late tag", (await o.getByText(/Atrasado|Late/).count()) > 0);
   await o.goto(state.poUrl);
+  // partial receiving: record part of the first line, the PO stays "sent"
+  await o.getByLabel(/Cantidad recibida|Quantity received/).first().fill("1");
+  await o.getByRole("button", { name: /Guardar lo recibido|Save what arrived/ }).click();
+  await o.waitForTimeout(1500);
+  ok("po logistics: partial receipt is recorded per line and the PO stays open", (await o.getByText(/Recibido 1 de|Received 1 of|Todo llegó|Everything arrived/).count()) > 0 && (await o.getByRole("button", { name: /Marcar como recibido|Mark as received/ }).count()) > 0);
   await o.getByRole("button", { name: /Marcar como recibido|Mark as received/ }).click();
   await o.waitForTimeout(1200);
   ok("po: received, receipt required to complete", (await o.getByText(/recibo, invoice o packing slip|receipt, invoice or packing slip/i).count()) > 0);
@@ -502,6 +507,11 @@ async function phaseLang(browser) {
   await o.goto(B + "/dashboard", { waitUntil: "networkidle" });
   const es = await o.locator("body").innerText();
   ok("language ES: navigation is in Spanish", /trabajo/i.test(es) && /operaciones/i.test(es));
+  // price history comes only from real POs and quotes; an empty history says so
+  await o.goto(B + "/materials");
+  await o.locator("ul li button.flex-1").first().click();
+  await o.waitForTimeout(1500);
+  ok("materials: the price history section loads (real prices or an honest empty state)", (await o.getByText(/Historial de precios|Price history/).count()) > 0 && (await o.getByText(/Aún no hay precios|No prices for this material|\$\d/).count()) > 0);
   await o.goto(B + "/pagina-que-no-existe");
   ok("404 page is translated", (await o.getByText(/No encontramos esta página/).count()) > 0);
 }

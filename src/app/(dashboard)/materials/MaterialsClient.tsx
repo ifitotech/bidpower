@@ -1,25 +1,35 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Star, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { MATERIAL_CATEGORIES, MATERIAL_UNITS, searchLibrary, type LibraryItem } from "@/lib/materials";
-import { archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import type { PricePoint } from "@/lib/services/materials";
+import { getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
 
 type Item = LibraryItem & { notes?: string | null; allow_substitution?: boolean };
 type SavedList = { id: string; name: string; items: { materialId: string; quantity: number }[] };
 type Draft = { id?: string; description: string; unit: string; category: string; manufacturer: string; catalog_number: string; aliases: string; notes: string; allow_substitution: boolean };
 const EMPTY: Draft = { description: "", unit: "EA", category: "", manufacturer: "", catalog_number: "", aliases: "", notes: "", allow_substitution: false };
 
-export default function MaterialsClient({ items, lists, error = false }: { items: Item[]; lists: SavedList[]; error?: boolean }) {
+export default function MaterialsClient({ items, lists, error = false, canViewCosts = false }: { items: Item[]; lists: SavedList[]; error?: boolean; canViewCosts?: boolean }) {
   const { t } = useI18n();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [prices, setPrices] = useState<PricePoint[] | null>(null);
+  useEffect(() => {
+    setPrices(null);
+    if (!draft?.id || !canViewCosts) return;
+    let live = true;
+    getMaterialPricesAction(draft.id).then((r) => { if (live) setPrices(r.prices ?? []); }).catch(() => { if (live) setPrices([]); });
+    return () => { live = false; };
+  }, [draft?.id, canViewCosts]);
   const shown = useMemo(() => searchLibrary(items, query, query ? 60 : 200), [items, query]);
   const input = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-brand-500";
 
@@ -54,6 +64,7 @@ export default function MaterialsClient({ items, lists, error = false }: { items
       </div>
       <label className="block text-sm font-medium">{t("itemAliases")}<input value={draft.aliases} placeholder={t("itemAliasesHint")} onChange={(e) => set({ aliases: e.target.value })} className={`${input} mt-1`} /></label>
       <label className="block text-sm font-medium">{t("itemNotes")}<input value={draft.notes} onChange={(e) => set({ notes: e.target.value })} className={`${input} mt-1`} /></label>
+      {draft.id && canViewCosts && <section className="rounded-lg bg-slate-50 p-3 text-sm"><h3 className="mb-1 font-semibold">{t("priceHistory")}</h3>{prices === null ? <p className="text-slate-400">{t("loading")}</p> : prices.length === 0 ? <p className="text-slate-500">{t("priceHistoryEmpty")}</p> : <><p className="mb-1 text-xs font-medium text-green-700">{t("priceLowest", { price: formatCurrency(Math.min(...prices.map((p) => p.price))), vendor: prices.reduce((a, b) => (b.price < a.price ? b : a)).vendor })}</p><ul className="space-y-0.5">{prices.map((p, k) => <li key={k} className="flex justify-between gap-2 text-xs"><span className="min-w-0 truncate">{p.vendor} · {p.source === "po" ? t("priceFromPO") : t("priceFromQuote")} · {formatDate(p.date)}</span><strong>{formatCurrency(p.price)}</strong></li>)}</ul></>}</section>}
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.allow_substitution} onChange={(e) => set({ allow_substitution: e.target.checked })} />{t("allowSubstitution")}</label>
       <div className="flex gap-2"><button type="button" disabled={busy || !draft.description.trim()} onClick={save} className="min-h-11 flex-1 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40">{t("save")}</button><button type="button" onClick={() => setDraft(null)} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold">{t("cancel")}</button></div>
     </div>}
