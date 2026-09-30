@@ -73,7 +73,7 @@ const es = {
   margin: "Margen",
   posWithoutDoc: "Órdenes de compra sin documento",
   posWithoutDocHint:
-    "Los empleados no pueden completarlos hasta subir el invoice o recibo.",
+    "Los empleados no pueden completarlos hasta subir la factura o el recibo.",
   viewPOs: "Ver POs",
   recentQuotes: "Propuestas recientes",
   recentActivity: "Últimos movimientos",
@@ -555,7 +555,7 @@ const es = {
   errPoLocked: "Este PO ya está aprobado: solo el Owner o un Manager puede cambiar el monto.",
   errPoNeedsManager: "Solo el Owner o un Manager puede hacer eso.",
   errPoNeedsSendPermission: "No tienes permiso para enviar POs.",
-  errPoNeedsDocument: "Falta el recibo, invoice o packing slip.",
+  errPoNeedsDocument: "Falta el recibo, la factura o el packing slip.",
   errPoTransition: "Este PO ya no admite ese cambio.",
   errPoAmount: "Escribe un costo real válido.",
   errPoNoCategory: "Falta una categoría de gastos en la empresa.",

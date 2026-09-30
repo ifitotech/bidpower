@@ -142,7 +142,7 @@ async function phase45(browser) {
   ok("po logistics: partial receipt is recorded per line and the PO stays open", (await o.getByText(/Recibido 1 de|Received 1 of|Todo llegó|Everything arrived/).count()) > 0 && (await o.getByRole("button", { name: /Marcar como recibido|Mark as received/ }).count()) > 0);
   await o.getByRole("button", { name: /Marcar como recibido|Mark as received/ }).click();
   await o.waitForTimeout(1200);
-  ok("po: received, receipt required to complete", (await o.getByText(/recibo, invoice o packing slip|receipt, invoice or packing slip/i).count()) > 0);
+  ok("po: received, receipt required to complete", (await o.getByText(/recibo, la factura o el packing slip|receipt, invoice or packing slip/i).count()) > 0);
   ok("po: cannot complete without a document (no complete form)", (await o.getByRole("button", { name: /Completar PO|Complete PO/ }).count()) === 0);
   await o.locator("input[type=file]").setInputFiles({ name: "receipt.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 receipt") });
   await o.waitForTimeout(1800);
