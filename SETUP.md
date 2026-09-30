@@ -187,3 +187,10 @@ las instrucciones para borrarlos están en la cabecera del script.
 - El PDF/HTML de un Quote respeta el idioma (`?lang=`) y escapa todo el contenido.
 - Auditoría: `AUDIT_EMAIL=<usuario del e2e> node scripts/e2e/i18n-audit.js` recorre las pantallas en los 3 idiomas y marca texto de otro idioma. El vocabulario de producto (Owner, Manager, Quote, PO, Bid Date…) se mantiene en inglés a propósito en español.
 - Limpieza de pantallas que eran maquetas: Configuración (ya carga los datos reales de la empresa y del perfil; antes tenía valores de ejemplo que se habrían guardado encima de los reales), Categorías de gasto (ahora se guardan de verdad), Calendario (mes real), Facturas (cliente elegido de una lista), Archivos. Se quitaron los interruptores de notificaciones, el contador "0 análisis" y el botón de firma, que no hacían nada.
+
+## 19. Cuentas de prueba (sin correos reales y sin puertas traseras)
+
+- No existe ni existirá un "bypass" de login dentro de la app: en un sistema multiempresa sería una puerta abierta a los datos de todos.
+- Para revisar la app sin registrar correos reales: `scripts/seed-test-users.js` crea cuentas ya confirmadas (`owner@prueba.test`, `supply@prueba.test`) con la API de administración de Supabase. Se ejecuta en tu máquina con `SUPABASE_SERVICE_ROLE_KEY` en el entorno (nunca en el chat ni con prefijo `NEXT_PUBLIC_`) y `--yes`. La empresa se crea sola en el primer login.
+- Manager y Employee se invitan desde el Owner (Empleados → Invitar), como en producción.
+- Alternativa sin script: desactiva "Confirm email" en Supabase y regístrate en `/register` con correos inventados.
