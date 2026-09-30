@@ -15,11 +15,6 @@ export async function getDashboardMetrics(companyId: string) {
     .select("id", { count: "exact", head: true })
     .eq("company_id", companyId)
     .eq("status", "completed");
-  const { count: employeesWorking } = await supabase
-    .from("company_members")
-    .select("id", { count: "exact", head: true })
-    .eq("company_id", companyId)
-    .eq("is_active", true);
   const { count: pendingInvoices } = await supabase
     .from("invoices")
     .select("id", { count: "exact", head: true })
@@ -35,12 +30,18 @@ export async function getDashboardMetrics(companyId: string) {
   let totalSpent = 0;
   let totalProfit = 0;
 
+  // Estimated profit uses the forecast (actual + committed in open POs), the same figure as the project screen.
+  const { data: costs } = activeProjects.length
+    ? await supabase.from("project_cost_summary").select("project_id, committed_cost").in("project_id", activeProjects.map((p) => p.id))
+    : { data: [] as { project_id: string; committed_cost: number }[] };
+  const committedBy = new Map((costs ?? []).map((c) => [c.project_id as string, Number(c.committed_cost)]));
+
   for (const p of activeProjects) {
     const spent = (p.expenses ?? [])
       .filter((e: { status?: string }) => e.status === "approved" || e.status === "reimbursed")
       .reduce((s: number, e: { amount: number }) => s + Number(e.amount), 0);
     totalSpent += spent;
-    totalProfit += Number(p.contract_value) - spent;
+    totalProfit += Number(p.contract_value) - (spent + (committedBy.get(p.id) ?? 0));
   }
 
   // Quotes pending
@@ -78,7 +79,6 @@ export async function getDashboardMetrics(companyId: string) {
   return {
     activeProjectsCount: activeProjects.length,
     completedProjectsCount: completedProjectsCount ?? 0,
-    employeesWorking: employeesWorking ?? 0,
     pendingInvoices: pendingInvoices ?? 0,
     totalContractValue,
     totalSpent,
@@ -101,4 +101,27 @@ export async function getRecentActivity(companyId: string, limit = 10) {
 
   if (error) throw error;
   return data;
+}
+
+export type OnboardingStep = { key: "stepCreateCompany" | "stepAddClient" | "stepCreateProject" | "stepSendQuote" | "stepAddExpense" | "stepInviteEmployee"; href: string; done: boolean };
+
+/** First steps for a new Owner, from what really exists in the company (nothing is ticked by hand). */
+export async function getOnboardingProgress(companyId: string): Promise<OnboardingStep[]> {
+  const supabase = await createClient();
+  const count = async (table: string, extra?: (q: ReturnType<ReturnType<typeof supabase.from>["select"]>) => unknown) => {
+    const base = supabase.from(table).select("id", { count: "exact", head: true }).eq("company_id", companyId);
+    const { count: n } = await (extra ? (extra(base as never) as PromiseLike<{ count: number | null }>) : base);
+    return n ?? 0;
+  };
+  const [clients, projects, quotes, expenses, members, invites] = await Promise.all([
+    count("clients"), count("projects"), count("quotes"), count("expenses"), count("company_members"), count("member_invitations"),
+  ]);
+  return [
+    { key: "stepCreateCompany", href: "/settings", done: true },
+    { key: "stepAddClient", href: "/clients/new", done: clients > 0 },
+    { key: "stepCreateProject", href: "/projects/new", done: projects > 0 },
+    { key: "stepSendQuote", href: "/quotes/new", done: quotes > 0 },
+    { key: "stepAddExpense", href: "/expenses/new", done: expenses > 0 },
+    { key: "stepInviteEmployee", href: "/employees/invite", done: members > 1 || invites > 0 },
+  ];
 }

@@ -257,11 +257,67 @@ export async function getAttachmentUrl(companyId: string, attachmentId: string) 
   return signed.data.signedUrl;
 }
 
+export type SupplierContact = { id: string; name: string; email: string | null; phone: string | null; is_primary: boolean };
+
 export async function getSuppliers(companyId: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("suppliers").select("id, name, supply_company_id").eq("company_id", companyId).eq("is_active", true).order("name");
+  const { data, error } = await supabase.from("suppliers").select("id, name, supply_company_id, contacts:supplier_contacts(id, name, email, phone, is_primary:is_default_quote_contact, is_active)").eq("company_id", companyId).eq("is_active", true).order("name");
   if (error) throw error;
-  return data as { id: string; name: string; supply_company_id: string | null }[];
+  return (data as unknown as { id: string; name: string; supply_company_id: string | null; contacts: (SupplierContact & { is_active: boolean })[] | null }[]).map((s) => ({
+    id: s.id, name: s.name, supply_company_id: s.supply_company_id,
+    contacts: [...(s.contacts ?? [])].filter((c) => c.is_active).map(({ is_active: _a, ...c }) => c).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.name.localeCompare(b.name)),
+  }));
+}
+
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+export type ContactInput = { name: string; email?: string | null; phone?: string | null };
+
+function cleanContact(c: ContactInput) {
+  const name = c.name.trim().slice(0, 120);
+  const email = (c.email ?? "").trim().toLowerCase();
+  const phone = (c.phone ?? "").trim().slice(0, 40);
+  if (!name) throw new Error("contact_name_required");
+  if (email && (!EMAIL.test(email) || email.length > 200)) throw new Error("invalid_email");
+  return { name, email: email || null, phone: phone || null };
+}
+
+/** A supplier together with its first contact, in one step. */
+export async function createSupplierWithContact(companyId: string, userId: string, input: { name: string; contact: ContactInput }) {
+  const contact = cleanContact(input.contact);
+  const supplierId = await createSupplier(companyId, userId, input.name);
+  const supabase = await createClient();
+  const { error } = await supabase.from("supplier_contacts").insert({ company_id: companyId, supplier_id: supplierId, created_by: userId, ...contact, is_default_quote_contact: true });
+  if (error) {
+    await supabase.from("suppliers").delete().eq("id", supplierId).eq("company_id", companyId);
+    if ((error as { code?: string }).code === "23505") throw new Error("contact_exists");
+    throw error;
+  }
+  return supplierId;
+}
+
+export async function addSupplierContact(companyId: string, userId: string, supplierId: string, input: ContactInput) {
+  const contact = cleanContact(input);
+  const supabase = await createClient();
+  const { count } = await supabase.from("supplier_contacts").select("id", { count: "exact", head: true }).eq("supplier_id", supplierId).eq("company_id", companyId).eq("is_active", true);
+  const { error } = await supabase.from("supplier_contacts").insert({ company_id: companyId, supplier_id: supplierId, created_by: userId, ...contact, is_default_quote_contact: (count ?? 0) === 0 });
+  if (error) {
+    if ((error as { code?: string }).code === "23505") throw new Error("contact_exists");
+    throw error;
+  }
+}
+
+export async function removeSupplierContact(companyId: string, contactId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("supplier_contacts").update({ is_active: false, is_default_quote_contact: false, updated_at: new Date().toISOString() }).eq("id", contactId).eq("company_id", companyId);
+  if (error) throw error;
+}
+
+export async function setPrimarySupplierContact(companyId: string, supplierId: string, contactId: string) {
+  const supabase = await createClient();
+  const a = await supabase.from("supplier_contacts").update({ is_default_quote_contact: false }).eq("supplier_id", supplierId).eq("company_id", companyId);
+  if (a.error) throw a.error;
+  const b = await supabase.from("supplier_contacts").update({ is_default_quote_contact: true }).eq("id", contactId).eq("supplier_id", supplierId).eq("company_id", companyId);
+  if (b.error) throw b.error;
 }
 
 export async function createSupplier(companyId: string, userId: string, name: string) {

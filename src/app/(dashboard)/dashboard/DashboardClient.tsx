@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ChevronRight, Clock3, MapPin, Plus, Receipt } from "lucide-react";
+import { AlertTriangle, Briefcase, ChevronRight, Clock3, FileText, MapPin, Package, Plus, Receipt } from "lucide-react";
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { useI18n } from "@/lib/i18n/provider";
 import { APP_NAME } from "@/lib/constants";
@@ -10,6 +10,8 @@ import { usePermissions } from "@/lib/permissions-context";
 import { WaitingOn } from "@/components/shared/RequestStatusBadge";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import type { AttentionItem } from "@/lib/services/project-control";
+import type { OnboardingStep } from "@/lib/services/dashboard";
+import { OnboardingChecklist } from "@/components/shared/OnboardingChecklist";
 
 type HomeProject = { id: string; name: string; status: string; address?: string | null; clientName?: string | null };
 
@@ -20,6 +22,7 @@ export default function DashboardClient({
   totalProjects = projects.length,
   attention,
   items = [],
+  onboarding = [],
   error,
 }: {
   firstName: string;
@@ -28,10 +31,11 @@ export default function DashboardClient({
   totalProjects?: number;
   attention: { invoices: number; quotes: number };
   items?: AttentionItem[];
+  onboarding?: OnboardingStep[];
   error?: "errNoSupabase" | "errLoadProjects";
 }) {
   const { t } = useI18n();
-  const { isManagerOrAbove } = usePermissions();
+  const { isManagerOrAbove, permissions } = usePermissions();
   const hour = new Date().getHours();
   const greetingKey = hour < 12 ? "greetingMorning" : hour < 19 ? "greetingAfternoon" : "greetingEvening";
   const attentionItems = [
@@ -48,6 +52,18 @@ export default function DashboardClient({
       </header>
 
       {error && <div role="alert" className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{t(error)}</div>}
+
+      {!error && (() => {
+        const quick = [
+          ...(isManagerOrAbove ? [{ href: "/projects/new", label: t("newProject"), icon: Briefcase }] : []),
+          ...(permissions.can_request_material ? [{ href: "/material", label: t("navMaterial"), icon: Package }] : []),
+          ...(isManagerOrAbove ? [{ href: "/quotes/new", label: t("createProposal"), icon: FileText }] : []),
+          ...(isManagerOrAbove || permissions.can_upload_documents ? [{ href: "/expenses/new", label: t("newExpense"), icon: Receipt }] : []),
+        ];
+        return quick.length > 0 ? <section className="mb-6" aria-label={t("whatToDo")}><h2 className="mb-2 text-sm font-bold">{t("whatToDo")}</h2><div className="grid grid-cols-2 gap-2 md:grid-cols-4">{quick.map((q) => <Link key={q.href} href={q.href} className="flex min-h-20 flex-col items-start justify-between rounded-xl border border-slate-200 bg-white p-3 transition hover:border-brand-300"><q.icon className="h-5 w-5 text-brand-600" /><span className="text-sm font-semibold">{q.label}</span></Link>)}</div></section> : null;
+      })()}
+
+      {onboarding.length > 0 && <OnboardingChecklist steps={onboarding} />}
 
       {(attentionItems.length > 0 || items.length > 0) && (
         <section className="mb-6">

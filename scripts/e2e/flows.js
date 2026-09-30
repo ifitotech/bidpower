@@ -67,10 +67,10 @@ async function phase45(browser) {
   const o = state.owner;
   // Pricing Request from the reviewed Material Request of the employee
   await o.goto(B + "/pricing/new");
-  await o.getByLabel(/Desde un pedido de material|From a material request/).selectOption({ index: 1 });
+  await o.getByLabel(/Desde una lista de material|From a material list/).selectOption({ index: 1 });
   await o.getByLabel(/^Título|^Title/).fill("Panel package");
   await o.locator("input[type=date]").fill("2030-01-15");
-  await o.getByRole("button", { name: /Crear Pricing Request|Create Pricing Request/ }).click();
+  await o.getByRole("button", { name: /Pedir cotización|Request quotes/ }).click();
   await o.waitForURL(/pricing\/[0-9a-f-]{36}$/, { timeout: 30000 });
   state.prUrl = o.url();
   ok("pricing: created with number PR-", (await o.locator("h1").innerText()).startsWith("PR-"));
@@ -120,16 +120,29 @@ async function phase45(browser) {
   await o.waitForTimeout(800);
 
   // Purchase Order from the response
-  await o.getByRole("button", { name: /Crear Purchase Order|Create purchase order/ }).first().click();
+  await o.getByRole("button", { name: /Crear orden de compra|Create purchase order/ }).first().click();
   await o.waitForURL(/\/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
   state.poUrl = o.url();
   ok("po: created from the supplier response, approved (owner has no limit)", (await o.getByText(/Aprobado|Approved/).count()) > 0);
   ok("po: lines carried over with prices", (await o.locator("ul li").filter({ hasText: /×/ }).count()) >= 1);
+  // logistics: expected delivery date travels with "sent"; a past date is late and shows on Home
+  await o.locator("input[type=date]").fill("2020-01-02");
   await o.getByRole("button", { name: /Marcar como enviado al supplier|Mark as sent to supplier/ }).click();
-  await o.waitForTimeout(1200);
+  await o.waitForTimeout(1500);
+  ok("po logistics: expected delivery saved and flagged as late", (await o.getByText(/Atrasado|Late/).count()) > 0 && (await o.getByText(/Entrega esperada|Expected delivery/).count()) > 0);
+  await o.goto(B + "/dashboard");
+  ok("po logistics: a late delivery appears in Needs Attention", (await o.getByText(/entrega atrasada|delivery is late/).count()) > 0);
+  await o.goto(B + "/pos");
+  ok("po logistics: the PO list shows the expected date with the late tag", (await o.getByText(/Atrasado|Late/).count()) > 0);
+  await o.goto(state.poUrl);
+  // partial receiving: record part of the first line, the PO stays "sent"
+  await o.getByLabel(/Cantidad recibida|Quantity received/).first().fill("1");
+  await o.getByRole("button", { name: /Guardar lo recibido|Save what arrived/ }).click();
+  await o.waitForTimeout(1500);
+  ok("po logistics: partial receipt is recorded per line and the PO stays open", (await o.getByText(/Recibido 1 de|Received 1 of|Todo llegó|Everything arrived/).count()) > 0 && (await o.getByRole("button", { name: /Marcar como recibido|Mark as received/ }).count()) > 0);
   await o.getByRole("button", { name: /Marcar como recibido|Mark as received/ }).click();
   await o.waitForTimeout(1200);
-  ok("po: received, receipt required to complete", (await o.getByText(/recibo, invoice o packing slip|receipt, invoice or packing slip/i).count()) > 0);
+  ok("po: received, receipt required to complete", (await o.getByText(/recibo, la factura o el packing slip|receipt, invoice or packing slip/i).count()) > 0);
   ok("po: cannot complete without a document (no complete form)", (await o.getByRole("button", { name: /Completar PO|Complete PO/ }).count()) === 0);
   await o.locator("input[type=file]").setInputFiles({ name: "receipt.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 receipt") });
   await o.waitForTimeout(1800);
@@ -149,7 +162,7 @@ async function phase45(browser) {
   await lim.locator("select[name=projectId]").selectOption({ index: 1 });
   await lim.locator("input[name=vendorName]").fill("Home Depot");
   await lim.locator("input[name=estimatedAmount]").fill("900");
-  await lim.getByRole("button", { name: /Crear PO|Create PO|Crear Purchase Order/ }).click();
+  await lim.getByRole("button", { name: /Crear PO|Create PO|Crear orden de compra/ }).click();
   await lim.waitForURL(/\/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
   ok("po limit: over the limit waits for approval", (await lim.getByText(/Por aprobar|Pending approval/).count()) > 0);
   ok("po limit: creator cannot approve", (await lim.getByRole("button", { name: /^Aprobar$|^Approve$/ }).count()) === 0);
@@ -201,7 +214,7 @@ async function phase6(browser) {
   await o.locator("input[type=text]").nth(0).fill("Panel upgrade 200A");
   await o.locator("input[type=number]").nth(1).fill("1200");
   await o.locator("input[name=taxRate]").fill("7.5");
-  await o.getByRole("button", { name: /Nueva Proposal|New Proposal/ }).last().click();
+  await o.getByRole("button", { name: /Nueva propuesta|New Proposal/ }).last().click();
   await o.waitForURL(/quotes\/[0-9a-f-]{36}$/, { timeout: 30000 });
   state.quoteUrl = o.url();
   ok("proposal: created and opened", (await o.getByText(/QT-/).count()) > 0);
@@ -264,7 +277,7 @@ async function phase6(browser) {
   await o.goto(`${B}/quotes/new?projectId=${state.projectId}`);
   await o.locator("input[type=text]").nth(0).fill("Lighting package");
   await o.locator("input[type=number]").nth(1).fill("500");
-  await o.getByRole("button", { name: /Nueva Proposal|New Proposal/ }).last().click();
+  await o.getByRole("button", { name: /Nueva propuesta|New Proposal/ }).last().click();
   await o.waitForURL(/quotes\/[0-9a-f-]{36}$/, { timeout: 30000 });
   const q2 = o.url();
   await o.getByRole("button", { name: /Crear enlace y enviar|Create link and send/ }).first().click();
@@ -325,7 +338,7 @@ async function phase78(browser) {
   await o.getByRole("button", { name: /^Agregar$|^Add$/ }).first().click();
   await o.waitForTimeout(1500);
   ok("takeoff: editing a verified takeoff sends it back to unverified", (await o.getByText(/Marcar como verificado|Mark as verified/).count()) > 0);
-  await o.getByRole("button", { name: /Enviar como pedido de material|Send as material request/ }).click();
+  await o.getByRole("button", { name: /Enviar como lista de material|Send as material list/ }).click();
   await o.waitForTimeout(2500);
   await o.goto(B + "/materials/requests");
   ok("takeoff: material request created with the PRELIMINARY note", (await o.locator("a[href*='/materials/']").filter({ hasText: /MR-/ }).count()) >= 1);
@@ -373,7 +386,7 @@ async function phase9(browser) {
   await o.locator("textarea").first().fill("12 x 2x4 LED panel\n40 x Duplex outlet");
   await o.getByLabel(/^Título|^Title/).fill("Lobby package");
   await o.locator("input[type=date]").fill("2030-02-01");
-  await o.getByRole("button", { name: /Crear Pricing Request|Create Pricing Request/ }).click();
+  await o.getByRole("button", { name: /Pedir cotización|Request quotes/ }).click();
   await o.waitForURL(/pricing\/[0-9a-f-]{36}$/, { timeout: 30000 });
   state.pr2 = o.url();
   await o.locator("input[type=file]").setInputFiles({ name: "lighting-plan.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 plan") });
@@ -396,7 +409,7 @@ async function phase9(browser) {
   const priceInputs = sp.getByLabel(/^Precio |^Price /);
   const n = await priceInputs.count();
   for (let i = 0; i < n; i++) await priceInputs.nth(i).fill(String(20 + i));
-  await sp.getByLabel(/Nº de quote|Quote number/).fill("GB-1001");
+  await sp.getByLabel(/Nº de cotización|Quote number/).fill("GB-1001");
   await sp.getByRole("button", { name: /Enviar mi respuesta|Send my response/ }).click();
   await sp.waitForTimeout(1800);
   ok("supply request: quote sent", (await sp.getByRole("status").count()) > 0);
@@ -485,7 +498,7 @@ async function phaseLang(browser) {
   await o.evaluate(() => localStorage.setItem("bidpower-locale", "en"));
   await o.reload({ waitUntil: "networkidle" });
   const en = await o.locator("body").innerText();
-  ok("language EN: navigation is in English", /work/i.test(en) && /operations/i.test(en) && !/trabajo|operaciones/i.test(en));
+  ok("language EN: navigation is in English", /sales/i.test(en) && /purchasing/i.test(en) && /connections/i.test(en) && !/ventas|compras|conexiones/i.test(en));
   await o.goto(B + "/settings/categories");
   ok("language EN: system categories are translated", (await o.getByText("Materials").count()) > 0 && (await o.getByText("Materiales").count()) === 0);
   const pdfEn = await o.request.get(B + "/api/quotes/00000000-0000-0000-0000-000000000000/pdf?lang=en");
@@ -493,9 +506,135 @@ async function phaseLang(browser) {
   await o.evaluate(() => localStorage.setItem("bidpower-locale", "es"));
   await o.goto(B + "/dashboard", { waitUntil: "networkidle" });
   const es = await o.locator("body").innerText();
-  ok("language ES: navigation is in Spanish", /trabajo/i.test(es) && /operaciones/i.test(es));
+  ok("language ES: navigation is in Spanish", /ventas/i.test(es) && /compras/i.test(es) && /conexiones/i.test(es));
+  // first steps come from what really exists; feedback is stored for the team
+  await o.goto(B + "/dashboard");
+  const fresh = await page(browser);
+  await register(fresh, "Nuevo Owner", `fresh-${RUN}@bidpower-smoke.test`, "Fresh Co");
+  await fresh.goto(B + "/dashboard");
+  ok("onboarding: a brand-new company sees the checklist at 1/6 (only 'create company' is done)", (await fresh.getByText(/Primeros pasos|First steps/).count()) > 0 && (await fresh.getByText("1/6").count()) > 0);
+  await o.goto(B + "/feedback");
+  await o.getByRole("textbox").first().fill("Prueba de comentario: falta X");
+  await o.getByRole("button", { name: /^Enviar$|^Send$/ }).click();
+  await o.waitForTimeout(1500);
+  ok("feedback: sent and listed under the person's previous comments", (await o.getByText(/Gracias, lo recibimos|Thank you, we got it/).count()) > 0 && (await o.getByText("Prueba de comentario: falta X").count()) > 0);
+  // import ready-made materials with part numbers; a field name finds the part number and the reverse
+  await o.goto(B + "/materials");
+  await o.getByRole("button", { name: /Importar lista|Import list/ }).click();
+  await o.getByLabel(/o pega aquí las filas|or paste the rows here|ou cole as linhas aqui/i).fill("description,part number,manufacturer,unit,category,aliases\r\nTHHN 10 AWG stranded black,THHN-10-STR-BLK,Southwire,FT,wire,\"cable 10 negro, #10 black\"\r\n20A single-pole breaker,BR120,Eaton,EA,breakers,");
+  ok("import: preview counts the ready rows", (await o.getByText(/2 materiales listos|2 items ready/).count()) > 0);
+  await o.getByRole("button", { name: /^Importar$|^Import$/ }).click();
+  await o.waitForTimeout(2000);
+  ok("import: created and reported", (await o.getByText(/Importados: 2|Imported: 2/).count()) > 0);
+  await o.getByPlaceholder(/Buscar|Search/).first().fill("cable 10 negro");
+  ok("import: finding it by the field name shows the part number", (await o.getByText(/THHN-10-STR-BLK/).count()) > 0);
+  await o.getByPlaceholder(/Buscar|Search/).first().fill("thhn-10-str-blk");
+  ok("import: finding it by the part number works too", (await o.getByText(/THHN 10 AWG stranded black/).count()) > 0);
+  await o.goto(B + "/materials");
+  await o.getByRole("button", { name: /Importar lista|Import list/ }).click();
+  await o.getByLabel(/o pega aquí las filas|or paste the rows here|ou cole as linhas aqui/i).fill("description,part number\r\nTHHN 10 AWG stranded black,thhn-10-str-blk\r\nNew item,NEW-1");
+  await o.getByRole("button", { name: /^Importar$|^Import$/ }).click();
+  await o.waitForTimeout(2000);
+  ok("import: an existing part number is skipped, the new one is created", (await o.getByText(/Importados: 1\. Ya existían: 1|Imported: 1\. Already existed: 1/).count()) > 0);
+  // price history comes only from real POs and quotes; an empty history says so
+  await o.goto(B + "/materials");
+  if (await o.locator("ul li button.flex-1").count()) {
+    await o.locator("ul li button.flex-1").first().click();
+    await o.waitForTimeout(1500);
+    ok("materials: the price history section loads (real prices or an honest empty state)", (await o.getByText(/Historial de precios|Price history/).count()) > 0 && (await o.getByText(/Aún no hay precios|No prices for this material|\$\d/).count()) > 0);
+  }
   await o.goto(B + "/pagina-que-no-existe");
   ok("404 page is translated", (await o.getByText(/No encontramos esta página/).count()) > 0);
+}
+
+async function phaseFlow(browser) {
+  const o = state.owner;
+  await o.evaluate(() => localStorage.setItem("bidpower-locale", "es"));
+  // Home answers "what do you want to do?" with four plain actions
+  await o.goto(B + "/dashboard", { waitUntil: "networkidle" });
+  const quick = o.getByRole("region", { name: /¿Qué quieres hacer\?|What do you want to do\?/ });
+  ok("flow: home offers the four actions (project, material, proposal, expense)", (await quick.locator("a").count()) === 4);
+  // Old screens that only said "it does not exist" are gone; the company area is one place
+  ok("flow: removed screens answer 404", (await o.request.get(B + "/quotes/estimator")).status() === 404 && (await o.request.get(B + "/files")).status() === 404);
+  await o.goto(B + "/my-company");
+  ok("flow: My company sends to Settings", o.url().endsWith("/settings"));
+  // The one door for material, with three ways out. Buy now = purchase order with the list's lines.
+  await o.goto(B + "/material");
+  if (!/materials\/new$/.test(o.url())) await o.locator("main a[href$='/materials/new']").first().click();
+  await o.waitForURL(/materials\/new$/);
+  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Conduit 1 in EMT");
+  await o.keyboard.press("Enter");
+  await o.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
+  await o.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  ok("flow: after the list the next step offers ask-quotes and buy-now", (await o.getByText(/¿Qué quieres hacer con esta lista\?|What do you want to do with this list\?/).count()) > 0 && (await o.getByText(/Pedir cotización a suppliers|Request quotes from suppliers/).count()) > 0 && (await o.getByText(/Comprar ya|Buy now/).count()) > 0);
+  await o.getByRole("button", { name: /Comprar ya|Buy now/ }).click();
+  const sel = o.locator("select").filter({ has: o.locator("option", { hasText: /Otro|Other/ }) });
+  if (await sel.count()) await sel.first().selectOption("other");
+  await o.getByLabel(/^Supplier$|^Fornecedor$/).fill("Corner Electric");
+  await o.getByLabel(/Monto estimado|Estimated amount/).fill("250");
+  await o.getByRole("button", { name: /Crear orden de compra|Create purchase order/ }).click();
+  await o.waitForURL(/\/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  ok("flow: buy-now creates a purchase order with the list's line and the supplier", (await o.getByText("Corner Electric").count()) > 0 && (await o.getByText(/Conduit 1 in EMT/).count()) > 0);
+  // Connections: a supplier with people (name + email)
+  await o.goto(B + "/suppliers");
+  await o.getByLabel(/Nombre de la empresa \(supplier\)|Supplier company name/).fill("Acme Supply");
+  await o.getByLabel(/Nombre del contacto|Contact name/).first().fill("Laura Ventas");
+  await o.getByLabel(/Correo del contacto|Contact email/).first().fill("not-an-email");
+  await o.getByRole("button", { name: /Agregar supplier|Add supplier/ }).last().click();
+  await o.waitForTimeout(1200);
+  ok("connections: an invalid contact email is refused", (await o.getByText(/El correo no es válido|The email is not valid/).count()) > 0);
+  await o.getByLabel(/Correo del contacto|Contact email/).first().fill("laura@acme.test");
+  await o.getByRole("button", { name: /Agregar supplier|Add supplier/ }).last().click();
+  await o.waitForTimeout(1500);
+  ok("connections: the supplier shows its primary contact with name and email", (await o.getByText("Acme Supply").count()) > 0 && (await o.getByText("Laura Ventas").count()) > 0 && (await o.getByText("laura@acme.test").count()) > 0 && (await o.getByText(/Principal|Primary/).count()) > 0);
+  const card = o.locator("li").filter({ hasText: "Acme Supply" }).first();
+  await card.locator("summary").click();
+  await card.getByLabel(/Nombre del contacto|Contact name/).fill("Pedro Mostrador");
+  await card.getByLabel(/Correo del contacto|Contact email/).fill("laura@acme.test");
+  await card.getByRole("button", { name: /Agregar contacto|Add contact/ }).last().click();
+  await o.waitForTimeout(1200);
+  ok("connections: the same email twice in a supplier is refused", (await o.getByText(/Ya existe un contacto|already exists/).count()) > 0);
+  await card.getByLabel(/Correo del contacto|Contact email/).fill("pedro@acme.test");
+  await card.getByRole("button", { name: /Agregar contacto|Add contact/ }).last().click();
+  await o.waitForTimeout(1500);
+  ok("connections: a second contact is added", (await o.getByText("Pedro Mostrador").count()) > 0);
+  // Quote road: ask for quotes, the supplier answers with a PDF, the contractor enters only the total, buys from it
+  await o.goto(B + "/material");
+  if (!/materials\/new$/.test(o.url())) await o.locator("main a[href$='/materials/new']").first().click();
+  await o.waitForURL(/materials\/new$/);
+  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Wire 12 AWG black");
+  await o.keyboard.press("Enter");
+  await o.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
+  await o.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  await o.getByRole("link", { name: /Pedir cotización a suppliers|Request quotes from suppliers/ }).click();
+  await o.waitForURL(/pricing\/new/);
+  await o.getByRole("button", { name: /Pedir cotización|Request quotes/ }).click();
+  await o.waitForURL(/pricing\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  {
+    const sel = o.locator("section").filter({ hasText: /Enlaces para suppliers|Supplier links/ }).locator("select").first();
+    await sel.selectOption({ label: "Acme Supply" });
+    ok("connections: choosing the supplier offers its contacts and fills the email", (await o.getByText(/Laura Ventas/).count()) > 0 && (await o.locator("input[type=email]").first().inputValue()) === "laura@acme.test");
+  }
+  await o.getByRole("button", { name: /Registrar respuesta|Record response/ }).click();
+  await o.locator("section").filter({ hasText: /Registrar respuesta|Record response|Cotizaciones recibidas|Quotes received/ }).last().getByLabel(/Nuevo supplier|New supplier/i).fill("Graybar PDF");
+  await o.getByLabel(/Total de la cotización|Quote total/).first().fill("480");
+  await o.getByRole("button", { name: /Guardar respuesta|Save response/ }).click();
+  await o.waitForTimeout(1800);
+  ok("flow: a supplier answer with only the total is enough to compare", (await o.getByText(/480/).count()) > 0 && (await o.getByText("Graybar PDF").count()) > 0);
+  await o.getByRole("button", { name: /Adjudicar|Award/ }).first().click();
+  await o.waitForTimeout(1500);
+  await o.getByRole("button", { name: /Crear orden de compra|Create purchase order/ }).first().click();
+  await o.waitForURL(/\/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  ok("flow: the purchase order from a total-only quote keeps the lines and the quoted total", (await o.getByText(/480/).count()) > 0 && (await o.getByText(/Wire 12 AWG black/).count()) > 0);
+  // The employee sees only what belongs to the employee
+  const emp = state.emp;
+  if (emp) {
+    await emp.goto(B + "/dashboard", { waitUntil: "networkidle" });
+    const nav = (await emp.locator("nav, aside").allInnerTexts()).join(" ");
+    ok("flow: the employee's menu has no Sales or Connections", !/ventas|conexiones|sales|connections/i.test(nav));
+    const blocked = await emp.request.get(B + "/quotes", { maxRedirects: 0 });
+    ok("flow: the employee cannot open Proposals", blocked.status() >= 300 || !(await emp.goto(B + "/quotes").then(() => emp.url().includes("/quotes"))));
+  }
 }
 
 (async () => {
@@ -513,6 +652,7 @@ async function phaseLang(browser) {
     if (want("all") || want("9")) await phase9(browser);
     if (want("all") || want("10")) await phase10(browser);
     if (want("all") || want("lang")) await phaseLang(browser);
+    if (want("all") || want("flow")) await phaseFlow(browser);
   } catch (e) {
     console.error("ERROR", e.message.split("\n").slice(0, 4).join(" | "));
     process.exitCode = 2;

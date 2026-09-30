@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
 import { poAllowed } from "@/lib/permissions";
 import {
-  approvePurchaseOrder, cancelPurchaseOrder, completePurchaseOrder, createPurchaseOrderFromResponse, getPurchaseOrderDocumentUrl,
-  markPurchaseOrderReceived, markPurchaseOrderSent, rejectPurchaseOrder, uploadPurchaseOrderDocument,
+  approvePurchaseOrder, cancelPurchaseOrder, completePurchaseOrder, createPurchaseOrderFromMaterialRequest, createPurchaseOrderFromResponse, getPurchaseOrderDocumentUrl,
+  markPurchaseOrderReceived, markPurchaseOrderSent, recordPurchaseOrderReceipt, setPurchaseOrderExpectedDelivery, rejectPurchaseOrder, uploadPurchaseOrderDocument,
 } from "@/lib/services/purchase-orders";
 
 export type POResult = { errorCode?: string; success?: boolean; id?: string; url?: string };
@@ -20,7 +20,7 @@ function fail(e: unknown): POResult {
     ["po_locked", "errPoLocked"], ["po_needs_manager", "errPoNeedsManager"], ["po_needs_send_permission", "errPoNeedsSendPermission"],
     ["po_needs_document", "errPoNeedsDocument"], ["po_transition_invalid", "errPoTransition"], ["po_complete_via_function", "errPoTransition"],
     ["invalid_amount", "errPoAmount"], ["no_expense_category", "errPoNoCategory"], ["po_no_priced_lines", "errPoNoPricedLines"], ["po_exists", "errPoExists"],
-    ["file_type", "errFileType"], ["file_size", "errFileSize"], ["forbidden", "errForbidden"], ["row-level security", "errPoNotAllowed"],
+    ["invalid_qty", "errQtyInvalid"], ["supplier_required", "errSupplierRequired"], ["request_not_pending", "errRequestNotPending"], ["request_empty", "errRequestEmpty"], ["check constraint", "errQtyInvalid"], ["file_type", "errFileType"], ["file_size", "errFileSize"], ["forbidden", "errForbidden"], ["row-level security", "errPoNotAllowed"],
   ];
   const hit = rules.find(([k]) => msg.includes(k));
   return { errorCode: hit ? hit[1] : "errGeneric" };
@@ -35,6 +35,21 @@ function refresh(id?: string) {
   if (id) revalidatePath(`/pos/${id}`);
   revalidatePath("/dashboard");
   revalidatePath("/pricing");
+}
+
+export async function buyNowAction(requestId: string, supplierId: string | null, vendorName: string, estimatedAmount: number | null): Promise<POResult> {
+  const c = await ctx();
+  if (!c || !UUID.test(requestId) || (supplierId && !UUID.test(supplierId))) return { errorCode: "errGeneric" };
+  if (!c.perms.can_create_po) return { errorCode: "errPoNotAllowed" };
+  const amount = estimatedAmount != null && Number.isFinite(estimatedAmount) && estimatedAmount >= 0 ? estimatedAmount : null;
+  // A person with a PO limit must state the amount, otherwise the limit would mean nothing.
+  if (amount == null && !isReviewer(c.role) && c.perms.po_limit != null) return { errorCode: "errPoAmount" };
+  try {
+    const po = await createPurchaseOrderFromMaterialRequest(c.companyId, c.userId, { requestId, supplierId, vendorName, estimatedAmount: amount, withinLimit: poAllowed(c.perms, amount) });
+    refresh(po.id);
+    revalidatePath("/materials/requests");
+    return { success: true, id: po.id };
+  } catch (e) { return fail(e); }
 }
 
 export async function createPOFromResponseAction(requestId: string, responseId: string): Promise<POResult> {
@@ -57,7 +72,16 @@ async function step(poId: string, allow: (c: NonNullable<Awaited<ReturnType<type
 
 export const approvePOAction = async (poId: string, note?: string) => step(poId, (c) => isReviewer(c.role), (co, u) => approvePurchaseOrder(co, u, poId, note));
 export const rejectPOAction = async (poId: string, note?: string) => step(poId, (c) => isReviewer(c.role), (co, u) => rejectPurchaseOrder(co, u, poId, note));
-export const sendPOAction = async (poId: string) => step(poId, (c) => isReviewer(c.role) || c.perms.can_send_po, (co, u) => markPurchaseOrderSent(co, u, poId));
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const validDay = (d?: string | null) => !d || (DAY.test(d) && !Number.isNaN(Date.parse(d)));
+export const sendPOAction = async (poId: string, expectedDelivery?: string | null): Promise<POResult> =>
+  validDay(expectedDelivery) ? step(poId, (c) => isReviewer(c.role) || c.perms.can_send_po, (co, u) => markPurchaseOrderSent(co, u, poId, expectedDelivery || null)) : { errorCode: "errDateInvalid" };
+export const setPOExpectedDeliveryAction = async (poId: string, date: string | null): Promise<POResult> =>
+  validDay(date) ? step(poId, (c) => isReviewer(c.role) || c.perms.can_send_po, (co) => setPurchaseOrderExpectedDelivery(co, poId, date || null)) : { errorCode: "errDateInvalid" };
+export const recordPOReceiptAction = async (poId: string, lines: { id: string; received: number }[]): Promise<POResult> =>
+  Array.isArray(lines) && lines.length > 0 && lines.length <= 200 && lines.every((l) => UUID.test(l.id) && typeof l.received === "number")
+    ? step(poId, () => true, (co) => recordPurchaseOrderReceipt(co, poId, lines))
+    : { errorCode: "errQtyInvalid" };
 export const receivePOAction = async (poId: string) => step(poId, () => true, (co, u) => markPurchaseOrderReceived(co, u, poId));
 export const cancelPOAction = async (poId: string) => step(poId, () => true, (co, u) => cancelPurchaseOrder(co, u, poId));
 

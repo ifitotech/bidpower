@@ -19,7 +19,7 @@ import {
 } from "../actions";
 
 type Request = NonNullable<Awaited<ReturnType<typeof getPricingRequestById>>>;
-type Supplier = { id: string; name: string; supply_company_id?: string | null };
+type Supplier = { id: string; name: string; supply_company_id?: string | null; contacts?: { id: string; name: string; email: string | null; is_primary: boolean }[] };
 const AVAIL_KEYS: Record<string, keyof Dictionary> = { available: "availAvailable", partial: "availPartial", unavailable: "availUnavailable" };
 const OPEN = ["draft", "sent", "question_open", "responded"];
 
@@ -175,6 +175,13 @@ function ResponseForm({ request: r, suppliers, onDone }: { request: Request; sup
       <label className="block text-sm font-medium">{t("quoteNumber")}<input value={quoteNumber} onChange={(e) => setQuoteNumber(e.target.value)} className={`${input} mt-1`} /></label>
       <label className="block text-sm font-medium">{t("validUntil")}<input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} className={`${input} mt-1`} /></label>
     </div>
+    <div className="rounded-lg bg-slate-50 p-3">
+      <label className="block text-sm font-semibold">{t("quoteTotal")}<input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0.00" className={`${input} mt-1`} /></label>
+      <p className="mt-1 text-xs text-slate-500">{t("totalOnlyHint")}</p>
+    </div>
+    <details className="rounded-lg border border-slate-200 p-3">
+      <summary className="cursor-pointer text-sm font-semibold text-slate-600">{t("lineDetail")}</summary>
+      <div className="mt-3 space-y-3">
     <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">{r.items.map((i) => <div key={i.id} className="space-y-2 p-3">
       <p className="text-sm font-medium">{i.description} <span className="text-slate-400">· {i.quantity} {i.unit}</span></p>
       <div className="grid grid-cols-3 gap-2">
@@ -185,8 +192,9 @@ function ResponseForm({ request: r, suppliers, onDone }: { request: Request; sup
     <div className="grid grid-cols-3 gap-2">
       <label className="block text-sm font-medium">{t("freight")}<input inputMode="decimal" value={freight} onChange={(e) => setFreight(e.target.value)} className={`${input} mt-1`} /></label>
       <label className="block text-sm font-medium">{t("taxAmount")}<input inputMode="decimal" value={tax} onChange={(e) => setTax(e.target.value)} className={`${input} mt-1`} /></label>
-      <label className="block text-sm font-medium">{t("quoteTotal")}<input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} className={`${input} mt-1`} /></label>
     </div>
+      </div>
+    </details>
     <textarea value={notes} rows={2} maxLength={2000} aria-label={t("itemNotes")} placeholder={t("itemNotes")} onChange={(e) => setNotes(e.target.value)} className={input} />
     {error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
     <button type="button" disabled={busy} onClick={save} className="min-h-11 w-full rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40">{t("saveResponse")}</button>
@@ -251,7 +259,8 @@ function SupplierLinks({ request: r, suppliers, invitations, questions, isOpen, 
       <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(fresh.url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { setError(t("errGeneric")); } }} className="mt-2 flex min-h-10 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white"><Copy className="h-4 w-4" />{copied ? t("prCopied") : t("copyLink")}</button>
     </div>}
     {isOpen && <div className="mb-3 grid gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:grid-cols-2">
-      <label className="block text-sm font-medium">{t("supplierName")}<select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={`${input} mt-1`}><option value="" />{suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      <label className="block text-sm font-medium">{t("supplierName")}<select value={supplierId} onChange={(e) => { setSupplierId(e.target.value); const c = suppliers.find((s) => s.id === e.target.value)?.contacts?.[0]; setEmail(c?.email ?? ""); }} className={`${input} mt-1`}><option value="" />{suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      {supplierId && (suppliers.find((s) => s.id === supplierId)?.contacts?.length ?? 0) > 0 && <label className="block text-sm font-medium">{t("chooseContact")}<select onChange={(e) => setEmail(suppliers.find((s) => s.id === supplierId)?.contacts?.find((c) => c.id === e.target.value)?.email ?? "")} className={`${input} mt-1`}>{suppliers.find((s) => s.id === supplierId)?.contacts?.map((c) => <option key={c.id} value={c.id}>{c.name}{c.is_primary ? ` · ${t("primaryContact")}` : ""}</option>)}</select></label>}
       {!supplierId && <label className="block text-sm font-medium">{t("newSupplierName")}<input value={name} maxLength={120} onChange={(e) => setName(e.target.value)} className={`${input} mt-1`} /></label>}
       <label className="block text-sm font-medium">{t("supplierEmailOptional")}<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${input} mt-1`} /></label>
       <label className="block text-sm font-medium">{t("linkDays")}<input inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} className={`${input} mt-1`} /></label>

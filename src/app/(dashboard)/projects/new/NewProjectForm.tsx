@@ -64,6 +64,9 @@ export default function NewProjectForm({ clients }: { clients: { id: string; nam
 
         <Input name="address" label={t("address")} placeholder="123 Main St, Miami FL" />
 
+        <details className="rounded-xl border border-slate-200 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-600">{t("moreDetails")}</summary>
+          <div className="mt-4 space-y-4">
         <Select
           label={t("statusLabel")}
           name="status"
@@ -98,6 +101,9 @@ export default function NewProjectForm({ clients }: { clients: { id: string; nam
           </label>
           <textarea id="description" name="description" rows={3} className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
+
+          </div>
+        </details>
 
         {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 

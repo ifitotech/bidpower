@@ -290,6 +290,7 @@ const PROJECT_STATUSES = ["lead", "quoted", "approved", "active", "on_hold", "co
 
 // Returns `errorCode` values that the client translates through i18n.
 export async function createProjectAction(formData: FormData) {
+  let newProjectId = "";
   try {
     const { userId, companyId, role } = await getContext();
     if (role !== "owner" && role !== "manager") return { errorCode: "errGeneric" };
@@ -328,13 +329,15 @@ export async function createProjectAction(formData: FormData) {
       entityId: project.id,
       newValues: { name },
     }).catch(() => undefined);
+    newProjectId = project.id as string;
   } catch (err) {
     return { errorCode: errCodeOf(err) };
   }
 
   revalidatePath("/projects");
   revalidatePath("/dashboard");
-  redirect("/projects");
+  // The new project is the anchor of everything else: land on it.
+  redirect(`/projects/${newProjectId}`);
 }
 
 export async function createInvoiceAction(formData: FormData) {

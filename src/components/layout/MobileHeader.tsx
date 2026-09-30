@@ -18,13 +18,6 @@ export function MobileHeader({
           <p className="text-xs text-slate-500 truncate">{subtitle}</p>
         )}
       </div>
-      <Link
-        href="/notifications"
-        className="relative w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0"
-      >
-        <Bell className="w-5 h-5 text-slate-600" />
-        <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
-      </Link>
     </header>
   );
 }

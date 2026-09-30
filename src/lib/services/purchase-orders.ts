@@ -48,6 +48,48 @@ export async function createPurchaseOrder(
 }
 
 /**
+ * "Buy now": the person already knows where to buy, so the material list becomes a purchase order with its lines.
+ * Same rules as a field purchase: inside the person's limit it waits for the receipt, over it waits for approval.
+ */
+export async function createPurchaseOrderFromMaterialRequest(
+  companyId: string, userId: string,
+  input: { requestId: string; supplierId?: string | null; vendorName?: string | null; estimatedAmount?: number | null; withinLimit: boolean },
+) {
+  const supabase = await createClient();
+  const { data: req, error: reqErr } = await supabase.from("material_requests").select("id, number, status, project_id").eq("id", input.requestId).eq("company_id", companyId).maybeSingle();
+  if (reqErr) throw reqErr;
+  if (!req || !req.project_id) throw new Error("forbidden");
+  if (!["requested", "reviewed"].includes(req.status as string)) throw new Error("request_not_pending");
+  const { data: items, error: itemsErr } = await supabase.from("material_request_items").select("material_id, description, quantity, unit, sort_order").eq("request_id", input.requestId).eq("company_id", companyId).order("sort_order");
+  if (itemsErr) throw itemsErr;
+  if (!items || items.length === 0) throw new Error("request_empty");
+
+  let vendorName = (input.vendorName ?? "").trim();
+  if (input.supplierId) {
+    const { data: sup } = await supabase.from("suppliers").select("name").eq("id", input.supplierId).eq("company_id", companyId).maybeSingle();
+    if (sup?.name) vendorName = sup.name as string;
+    else input.supplierId = null;
+  }
+  if (!vendorName) throw new Error("supplier_required");
+  const amount = input.estimatedAmount != null && Number.isFinite(input.estimatedAmount) && input.estimatedAmount >= 0 ? round2(input.estimatedAmount) : null;
+  const status: POStatus = input.withinLimit ? "pending_document" : "pending_approval";
+  const number = await nextPONumber(companyId);
+  const { data: po, error } = await supabase.from("purchase_orders").insert({
+    company_id: companyId, project_id: req.project_id, created_by: userId, number, vendor_name: vendorName.slice(0, 120), supplier_id: input.supplierId ?? null,
+    description: `${req.number ?? ""}`.trim() || null, estimated_amount: amount, status, waiting_on: input.withinLimit ? "employee" : "owner",
+  }).select().single();
+  if (error) throw error;
+  const { error: lineErr } = await supabase.from("purchase_order_items").insert(items.map((i, idx) => ({
+    company_id: companyId, purchase_order_id: po.id, material_id: i.material_id as string | null, description: String(i.description).slice(0, 300),
+    quantity: Number(i.quantity), unit: normalizeUnit(i.unit as string), unit_price: 0, sort_order: idx,
+  })));
+  if (lineErr) { await supabase.from("purchase_orders").delete().eq("id", po.id); throw lineErr; }
+  await addHistory(po.id, null, status, userId, null);
+  await supabase.from("material_requests").update({ status: "converted", waiting_on: "none", updated_at: new Date().toISOString() }).eq("id", input.requestId).eq("company_id", companyId).in("status", ["requested", "reviewed"]);
+  return { id: po.id as string, number: po.number as string, status };
+}
+
+/**
  * PO built from a supplier response: only priced, available lines come across, each keeping its origin
  * (request line + library item). Over the person's limit it waits for approval; otherwise it is approved.
  */
@@ -73,7 +115,12 @@ export async function createPurchaseOrderFromResponse(companyId: string, userId:
     if (!l || l.unit_price == null || l.availability === "unavailable") return [];
     return [{ request_item_id: i.id as string, material_id: i.material_id as string | null, description: i.description as string, quantity: Number(i.quantity), unit: i.unit as string, unit_price: Number(l.unit_price), lead_time: l.lead_time, sort_order: idx }];
   });
-  if (lines.length === 0) throw new Error("po_no_priced_lines");
+  // A supplier that answered with a PDF and only a total: the PO keeps the list's lines without unit prices and the quoted total.
+  const totalOnly = lines.length === 0 && resp.total_amount != null && Number(resp.total_amount) > 0;
+  if (lines.length === 0 && !totalOnly) throw new Error("po_no_priced_lines");
+  if (totalOnly) {
+    (reqItems ?? []).forEach((i, idx) => lines.push({ request_item_id: i.id as string, material_id: i.material_id as string | null, description: i.description as string, quantity: Number(i.quantity), unit: i.unit as string, unit_price: 0, lead_time: null, sort_order: idx } as (typeof lines)[number]));
+  }
 
   const asLines: ResponseLine[] = lines.map((l) => ({ requestItemId: l.request_item_id, quantity: l.quantity, unitPrice: l.unit_price, availability: "available", leadTime: null }));
   const freight = resp.freight == null ? null : Number(resp.freight);
@@ -89,7 +136,7 @@ export async function createPurchaseOrderFromResponse(companyId: string, userId:
     supplier_id: resp.supplier_id, pricing_request_id: req.id, supplier_response_id: resp.id,
     description: `${req.number ?? ""}`.trim() || null, estimated_amount: total, freight, tax_amount: tax,
     status, waiting_on: "owner", approved_by: within ? userId : null, approved_at: within ? new Date().toISOString() : null,
-    approval_note: within ? "within PO limit" : null,
+    approval_note: null,
   }).select().single();
   if (error) {
     if ((error as { code?: string }).code === "23505") throw new Error("po_exists");
@@ -124,8 +171,31 @@ export const approvePurchaseOrder = (companyId: string, userId: string, poId: st
   move(companyId, userId, poId, ["pending_approval"], { approved_by: userId, approved_at: new Date().toISOString(), approval_note: note?.trim() || null, waiting_on: "owner" }, "approved", note);
 export const rejectPurchaseOrder = (companyId: string, userId: string, poId: string, note?: string | null) =>
   move(companyId, userId, poId, ["pending_approval"], { approved_by: userId, approved_at: new Date().toISOString(), approval_note: note?.trim() || null, waiting_on: "employee" }, "rejected", note);
-export const markPurchaseOrderSent = (companyId: string, userId: string, poId: string) =>
-  move(companyId, userId, poId, ["approved"], { sent_at: new Date().toISOString(), waiting_on: "supplier" }, "sent");
+export const markPurchaseOrderSent = (companyId: string, userId: string, poId: string, expectedDelivery?: string | null) =>
+  move(companyId, userId, poId, ["approved"], { sent_at: new Date().toISOString(), waiting_on: "supplier", ...(expectedDelivery ? { expected_delivery: expectedDelivery } : {}) }, "sent");
+
+/** Logistics: how much of each line has arrived. Only while the PO waits for delivery; the database enforces it too. */
+export async function recordPurchaseOrderReceipt(companyId: string, poId: string, lines: { id: string; received: number }[]) {
+  const supabase = await createClient();
+  const { data: po } = await supabase.from("purchase_orders").select("id, status").eq("id", poId).eq("company_id", companyId).maybeSingle();
+  if (!po) throw new Error("forbidden");
+  if (po.status !== "approved" && po.status !== "sent") throw new Error("po_transition_invalid");
+  for (const l of lines) {
+    if (!Number.isFinite(l.received) || l.received < 0) throw new Error("invalid_qty");
+    const { data, error } = await supabase.from("purchase_order_items").update({ received_quantity: l.received }).eq("id", l.id).eq("purchase_order_id", poId).eq("company_id", companyId).select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("forbidden");
+  }
+}
+
+/** Logistics: the date the material is expected. Only while the PO is approved or sent (after that it is history). */
+export async function setPurchaseOrderExpectedDelivery(companyId: string, poId: string, date: string | null) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("purchase_orders").update({ expected_delivery: date, updated_at: new Date().toISOString() })
+    .eq("id", poId).eq("company_id", companyId).in("status", ["approved", "sent"]).select("id");
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error("po_transition_invalid");
+}
 export const markPurchaseOrderReceived = (companyId: string, userId: string, poId: string) =>
   move(companyId, userId, poId, ["approved", "sent"], { received_at: new Date().toISOString(), waiting_on: "employee" }, "received");
 export const cancelPurchaseOrder = (companyId: string, userId: string, poId: string) =>
@@ -197,7 +267,7 @@ export async function requestException(poId: string, companyId: string, userId: 
   await supabase.from("purchase_orders").update({ exception_reason: reason, waiting_on: "owner" }).eq("id", poId);
 }
 
-const PO_LIST = `id, number, vendor_name, description, estimated_amount, final_amount, status, waiting_on, created_at, project_id, project:projects(id, name), creator:profiles!purchase_orders_created_by_fkey(full_name)`;
+const PO_LIST = `id, number, vendor_name, description, estimated_amount, final_amount, status, waiting_on, expected_delivery, created_at, project_id, project:projects(id, name), creator:profiles!purchase_orders_created_by_fkey(full_name)`;
 
 export async function getPurchaseOrders(companyId: string, statusFilter?: string) {
   const supabase = await createClient();
@@ -215,12 +285,12 @@ export async function getPurchaseOrderById(poId: string, companyId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("purchase_orders")
-    .select("id, number, vendor_name, category, description, estimated_amount, final_amount, tax_amount, freight, status, waiting_on, exception_reason, approval_note, approved_at, sent_at, received_at, completed_at, created_at, created_by, project_id, pricing_request_id, supplier_response_id, project:projects(id, name), creator:profiles!purchase_orders_created_by_fkey(full_name), pricing:supply_quote_requests(id, number)")
+    .select("id, number, vendor_name, category, description, estimated_amount, final_amount, tax_amount, freight, status, waiting_on, exception_reason, approval_note, expected_delivery, approved_at, sent_at, received_at, completed_at, created_at, created_by, project_id, pricing_request_id, supplier_response_id, project:projects(id, name), creator:profiles!purchase_orders_created_by_fkey(full_name), pricing:supply_quote_requests(id, number)")
     .eq("id", poId).eq("company_id", companyId).maybeSingle();
   if (error) throw error;
   if (!data) return null;
   const [items, docs, history] = await Promise.all([
-    supabase.from("purchase_order_items").select("id, description, quantity, unit, unit_price, lead_time, sort_order").eq("purchase_order_id", poId).order("sort_order"),
+    supabase.from("purchase_order_items").select("id, description, quantity, unit, unit_price, lead_time, sort_order, received_quantity").eq("purchase_order_id", poId).order("sort_order"),
     supabase.from("documents").select("id, name, mime_type, document_kind, created_at").eq("related_type", "purchase_order").eq("related_id", poId).order("created_at"),
     supabase.from("purchase_order_status_history").select("id, from_status, to_status, notes, created_at, changer:profiles(full_name)").eq("purchase_order_id", poId).order("created_at"),
   ]);
@@ -231,13 +301,13 @@ export async function getPurchaseOrderById(poId: string, companyId: string) {
     ...(raw as {
       id: string; number: string; vendor_name: string; category: string | null; description: string | null; estimated_amount: number | null;
       final_amount: number | null; tax_amount: number | null; freight: number | null; status: string; waiting_on: string; exception_reason: string | null;
-      approval_note: string | null; approved_at: string | null; sent_at: string | null; received_at: string | null; completed_at: string | null;
+      approval_note: string | null; expected_delivery: string | null; approved_at: string | null; sent_at: string | null; received_at: string | null; completed_at: string | null;
       created_at: string; created_by: string; project_id: string; pricing_request_id: string | null; supplier_response_id: string | null;
     }),
     project: one(raw.project as { id: string; name: string } | { id: string; name: string }[] | null),
     creator: one(raw.creator as { full_name: string | null } | { full_name: string | null }[] | null),
     pricing: one(raw.pricing as { id: string; number: string | null } | { id: string; number: string | null }[] | null),
-    items: (items.data ?? []).map((i) => ({ ...i, quantity: Number(i.quantity), unit_price: Number(i.unit_price) })) as { id: string; description: string; quantity: number; unit: string; unit_price: number; lead_time: string | null }[],
+    items: (items.data ?? []).map((i) => ({ ...i, quantity: Number(i.quantity), unit_price: Number(i.unit_price), received_quantity: Number(i.received_quantity ?? 0) })) as { id: string; description: string; quantity: number; unit: string; unit_price: number; lead_time: string | null; received_quantity: number }[],
     documents: (docs.data ?? []) as { id: string; name: string; mime_type: string; document_kind: string | null; created_at: string }[],
     history: ((history.data ?? []) as unknown as { id: string; from_status: string | null; to_status: string; notes: string | null; created_at: string; changer: { full_name: string | null } | { full_name: string | null }[] | null }[]).map((h) => ({ ...h, changer: one(h.changer) })),
   };

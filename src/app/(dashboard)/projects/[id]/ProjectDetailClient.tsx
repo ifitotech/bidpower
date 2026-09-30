@@ -73,7 +73,6 @@ export default function ProjectDetailClient({ project: p, error, team = [], canM
       { href: "/quotes", label: t("toolQuotes"), icon: FileText },
       { href: "/invoices", label: t("toolInvoices"), icon: ClipboardList },
     ] : []),
-    { href: "/files", label: t("toolFiles"), icon: FolderOpen },
     { href: "/calendar", label: t("calendar"), icon: CalendarDays },
   ];
   const costsHidden = Boolean(p.costsHidden);

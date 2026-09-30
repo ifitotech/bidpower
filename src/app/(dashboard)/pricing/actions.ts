@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
 import {
-  addPricingAttachment, answerSupplierQuestion, awardResponse, createSupplierInvitation, revokeSupplierInvitation, cancelPricingRequest, closePricingRequest, createPricingRequest, createSupplier,
+  addPricingAttachment, addSupplierContact, createSupplierWithContact, removeSupplierContact, setPrimarySupplierContact, answerSupplierQuestion, awardResponse, createSupplierInvitation, revokeSupplierInvitation, cancelPricingRequest, closePricingRequest, createPricingRequest, createSupplier,
   getAttachmentUrl, markMaterialRequestConverted, markPricingSent, recordSupplierResponse,
   type PricingInput, type ResponseInput,
 } from "@/lib/services/pricing-requests";
@@ -17,7 +17,7 @@ function fail(e: unknown): PricingResult {
   const msg = e instanceof Error ? e.message : "";
   const map: Record<string, string> = {
     request_empty: "errRequestEmpty", request_too_large: "errRequestTooLarge", request_not_pending: "errPricingNotOpen",
-    supplier_required: "errSupplierRequired", supply_not_connected: "errSupplyNotConnected", response_empty: "errResponseEmpty", file_type: "errFileType", file_size: "errFileSize", forbidden: "errForbidden",
+    supplier_required: "errSupplierRequired", invalid_email: "errInvalidEmail2", contact_exists: "errContactExists", contact_name_required: "errContactName", supply_not_connected: "errSupplyNotConnected", response_empty: "errResponseEmpty", file_type: "errFileType", file_size: "errFileSize", forbidden: "errForbidden",
   };
   return { errorCode: map[msg] ?? "errGeneric" };
 }
@@ -55,6 +55,34 @@ export async function createSupplierAction(name: string): Promise<PricingResult>
   if (!c) return { errorCode: "errGeneric" };
   if (!c.perms.can_create_pricing_request) return { errorCode: "errForbidden" };
   try { return { success: true, id: await createSupplier(c.companyId, c.userId, String(name ?? "")) }; } catch (e) { return fail(e); }
+}
+
+export async function createSupplierWithContactAction(input: { name: string; contactName: string; email?: string; phone?: string }): Promise<PricingResult> {
+  const c = await ctx();
+  if (!c || !isReviewer(c.role)) return { errorCode: "errForbidden" };
+  try {
+    const id = await createSupplierWithContact(c.companyId, c.userId, { name: String(input?.name ?? ""), contact: { name: String(input?.contactName ?? ""), email: input?.email ?? null, phone: input?.phone ?? null } });
+    revalidatePath("/suppliers");
+    return { success: true, id };
+  } catch (e) { return fail(e); }
+}
+
+export async function addSupplierContactAction(supplierId: string, input: { name: string; email?: string; phone?: string }): Promise<PricingResult> {
+  const c = await ctx();
+  if (!c || !isReviewer(c.role) || !UUID.test(supplierId)) return { errorCode: "errForbidden" };
+  try { await addSupplierContact(c.companyId, c.userId, supplierId, { name: String(input?.name ?? ""), email: input?.email ?? null, phone: input?.phone ?? null }); revalidatePath("/suppliers"); return { success: true }; } catch (e) { return fail(e); }
+}
+
+export async function removeSupplierContactAction(contactId: string): Promise<PricingResult> {
+  const c = await ctx();
+  if (!c || !isReviewer(c.role) || !UUID.test(contactId)) return { errorCode: "errForbidden" };
+  try { await removeSupplierContact(c.companyId, contactId); revalidatePath("/suppliers"); return { success: true }; } catch (e) { return fail(e); }
+}
+
+export async function setPrimaryContactAction(supplierId: string, contactId: string): Promise<PricingResult> {
+  const c = await ctx();
+  if (!c || !isReviewer(c.role) || !UUID.test(supplierId) || !UUID.test(contactId)) return { errorCode: "errForbidden" };
+  try { await setPrimarySupplierContact(c.companyId, supplierId, contactId); revalidatePath("/suppliers"); return { success: true }; } catch (e) { return fail(e); }
 }
 
 async function reviewerAction(requestId: string, fn: (companyId: string, userId: string) => Promise<unknown>): Promise<PricingResult> {

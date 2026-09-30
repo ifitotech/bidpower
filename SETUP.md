@@ -5,7 +5,7 @@
 1. Crea un proyecto en https://supabase.com
 2. Atajo para un proyecto nuevo: pega `supabase/apply_all_migrations.sql` completo en SQL Editor y ejecútalo una vez.
    O bien, SQL Editor → ejecuta **todas** las migraciones de `supabase/migrations/` en orden de nombre
-   (de `20260728000000_initial_schema.sql` a `20260811000021_phase10_accounting_export.sql`).
+   (de `20260728000000_initial_schema.sql` a `20260814000024_feedback.sql`).
    La última crea la función `create_company_with_owner`, necesaria para que el registro
    cree empresa, owner, settings, plan Free y categorías de forma segura con RLS activo.
 3. Storage → New bucket:
@@ -194,3 +194,46 @@ las instrucciones para borrarlos están en la cabecera del script.
 - Para revisar la app sin registrar correos reales: `scripts/seed-test-users.js` crea cuentas ya confirmadas (`owner@prueba.test`, `supply@prueba.test`) con la API de administración de Supabase. Se ejecuta en tu máquina con `SUPABASE_SERVICE_ROLE_KEY` en el entorno (nunca en el chat ni con prefijo `NEXT_PUBLIC_`) y `--yes`. La empresa se crea sola en el primer login.
 - Manager y Employee se invitan desde el Owner (Empleados → Invitar), como en producción.
 - Alternativa sin script: desactiva "Confirm email" en Supabase y regístrate en `/register` con correos inventados.
+
+## 20. Logística de compras y precios reales
+
+- **Entrega esperada** en cada PO (`20260812000022`): se fija al marcar como enviado o después. Aparece atrasada / hoy / mañana en la lista, el detalle y en Inicio → Necesita atención.
+- **Recepción parcial** (`20260813000023`): se registra cuánto llegó de cada línea (`received_quantity`). El estado del PO no cambia; "Marcar como recibido" sigue siendo la decisión que cierra la entrega. Una regla en la base impide cambiar cualquier otro dato de la línea y recibir más de lo pedido.
+- **Historial de precios** por material (Biblioteca de materiales → editar): solo con datos reales, líneas de POs y cotizaciones de suppliers, y solo para quien puede ver costos. Un material sin historial lo dice.
+- La ganancia estimada de Reportes usa el pronóstico (real + comprometido), igual que la pantalla del proyecto.
+
+## 21. Listo para las primeras entrevistas
+
+- **Primeros pasos reales** en Inicio (solo Owner): cada paso se marca cuando el registro existe de verdad (cliente, proyecto, Quote, gasto, invitación). La tarjeta desaparece al completar todo.
+- **Enviar comentarios** (Más → Enviar comentarios): guarda en la tabla `feedback` (`20260814000024`). Cada persona ve solo los suyos; el equipo los lee en Supabase → Table Editor.
+- **Guía de entrevistas:** `docs/INTERVIEW_GUIDE.md` (tareas por rol, qué observar, preguntas finales).
+- No hay datos de ejemplo: lo que se ve es lo que se crea.
+
+## 22. Conexión real: Vercel y Supabase
+
+- Vercel (`bidpower`): `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` en Production, Preview y Development; `NEXT_PUBLIC_SITE_URL` en Production. Los previews usan la dirección con la que se abren.
+- Los correos de Supabase (recuperar contraseña, confirmar correo) vuelven a la dirección real del sitio, nunca a localhost. En Supabase → Authentication → URL Configuration: pon Site URL = la URL de producción y agrega `https://<tu-dominio>/**` a Redirect URLs.
+- Google: el botón solo aparece con `NEXT_PUBLIC_GOOGLE_AUTH=true` (y el proveedor Google activado en Supabase).
+- Los previews piden iniciar sesión en Vercel (Deployment Protection); desactívalo para probar con otras personas.
+
+## 23. Materiales ya fabricados con número de parte (importar)
+
+- Biblioteca de materiales → **Importar lista**: sube un CSV/TSV (o pega filas desde Excel). Columnas reconocidas (español, inglés o portugués): descripción, número de parte (`part number`, `sku`, `pn`…), fabricante, unidad, categoría y apodos (separados por coma o `|`). Hay plantilla descargable con un ejemplo real (`THHN-10-STR-BLK`).
+- El nombre de campo va en **apodos** ("cable 10 negro, #10 black") y el número de parte en su columna: después el material se encuentra escribiendo cualquiera de los dos.
+- Repetidos: se omite lo que ya existe por número de parte (un número de parte sin fabricante coincide con cualquier fabricante) o, sin número de parte, por nombre. Máximo 2000 filas por importación; se muestra vista previa antes de importar.
+- Requiere el permiso de administrar la biblioteca. El número de parte viaja a los Pricing Requests y a lo que ve el supplier.
+
+## 24. Orden de la app (vocabulario, menú y flujo de Material)
+
+- **Un nombre por cosa:** *Propuesta* (lo que se le manda al cliente), *Cotización* (la respuesta de un supplier; "Pedir cotización" es la acción), *Lista de material* (lo que pide el equipo), *Orden de compra (PO)*. "Quote" ya no se usa como nombre general. Mismo criterio en ES/EN/PT.
+- **Menú por áreas:** Inicio, Proyectos | Ventas (Propuestas, Facturas) | Compras (Material, Cotizaciones, Órdenes de compra, Listas, Materiales) | Dinero (Gastos, Reportes, Contabilidad) | Conexiones (Clientes, Suppliers, Equipo) | Empresa (Ajustes, Ayuda). El Employee ve solo lo suyo. En el teléfono: Inicio, Proyectos, Ventas, Compras, Más (Employee: Inicio, Proyectos, Material, Gastos, Más).
+- **Material es una sola puerta** (`/material`): eliges proyecto, armas la lista y decides: *Pedir cotización* a suppliers o *Comprar ya* (crea la orden de compra con las líneas de la lista, con las mismas reglas de límite y aprobación).
+- **Inicio** responde "¿Qué quieres hacer?" con cuatro acciones: Nuevo proyecto, Material, Propuesta, Gasto. El "+" repite esas cuatro.
+- **Nuevo proyecto** pide solo nombre, cliente y dirección (lo demás en "Más detalles") y aterriza en el proyecto.
+- **Se quitaron** las pantallas que solo decían que algo no existe (Estimator, Material list, Supply requests), la subida suelta de Archivos, el hub de Clientes, los tipos de Quote y la campana de notificaciones vacía. `/my-company` redirige a Ajustes.
+
+## 25. Conexiones: suppliers con contactos y cotización con PDF
+
+- **Supplier con contactos** (`20260815000025`): un supplier es una empresa con personas (nombre + correo, teléfono opcional; un contacto principal). Se crea en un solo paso en Suppliers. Validación de correo, sin repetir el mismo correo en un supplier y aviso si el correo parece compartido (`ventas@`, `info@`). Un contacto es solo libreta: no se envía ni se comparte nada hasta que mandes una solicitud.
+- Al pedir cotización, elegir el supplier ofrece sus contactos y rellena el correo de la invitación. **Todavía no** hay verificación del correo al abrir el enlace: el enlace funciona para quien lo tenga (pendiente del modelo de permisos por correo).
+- **Cotización con PDF y solo total:** al registrar la respuesta de un supplier, lo principal es el **total de la cotización** (con el PDF adjunto); el detalle por línea es opcional. La orden de compra creada desde un total único conserva las líneas de la lista y el total cotizado.

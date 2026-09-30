@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, FileText, Upload } from "lucide-react";
 import { POStatusBadge } from "@/components/shared/StatusBadge";
+import { DeliveryTag } from "@/components/shared/DeliveryTag";
 import { WaitingOn } from "@/components/shared/RequestStatusBadge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
@@ -12,7 +13,7 @@ import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import { PO_STATUS_KEYS, PO_UPLOAD_STATUSES, isTerminal } from "@/lib/po-status";
 import type { POStatus } from "@/types/database";
 import type { PODetail as PO } from "@/lib/services/purchase-orders";
-import { approvePOAction, cancelPOAction, completePOAction, getPODocumentUrlAction, receivePOAction, rejectPOAction, sendPOAction, uploadPODocumentAction } from "../actions";
+import { approvePOAction, cancelPOAction, completePOAction, getPODocumentUrlAction, receivePOAction, recordPOReceiptAction, rejectPOAction, sendPOAction, setPOExpectedDeliveryAction, uploadPODocumentAction } from "../actions";
 
 const KIND_KEYS: Record<string, keyof Dictionary> = { receipt: "poKindReceipt", invoice: "poKindInvoice", packing_slip: "poKindPacking", other: "poKindOther" };
 const btn = "min-h-11 rounded-xl px-4 text-sm font-semibold disabled:opacity-40";
@@ -27,6 +28,8 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
   const [note, setNote] = useState("");
   const [kind, setKind] = useState("receipt");
   const [finalAmount, setFinalAmount] = useState(po.estimated_amount != null ? String(po.estimated_amount) : "");
+  const [received, setReceived] = useState<Record<string, string>>(Object.fromEntries(po.items.map((i) => [i.id, String(i.received_quantity)])));
+  const [deliveryDate, setDeliveryDate] = useState(po.expected_delivery ?? "");
   const [tax, setTax] = useState(po.tax_amount != null ? String(po.tax_amount) : "");
   const fileRef = useRef<HTMLInputElement>(null);
   const money = (n: number | null | undefined) => (n == null ? "—" : formatCurrency(Number(n)));
@@ -54,6 +57,7 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  const receiving = status === "approved" || status === "sent";
   const canCloseOut = (status === "document_uploaded" || status === "pending_review") && (isReviewer || isCreator);
   const canUploadNow = canUpload && (PO_UPLOAD_STATUSES.includes(status) || status === "document_uploaded");
   const showDocs = ["received", "pending_document", "pending_review", "document_uploaded", "completed"].includes(status) || po.documents.length > 0;
@@ -73,13 +77,14 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
       {status === "completed" && <Row label={t("poFinal")} value={money(po.final_amount)} bold />}
       {po.tax_amount != null && <Row label={t("poTax")} value={money(po.tax_amount)} />}
       {po.freight != null && <Row label={t("freight")} value={money(po.freight)} />}
+      {po.expected_delivery && <Row label={t("poExpectedDelivery")} value={<span className="inline-flex items-center gap-2">{formatDate(po.expected_delivery)}<DeliveryTag date={po.expected_delivery} status={status} /></span>} />}
       <Row label={t("employees")} value={`${po.creator?.full_name ?? "—"} · ${formatDate(po.created_at)}`} />
       {!isTerminal(status) && po.waiting_on !== "none" && <Row label={t("waitingOn")} value={<WaitingOn value={po.waiting_on} />} />}
       {po.pricing && <p className="text-xs"><Link href={`/pricing/${po.pricing.id}`} className="text-brand-700 underline">{t("poFromPricing", { number: po.pricing.number ?? "" })}</Link></p>}
     </div>
 
     {po.items.length > 0 && <section className="mb-4"><h2 className="mb-2 font-semibold">{t("poLines")}</h2>
-      <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{po.items.map((i) => <li key={i.id} className="flex items-start gap-3 px-4 py-3 text-sm"><div className="min-w-0 flex-1"><p className="break-words font-medium">{i.description}</p><p className="text-xs text-slate-400">{i.quantity} {i.unit} × {money(i.unit_price)}{i.lead_time ? ` · ${i.lead_time}` : ""}</p></div><span className="shrink-0 font-semibold">{money(i.quantity * i.unit_price)}</span></li>)}</ul></section>}
+      <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{po.items.map((i) => <li key={i.id} className="flex items-start gap-3 px-4 py-3 text-sm"><div className="min-w-0 flex-1"><p className="break-words font-medium">{i.description}</p><p className="text-xs text-slate-400">{i.quantity} {i.unit} × {money(i.unit_price)}{i.lead_time ? ` · ${i.lead_time}` : ""}</p>{(i.received_quantity > 0 || receiving) && <p className={`mt-0.5 text-xs font-medium ${i.received_quantity >= i.quantity ? "text-green-700" : i.received_quantity > 0 ? "text-amber-700" : "text-slate-400"}`}>{i.received_quantity >= i.quantity ? t("poAllArrived") : t("poReceivedOf", { received: String(i.received_quantity), total: String(i.quantity) })}</p>}{receiving && <input type="number" inputMode="decimal" min="0" max={i.quantity} step="0.01" aria-label={`${t("poReceivedQty")}: ${i.description}`} value={received[i.id] ?? ""} onChange={(e) => setReceived({ ...received, [i.id]: e.target.value })} className={`${field} mt-1.5 max-w-[9rem]`} />}</div><span className="shrink-0 font-semibold">{money(i.quantity * i.unit_price)}</span></li>)}</ul>{receiving && <button type="button" disabled={busy} onClick={() => run(() => recordPOReceiptAction(po.id, po.items.map((i) => ({ id: i.id, received: Number((received[i.id] ?? "0").replace(",", ".")) || 0 }))))} className={`${btn} mt-2 w-full border border-slate-200`}>{t("poSaveReceived")}</button>}</section>}
 
     {po.approval_note && <p className="mb-4 whitespace-pre-wrap rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">{po.approval_note}</p>}
 
@@ -90,7 +95,8 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
     {status === "pending_approval" && !isReviewer && <p className="mb-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">{t("poWaitsApproval")}</p>}
 
     {(status === "approved" || status === "sent") && <div className="mb-4 space-y-2">
-      {status === "approved" && canSend && <button type="button" disabled={busy} onClick={() => run(() => sendPOAction(po.id))} className={`${btn} w-full bg-brand-600 text-white`}>{t("poMarkSent")}</button>}
+      {canSend && <div className="rounded-xl border border-slate-200 bg-white p-3"><label className="block text-xs font-medium text-slate-600">{t("poExpectedDelivery")}<input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className={`${field} mt-1`} /></label><p className="mt-1 text-xs text-slate-400">{t("poExpectedDeliveryHint")}</p>{status === "sent" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy || deliveryDate === (po.expected_delivery ?? "")} onClick={() => run(() => setPOExpectedDeliveryAction(po.id, deliveryDate || null))} className={`${btn} flex-1 border border-slate-200`}>{deliveryDate ? t("poSaveDate") : t("poClearDate")}</button></div>}</div>}
+      {status === "approved" && canSend && <button type="button" disabled={busy} onClick={() => run(() => sendPOAction(po.id, deliveryDate || null))} className={`${btn} w-full bg-brand-600 text-white`}>{t("poMarkSent")}</button>}
       <button type="button" disabled={busy} onClick={() => run(() => receivePOAction(po.id))} className={`${btn} w-full border border-slate-200`}>{t("poMarkReceived")}</button>
     </div>}
 

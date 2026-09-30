@@ -29,21 +29,9 @@ export default function NewQuoteForm({ clients, projects, defaultProjectId, defa
   const [items, setItems] = useState<LineItem[]>([
     { id: "1", description: "", quantity: 1, unit_price: 0, part_number: "", unit: "each", notes: "" },
   ]);
-  const [quoteType, setQuoteType] = useState("complete");
   const [projectId, setProjectId] = useState(defaultProjectId);
   const [clientId, setClientId] = useState(defaultClientId);
   const [taxRate, setTaxRate] = useState("");
-  useEffect(() => {
-    const requestedType = new URLSearchParams(window.location.search).get("type");
-    if (requestedType === "materials") {
-      router.replace("/quotes/material-list");
-      return;
-    }
-    if (["service", "materials", "plan_estimate", "complete"].includes(requestedType || "")) {
-      setQuoteType(requestedType as string);
-      window.history.replaceState(null, "", "/quotes/new");
-    }
-  }, []);
 
   const subtotal = items.reduce(
     (sum, item) => sum + item.quantity * item.unit_price,
@@ -98,13 +86,7 @@ export default function NewQuoteForm({ clients, projects, defaultProjectId, defa
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h2 className="font-semibold mb-3">{t("quoteTypeTitle")}</h2>
-          <div className="grid grid-cols-2 gap-2">
-            {[{ value: "service", label: t("quoteTypeService"), hint: t("qtServiceHint") }, { value: "materials", label: t("qtMaterials"), hint: t("qtMaterialsHint") }, { value: "plan_estimate", label: t("qtPlan"), hint: t("qtPlanHint") }, { value: "complete", label: t("qtComplete"), hint: t("qtCompleteHint") }].map((type) => <button key={type.value} type="button" onClick={() => setQuoteType(type.value)} className={`text-left rounded-xl p-3 border transition ${quoteType === type.value ? "border-brand-500 bg-brand-50" : "border-slate-200"}`}><p className="text-sm font-semibold">{type.label}</p><p className="text-xs text-slate-500 mt-1">{type.hint}</p></button>)}
-          </div>
-          <input type="hidden" name="quoteType" value={quoteType} />
-        </div>
+        <input type="hidden" name="quoteType" value="complete" />
         <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
           <Select
             label={t("clients")}
