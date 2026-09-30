@@ -231,3 +231,9 @@ las instrucciones para borrarlos están en la cabecera del script.
 - **Inicio** responde "¿Qué quieres hacer?" con cuatro acciones: Nuevo proyecto, Material, Propuesta, Gasto. El "+" repite esas cuatro.
 - **Nuevo proyecto** pide solo nombre, cliente y dirección (lo demás en "Más detalles") y aterriza en el proyecto.
 - **Se quitaron** las pantallas que solo decían que algo no existe (Estimator, Material list, Supply requests), la subida suelta de Archivos, el hub de Clientes, los tipos de Quote y la campana de notificaciones vacía. `/my-company` redirige a Ajustes.
+
+## 25. Conexiones: suppliers con contactos y cotización con PDF
+
+- **Supplier con contactos** (`20260815000025`): un supplier es una empresa con personas (nombre + correo, teléfono opcional; un contacto principal). Se crea en un solo paso en Suppliers. Validación de correo, sin repetir el mismo correo en un supplier y aviso si el correo parece compartido (`ventas@`, `info@`). Un contacto es solo libreta: no se envía ni se comparte nada hasta que mandes una solicitud.
+- Al pedir cotización, elegir el supplier ofrece sus contactos y rellena el correo de la invitación. **Todavía no** hay verificación del correo al abrir el enlace: el enlace funciona para quien lo tenga (pendiente del modelo de permisos por correo).
+- **Cotización con PDF y solo total:** al registrar la respuesta de un supplier, lo principal es el **total de la cotización** (con el PDF adjunto); el detalle por línea es opcional. La orden de compra creada desde un total único conserva las líneas de la lista y el total cotizado.

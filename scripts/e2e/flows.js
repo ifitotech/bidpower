@@ -575,6 +575,57 @@ async function phaseFlow(browser) {
   await o.getByRole("button", { name: /Crear orden de compra|Create purchase order/ }).click();
   await o.waitForURL(/\/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
   ok("flow: buy-now creates a purchase order with the list's line and the supplier", (await o.getByText("Corner Electric").count()) > 0 && (await o.getByText(/Conduit 1 in EMT/).count()) > 0);
+  // Connections: a supplier with people (name + email)
+  await o.goto(B + "/suppliers");
+  await o.getByLabel(/Nombre de la empresa \(supplier\)|Supplier company name/).fill("Acme Supply");
+  await o.getByLabel(/Nombre del contacto|Contact name/).first().fill("Laura Ventas");
+  await o.getByLabel(/Correo del contacto|Contact email/).first().fill("not-an-email");
+  await o.getByRole("button", { name: /Agregar supplier|Add supplier/ }).last().click();
+  await o.waitForTimeout(1200);
+  ok("connections: an invalid contact email is refused", (await o.getByText(/El correo no es válido|The email is not valid/).count()) > 0);
+  await o.getByLabel(/Correo del contacto|Contact email/).first().fill("laura@acme.test");
+  await o.getByRole("button", { name: /Agregar supplier|Add supplier/ }).last().click();
+  await o.waitForTimeout(1500);
+  ok("connections: the supplier shows its primary contact with name and email", (await o.getByText("Acme Supply").count()) > 0 && (await o.getByText("Laura Ventas").count()) > 0 && (await o.getByText("laura@acme.test").count()) > 0 && (await o.getByText(/Principal|Primary/).count()) > 0);
+  const card = o.locator("li").filter({ hasText: "Acme Supply" }).first();
+  await card.locator("summary").click();
+  await card.getByLabel(/Nombre del contacto|Contact name/).fill("Pedro Mostrador");
+  await card.getByLabel(/Correo del contacto|Contact email/).fill("laura@acme.test");
+  await card.getByRole("button", { name: /Agregar contacto|Add contact/ }).last().click();
+  await o.waitForTimeout(1200);
+  ok("connections: the same email twice in a supplier is refused", (await o.getByText(/Ya existe un contacto|already exists/).count()) > 0);
+  await card.getByLabel(/Correo del contacto|Contact email/).fill("pedro@acme.test");
+  await card.getByRole("button", { name: /Agregar contacto|Add contact/ }).last().click();
+  await o.waitForTimeout(1500);
+  ok("connections: a second contact is added", (await o.getByText("Pedro Mostrador").count()) > 0);
+  // Quote road: ask for quotes, the supplier answers with a PDF, the contractor enters only the total, buys from it
+  await o.goto(B + "/material");
+  if (!/materials\/new$/.test(o.url())) await o.locator("main a[href$='/materials/new']").first().click();
+  await o.waitForURL(/materials\/new$/);
+  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Wire 12 AWG black");
+  await o.keyboard.press("Enter");
+  await o.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
+  await o.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  await o.getByRole("link", { name: /Pedir cotización a suppliers|Request quotes from suppliers/ }).click();
+  await o.waitForURL(/pricing\/new/);
+  await o.getByRole("button", { name: /Pedir cotización|Request quotes/ }).click();
+  await o.waitForURL(/pricing\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  {
+    const sel = o.locator("section").filter({ hasText: /Enlaces para suppliers|Supplier links/ }).locator("select").first();
+    await sel.selectOption({ label: "Acme Supply" });
+    ok("connections: choosing the supplier offers its contacts and fills the email", (await o.getByText(/Laura Ventas/).count()) > 0 && (await o.locator("input[type=email]").first().inputValue()) === "laura@acme.test");
+  }
+  await o.getByRole("button", { name: /Registrar respuesta|Record response/ }).click();
+  await o.locator("section").filter({ hasText: /Registrar respuesta|Record response|Cotizaciones recibidas|Quotes received/ }).last().getByLabel(/Nuevo supplier|New supplier/i).fill("Graybar PDF");
+  await o.getByLabel(/Total de la cotización|Quote total/).first().fill("480");
+  await o.getByRole("button", { name: /Guardar respuesta|Save response/ }).click();
+  await o.waitForTimeout(1800);
+  ok("flow: a supplier answer with only the total is enough to compare", (await o.getByText(/480/).count()) > 0 && (await o.getByText("Graybar PDF").count()) > 0);
+  await o.getByRole("button", { name: /Adjudicar|Award/ }).first().click();
+  await o.waitForTimeout(1500);
+  await o.getByRole("button", { name: /Crear orden de compra|Create purchase order/ }).first().click();
+  await o.waitForURL(/\/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  ok("flow: the purchase order from a total-only quote keeps the lines and the quoted total", (await o.getByText(/480/).count()) > 0 && (await o.getByText(/Wire 12 AWG black/).count()) > 0);
   // The employee sees only what belongs to the employee
   const emp = state.emp;
   if (emp) {

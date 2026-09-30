@@ -115,7 +115,12 @@ export async function createPurchaseOrderFromResponse(companyId: string, userId:
     if (!l || l.unit_price == null || l.availability === "unavailable") return [];
     return [{ request_item_id: i.id as string, material_id: i.material_id as string | null, description: i.description as string, quantity: Number(i.quantity), unit: i.unit as string, unit_price: Number(l.unit_price), lead_time: l.lead_time, sort_order: idx }];
   });
-  if (lines.length === 0) throw new Error("po_no_priced_lines");
+  // A supplier that answered with a PDF and only a total: the PO keeps the list's lines without unit prices and the quoted total.
+  const totalOnly = lines.length === 0 && resp.total_amount != null && Number(resp.total_amount) > 0;
+  if (lines.length === 0 && !totalOnly) throw new Error("po_no_priced_lines");
+  if (totalOnly) {
+    (reqItems ?? []).forEach((i, idx) => lines.push({ request_item_id: i.id as string, material_id: i.material_id as string | null, description: i.description as string, quantity: Number(i.quantity), unit: i.unit as string, unit_price: 0, lead_time: null, sort_order: idx } as (typeof lines)[number]));
+  }
 
   const asLines: ResponseLine[] = lines.map((l) => ({ requestItemId: l.request_item_id, quantity: l.quantity, unitPrice: l.unit_price, availability: "available", leadTime: null }));
   const freight = resp.freight == null ? null : Number(resp.freight);
