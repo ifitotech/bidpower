@@ -361,7 +361,7 @@ const es = {
   catLighting: "Iluminación",
   catGear: "Equipos y herramientas",
   catOther: "Otros",
-  searchOrTypeItem: "Busca un ítem o escribe uno nuevo",
+  searchOrTypeItem: "Busca un ítem (ej. thhn 8 rojo x 500)",
   addAsFreeText: "Agregar \"{text}\" como texto libre",
   pasteList: "Pegar lista",
   pasteListHint: "Pega una lista de WhatsApp, correo o Excel. Un ítem por línea, ej.: 20 x EMT 3/4",
@@ -1126,6 +1126,8 @@ const es = {
   errContactName: "Escribe el nombre del contacto.",
   nextStepLabel: "Siguiente paso",
   loginWho: "Contratistas, equipos y suppliers entran aquí.",
+  howMany: "¿Cuántos?",
+  addToList: "Agregar a la lista",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

@@ -53,6 +53,42 @@ export type LibraryItem = {
   aliases: string[];
 };
 
+// Field shorthand and Spanish colour names, so "thhn 8 red", "THHN #8 RD" and "thhn 8 rojo" find the same wire.
+const WORD_SYNONYMS: Record<string, string> = {
+  blk: "black", negro: "black", wht: "white", wh: "white", blanco: "white", grn: "green", gn: "green", verde: "green",
+  blu: "blue", azul: "blue", org: "orange", naranja: "orange", yel: "yellow", ylw: "yellow", amarillo: "yellow",
+  gry: "gray", grey: "gray", gris: "gray", brn: "brown", cafe: "brown", rd: "red", rojo: "red", vermelho: "red", preto: "black", branco: "white", amarelo: "yellow", cinza: "gray", str: "stranded", sol: "solid",
+};
+
+/** Punctuation becomes spaces ("THHN-10-STR-BLK", "#8") and shorthand words are unified. Expects normalizeText output. */
+function canonical(text: string): string {
+  return text
+    .replace(/#/g, " ")
+    .replace(/[-_,()]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => WORD_SYNONYMS[w] ?? w)
+    .join(" ");
+}
+
+/** A plain number must match a whole number ("8" must not match "18" or "80"); other words match as text. */
+function tokenMatches(haystack: string, token: string): boolean {
+  if (/^\d+$/.test(token)) return new RegExp(`(^|[^0-9.])${token}(?![0-9])`).test(haystack);
+  return haystack.includes(token);
+}
+
+/**
+ * Splits "thhn 8 red x 500" or "500 x thhn 8 red" into the search text and a quantity.
+ * Only explicit shapes count, so the 8 in "thhn 8 red" is never taken as a quantity.
+ */
+export function splitQuantity(text: string): { text: string; quantity: number | null } {
+  const raw = text.trim();
+  if (!raw) return { text: "", quantity: null };
+  const [line] = parsePastedList(raw, 1);
+  if (!line || line.description === raw) return { text: raw, quantity: null };
+  return { text: line.description, quantity: line.quantity };
+}
+
 /**
  * Search the library while typing. Empty query = favorites first, then recent, then most used.
  * A typed query matches the name, aliases (field slang like "romex" or "mud ring") and catalog number.
@@ -67,18 +103,19 @@ export function searchLibrary(items: LibraryItem[], query: string, limit = 12): 
 
   if (!q) return [...items].sort(byUse).slice(0, limit);
 
-  const tokens = q.split(" ");
+  const tokens = canonical(q).split(" ");
   const scored: { item: LibraryItem; score: number }[] = [];
   for (const item of items) {
-    const name = normalizeText(item.description);
-    const aliases = item.aliases.map(normalizeText);
-    const catalog = normalizeText(item.catalog_number ?? "");
+    const name = canonical(normalizeText(item.description));
+    const aliases = item.aliases.map((a) => canonical(normalizeText(a)));
+    const catalog = canonical(normalizeText(item.catalog_number ?? ""));
     const haystack = [name, ...aliases, catalog].join(" | ");
-    if (!tokens.every((t) => haystack.includes(t))) continue;
+    if (!tokens.every((t) => tokenMatches(haystack, t))) continue;
+    const cq = tokens.join(" ");
     let score = 1;
-    if (name === q || aliases.includes(q)) score += 100;
-    else if (name.startsWith(q) || aliases.some((a) => a.startsWith(q))) score += 40;
-    else if (name.includes(q)) score += 20;
+    if (name === cq || aliases.includes(cq)) score += 100;
+    else if (name.startsWith(cq) || aliases.some((a) => a.startsWith(cq))) score += 40;
+    else if (name.includes(cq)) score += 20;
     if (item.is_favorite) score += 5;
     if (item.use_count > 0) score += Math.min(4, item.use_count);
     scored.push({ item, score });

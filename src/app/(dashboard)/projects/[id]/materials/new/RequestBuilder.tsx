@@ -1,15 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClipboardPaste, ListChecks, Minus, Plus, Search, Star, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
 import { usePermissions } from "@/lib/permissions-context";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
-import { MATERIAL_UNITS, findExact, normalizeUnit, parsePastedList, searchLibrary, type LibraryItem } from "@/lib/materials";
+import { MATERIAL_UNITS, findExact, normalizeUnit, parsePastedList, searchLibrary, splitQuantity, type LibraryItem } from "@/lib/materials";
 import { createMaterialRequestAction } from "@/app/(dashboard)/materials/actions";
 
 type Line = { key: string; materialId: string | null; description: string; quantity: number; unit: string; category: string | null; notes: string; allowSubstitution: boolean; saveToLibrary: boolean };
+type Staged = { item: LibraryItem | null; description: string; quantity: number; unit: string };
 type SavedList = { id: string; name: string; items: { materialId: string; quantity: number }[] };
 
 let counter = 0;
@@ -27,10 +28,13 @@ export default function RequestBuilder({ projectId, projectName, items, lists }:
   const [listName, setListName] = useState("");
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const [staged, setStaged] = useState<Staged | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const results = useMemo(() => searchLibrary(items, query, query ? 8 : 6), [items, query]);
+  const typed = useMemo(() => splitQuantity(query), [query]);
+  const results = useMemo(() => searchLibrary(items, typed.text, typed.text ? 8 : 6), [items, typed.text]);
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
 
   function addLine(line: Omit<Line, "key">) {
@@ -43,14 +47,36 @@ export default function RequestBuilder({ projectId, projectName, items, lists }:
 
   function addLibrary(item: LibraryItem, quantity = 1) {
     addLine({ materialId: item.id, description: item.description, quantity, unit: item.unit, category: item.category, notes: "", allowSubstitution: false, saveToLibrary: false });
-    setQuery("");
   }
 
-  function addFreeText() {
-    const text = query.trim();
-    if (!text) return;
-    addLine({ materialId: null, description: text, quantity: 1, unit: "EA", category: null, notes: "", allowSubstitution: false, saveToLibrary: false });
+  // Tapping a suggestion asks for the quantity right away; nothing is added until that is confirmed.
+  function stageLibrary(item: LibraryItem) { setStaged({ item, description: item.description, quantity: typed.quantity ?? 1, unit: item.unit }); }
+  function stageFreeText() {
+    if (!typed.text) return;
+    setStaged({ item: null, description: typed.text, quantity: typed.quantity ?? 1, unit: "EA" });
+  }
+
+  function confirmStaged() {
+    if (!staged) return;
+    const quantity = staged.quantity > 0 ? staged.quantity : 1;
+    if (staged.item) addLine({ materialId: staged.item.id, description: staged.item.description, quantity, unit: staged.unit, category: staged.item.category, notes: "", allowSubstitution: false, saveToLibrary: false });
+    else addLine({ materialId: null, description: staged.description, quantity, unit: staged.unit, category: null, notes: "", allowSubstitution: false, saveToLibrary: false });
+    setStaged(null);
     setQuery("");
+    searchRef.current?.focus();
+  }
+
+  // "thhn 8 red x 500" + Enter adds the first match straight away; without a quantity it asks for it.
+  function onSearchEnter() {
+    if (!typed.text) return;
+    const first = results[0];
+    if (typed.quantity) {
+      if (first) addLibrary(first, typed.quantity);
+      else addLine({ materialId: null, description: typed.text, quantity: typed.quantity, unit: "EA", category: null, notes: "", allowSubstitution: false, saveToLibrary: false });
+      setQuery("");
+      return;
+    }
+    if (first) stageLibrary(first); else stageFreeText();
   }
 
   const parsed = useMemo(() => (pasteOpen ? parsePastedList(pasteText) : []), [pasteOpen, pasteText]);
@@ -96,18 +122,37 @@ export default function RequestBuilder({ projectId, projectName, items, lists }:
 
     <div className="relative">
       <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-      <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (results[0] && query.trim()) addLibrary(results[0]); else addFreeText(); } }} placeholder={t("searchOrTypeItem")} aria-label={t("searchOrTypeItem")} className={`${input} pl-9`} />
+      <input ref={searchRef} value={query} onChange={(e) => { setQuery(e.target.value); setStaged(null); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onSearchEnter(); } }} autoComplete="off" enterKeyHint="search" placeholder={t("searchOrTypeItem")} aria-label={t("searchOrTypeItem")} className={`${input} pl-9`} />
     </div>
 
-    <div className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+    {staged && <div className="mt-2 rounded-xl border-2 border-brand-500 bg-brand-50 p-3">
+      <p className="break-words text-sm font-semibold">{staged.description}</p>
+      {staged.item && (staged.item.manufacturer || staged.item.catalog_number) && <p className="text-xs text-slate-500">{[staged.item.manufacturer, staged.item.catalog_number].filter(Boolean).join(" · ")}</p>}
+      <p className="mb-1 mt-3 text-xs font-medium text-slate-600">{t("howMany")}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center rounded-lg border border-slate-300 bg-white">
+          <button type="button" aria-label="-" onClick={() => setStaged({ ...staged, quantity: Math.max(1, staged.quantity - 1) })} className="flex h-12 w-12 items-center justify-center"><Minus className="h-4 w-4" /></button>
+          <input autoFocus type="number" inputMode="decimal" min={0.01} step="any" value={staged.quantity} aria-label={t("quantity")} onFocus={(e) => e.currentTarget.select()} onChange={(e) => setStaged({ ...staged, quantity: Number(e.target.value) > 0 ? Number(e.target.value) : 0 })} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); confirmStaged(); } }} className="h-12 w-20 border-x border-slate-300 text-center text-lg font-semibold outline-none" />
+          <button type="button" aria-label="+" onClick={() => setStaged({ ...staged, quantity: staged.quantity + 1 })} className="flex h-12 w-12 items-center justify-center"><Plus className="h-4 w-4" /></button>
+        </div>
+        <select value={staged.unit} aria-label={t("itemUnit")} onChange={(e) => setStaged({ ...staged, unit: normalizeUnit(e.target.value) })} className="h-12 rounded-lg border border-slate-300 bg-white px-2 text-sm">{MATERIAL_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}</select>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">{[10, 50, 100, 500].map((n) => <button key={n} type="button" onClick={() => setStaged({ ...staged, quantity: staged.quantity + n })} className="min-h-9 rounded-full border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700">+{n}</button>)}</div>
+      <div className="mt-3 flex gap-2">
+        <button type="button" onClick={confirmStaged} disabled={staged.quantity <= 0} className="min-h-12 flex-1 rounded-xl bg-brand-600 px-4 font-semibold text-white disabled:opacity-40">{t("addToList")}</button>
+        <button type="button" onClick={() => { setStaged(null); searchRef.current?.focus(); }} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-600">{t("cancel")}</button>
+      </div>
+    </div>}
+
+    {!staged && <div className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
       {!query && results.length > 0 && <p className="px-4 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t("favorites")} · {t("recentItems")}</p>}
-      {results.map((item) => <button key={item.id} type="button" onClick={() => addLibrary(item)} className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50">
+      {results.map((item) => <button key={item.id} type="button" onClick={() => stageLibrary(item)} className="flex min-h-12 w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50">
         {item.is_favorite ? <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400" /> : <Plus className="h-4 w-4 shrink-0 text-slate-400" />}
-        <span className="min-w-0 flex-1 truncate">{item.description}</span><span className="text-xs text-slate-400">{item.unit}</span>
+        <span className="min-w-0 flex-1"><span className="block truncate">{item.description}</span>{(item.manufacturer || item.catalog_number) && <span className="block truncate text-xs text-slate-400">{[item.manufacturer, item.catalog_number].filter(Boolean).join(" · ")}</span>}</span><span className="text-xs text-slate-400">{item.unit}</span>
       </button>)}
-      {query.trim() && <button type="button" onClick={addFreeText} className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-brand-700 hover:bg-brand-50"><Plus className="h-4 w-4" />{t("addAsFreeText", { text: query.trim() })}</button>}
+      {typed.text && <button type="button" onClick={stageFreeText} className="flex min-h-12 w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-brand-700 hover:bg-brand-50"><Plus className="h-4 w-4" />{t("addAsFreeText", { text: typed.text })}</button>}
       {!query && results.length === 0 && <p className="px-4 py-3 text-sm text-slate-400">{t("noItemsYet")}</p>}
-    </div>
+    </div>}
 
     <div className="mt-3 flex flex-wrap gap-2">
       <button type="button" onClick={() => setPasteOpen((v) => !v)} className="flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium"><ClipboardPaste className="h-4 w-4" />{t("pasteList")}</button>

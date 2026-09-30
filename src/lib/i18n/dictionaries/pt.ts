@@ -348,7 +348,7 @@ const pt: Dictionary = {
   catLighting: "Iluminação",
   catGear: "Equipamentos e ferramentas",
   catOther: "Outros",
-  searchOrTypeItem: "Busque um item ou digite um novo",
+  searchOrTypeItem: "Busque um item (ex. thhn 8 vermelho x 500)",
   addAsFreeText: "Adicionar \"{text}\" como texto livre",
   pasteList: "Colar lista",
   pasteListHint: "Cole uma lista do WhatsApp, e-mail ou Excel. Um item por linha, ex.: 20 x EMT 3/4",
@@ -1113,6 +1113,8 @@ const pt: Dictionary = {
   errContactName: "Digite o nome do contato.",
   nextStepLabel: "Próximo passo",
   loginWho: "Contratantes, equipes e fornecedores entram aqui.",
+  howMany: "Quantos?",
+  addToList: "Adicionar à lista",
 };
 
 export default pt;

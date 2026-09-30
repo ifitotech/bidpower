@@ -347,7 +347,7 @@ const en: Dictionary = {
   catLighting: "Lighting",
   catGear: "Gear & tools",
   catOther: "Other",
-  searchOrTypeItem: "Search an item or type a new one",
+  searchOrTypeItem: "Search an item (e.g. thhn 8 red x 500)",
   addAsFreeText: "Add \"{text}\" as free text",
   pasteList: "Paste list",
   pasteListHint: "Paste a list from WhatsApp, email or Excel. One item per line, e.g. 20 x 3/4 EMT",
@@ -1112,6 +1112,8 @@ const en: Dictionary = {
   errContactName: "Enter the contact name.",
   nextStepLabel: "Next step",
   loginWho: "Contractors, teams and suppliers sign in here.",
+  howMany: "How many?",
+  addToList: "Add to list",
 };
 
 export default en;

@@ -25,6 +25,8 @@ async function phase3(browser) {
   await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("tubo");
   ok("request: alias search finds the library item", (await o.getByRole("button", { name: /3\/4 in EMT conduit/ }).count()) > 0);
   await o.getByRole("button", { name: /3\/4 in EMT conduit/ }).first().click();
+  await o.getByLabel(/^Cant\.$|^Qty$|^Qtd\.?$/).fill("1");
+  await o.getByRole("button", { name: /Agregar a la lista|Add to list/ }).click();
   await o.getByRole("button", { name: /Pegar lista|Paste list/ }).click();
   await o.locator("textarea").first().fill("20 x 12/2 Romex 250ft\n5 ea Mud ring\n3/4 in EMT conduit x 10");
   await o.getByRole("button", { name: /Agregar 3 líneas|Add 3 lines/ }).click();
@@ -41,6 +43,7 @@ async function phase3(browser) {
   await emp.goto(`${B}/projects/${state.projectId}/materials/new`);
   await emp.getByPlaceholder(/Busca un ítem|Search an item/).fill("Breaker 20A");
   await emp.getByRole("button", { name: /Agregar "Breaker 20A"|Add "Breaker 20A"/ }).click();
+  await emp.getByRole("button", { name: /Agregar a la lista|Add to list/ }).click();
   await emp.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
   await emp.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
   ok("employee: can create a request", true);
@@ -562,7 +565,7 @@ async function phaseFlow(browser) {
   await o.goto(B + "/material");
   if (!/materials\/new$/.test(o.url())) await o.locator("main a[href$='/materials/new']").first().click();
   await o.waitForURL(/materials\/new$/);
-  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Conduit 1 in EMT");
+  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Conduit 1 in EMT x 20");
   await o.keyboard.press("Enter");
   await o.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
   await o.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
@@ -602,7 +605,7 @@ async function phaseFlow(browser) {
   await o.goto(B + "/material");
   if (!/materials\/new$/.test(o.url())) await o.locator("main a[href$='/materials/new']").first().click();
   await o.waitForURL(/materials\/new$/);
-  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Wire 12 AWG black");
+  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Wire 12 AWG black x 100");
   await o.keyboard.press("Enter");
   await o.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
   await o.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
