@@ -241,3 +241,5 @@ las instrucciones para borrarlos están en la cabecera del script.
 ## 26. Adding material: type, tap, quantity
 
 In a new material list the search understands field shorthand: `thhn 8 red`, `THHN #8 RD`, `thhn 8 rojo` and `THHN-10-STR-BLK` find the same library items (colour words in ES/EN/PT, punctuation ignored, a plain number matches a whole number only so `8` does not match `#18`). Tapping a suggestion opens a quantity step (big number field, +1/+10/+50/+100 chips, unit) and "Add to list" puts it on the list and returns to the search. Typing the quantity with the item (`thhn 8 red x 500`, `500 x thhn 8 red`) and pressing Enter adds it straight away.
+
+The quantity step never guesses the unit: it starts from the library item's own unit (EA for free text) and shows a labelled unit selector right under the quantity (Pieza, Pies, Rollo, Caja...). Wire is not special-cased.

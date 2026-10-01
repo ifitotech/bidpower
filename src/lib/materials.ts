@@ -130,13 +130,6 @@ export function findExact(items: LibraryItem[], text: string): LibraryItem | und
   return items.find((i) => normalizeText(i.description) === q || i.aliases.some((a) => normalizeText(a) === q));
 }
 
-/** Wire and cable are bought by length (cut footage or a full reel), not by piece. */
-export function isLengthItem(description: string, category?: string | null, unit?: string | null): boolean {
-  if (unit === "FT" || unit === "ROLL") return true;
-  if (category === "wire") return true;
-  return /\b(thhn|thwn|xhhw|mtw|romex|nm-?b|uf-?b|awg|wire|cable|cord|cordon|cordón|alambre|fio|fio)\b/i.test(description);
-}
-
 export type ParsedLine = { description: string; quantity: number; unit: string | null };
 
 const UNIT_WORDS = "ea|each|ft|feet|foot|roll|rolls|box|boxes|bag|bags|set|sets|pair|pairs|lot|ct|pkg|pc|pcs|pza|pzas|und|un|pies|rollo|rollos|caja|cajas";

@@ -1115,7 +1115,16 @@ const pt: Dictionary = {
   loginWho: "Contratantes, equipes e fornecedores entram aqui.",
   howMany: "Quantos?",
   addToList: "Adicionar à lista",
-  lengthHint: "Cabo: digite os pés que precisa (qualquer quantidade) ou some bobinas de 500 ou 1000 pés.",
+  unitEA: "Peça (EA)",
+  unitFT: "Pés (FT)",
+  unitROLL: "Rolo / bobina (ROLL)",
+  unitBOX: "Caixa (BOX)",
+  unitBAG: "Saco (BAG)",
+  unitSET: "Conjunto (SET)",
+  unitPAIR: "Par (PAIR)",
+  unitLOT: "Lote (LOT)",
+  unitCT: "Caixa fechada (CT)",
+  unitPKG: "Pacote (PKG)",
 };
 
 export default pt;

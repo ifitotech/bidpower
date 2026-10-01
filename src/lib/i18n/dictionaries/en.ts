@@ -1114,7 +1114,16 @@ const en: Dictionary = {
   loginWho: "Contractors, teams and suppliers sign in here.",
   howMany: "How many?",
   addToList: "Add to list",
-  lengthHint: "Wire: enter the feet you need (any amount) or add 500 or 1000 ft reels.",
+  unitEA: "Each (EA)",
+  unitFT: "Feet (FT)",
+  unitROLL: "Roll / reel (ROLL)",
+  unitBOX: "Box (BOX)",
+  unitBAG: "Bag (BAG)",
+  unitSET: "Set (SET)",
+  unitPAIR: "Pair (PAIR)",
+  unitLOT: "Lot (LOT)",
+  unitCT: "Carton (CT)",
+  unitPKG: "Package (PKG)",
 };
 
 export default en;
