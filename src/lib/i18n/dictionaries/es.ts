@@ -1070,9 +1070,9 @@ const es = {
   feedbackMine: "Tus comentarios anteriores",
   errFeedbackEmpty: "Escribe un comentario primero.",
   orDivider: "o",
-  importCsv: "Importar lista",
-  importHint: "Sube un CSV (o pega desde Excel) con columnas: descripción, número de parte, fabricante, unidad, categoría y apodos. Ya existentes se omiten por número de parte.",
-  importChooseFile: "Elegir archivo CSV",
+  importCsv: "Importar lista (Excel o CSV)",
+  importHint: "Sube un archivo Excel (.xlsx) o CSV, o pega desde Excel, con columnas: descripción, número de parte, fabricante, unidad, categoría y apodos. Los que ya existen se omiten por número de parte.",
+  importChooseFile: "Elegir archivo Excel o CSV",
   importPaste: "…o pega aquí las filas",
   importTemplate: "Descargar plantilla",
   importPreview: "{count} materiales listos para importar",
@@ -1153,6 +1153,8 @@ const es = {
   teamPurchases: "Compras del equipo",
   teamBought: "{name} compró en {vendor}",
   teamReceiptsOverdue: "{name} tiene {count} recibo(s) sin subir (el más viejo, hace {days} días)",
+  importXlsError: "No se pudo leer el archivo de Excel. Guárdalo como .xlsx o CSV e inténtalo de nuevo.",
+  importXlsOld: "Los archivos .xls antiguos no se pueden leer. En Excel usa Guardar como → .xlsx o CSV.",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

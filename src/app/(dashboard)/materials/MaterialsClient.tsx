@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Plus, Star, Trash2, Upload } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
@@ -26,6 +27,11 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
   const [notice, setNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importText, setImportText] = useState("");
+  const params = useSearchParams();
+  useEffect(() => {
+    if (params.get("import")) setImporting(true);
+    if (params.get("add")) setDraft({ ...EMPTY });
+  }, [params]);
   const preview = useMemo(() => (importText.trim() ? parseMaterialImport(importText) : null), [importText]);
   const [prices, setPrices] = useState<PricePoint[] | null>(null);
   useEffect(() => {
@@ -46,15 +52,30 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
     router.refresh();
   }
 
+  // Excel (.xlsx) is read in the browser and turned into the same tab-separated text the CSV path uses.
+  async function loadFile(f: File) {
+    setMsg(null);
+    if (/\.xls$/i.test(f.name)) { setMsg(t("importXlsOld")); return; }
+    if (/\.xlsx$/i.test(f.name)) {
+      try {
+        const { readSheet } = await import("read-excel-file/browser");
+        const rows = await readSheet(f);
+        setImportText(rows.map((r) => r.map((c) => (c == null ? "" : String(c instanceof Date ? c.toISOString().slice(0, 10) : c)).replace(/[\t\r\n]+/g, " ").trim()).join("\t")).join("\n"));
+      } catch { setMsg(t("importXlsError")); }
+      return;
+    }
+    setImportText(await f.text());
+  }
+
   const save = () => draft && run(() => saveMaterialAction({ ...draft, aliases: draft.aliases.split(",").map((a) => a.trim()).filter(Boolean) }), () => setDraft(null));
   const edit = (i: Item) => setDraft({ id: i.id, description: i.description, unit: i.unit, category: i.category ?? "", manufacturer: i.manufacturer ?? "", catalog_number: i.catalog_number ?? "", aliases: i.aliases.join(", "), notes: i.notes ?? "", allow_substitution: Boolean(i.allow_substitution) });
   const set = (p: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...p } : d));
 
   return <div className="mx-auto max-w-3xl p-4 md:p-8">
-    <div className="mb-4 flex items-start gap-3">
-      <div className="min-w-0 flex-1"><h1 className="text-xl font-bold">{t("materialsLibrary")}</h1><p className="text-sm text-slate-500">{t("materialsLibraryHint")}</p></div>
-      <button type="button" onClick={() => setImporting((v) => !v)} className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold"><Upload className="h-4 w-4" /><span className="hidden sm:inline">{t("importCsv")}</span></button>
-      <button type="button" onClick={() => setDraft({ ...EMPTY })} className="flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white"><Plus className="h-4 w-4" /><span className="hidden sm:inline">{t("addItem")}</span></button>
+    <div className="mb-3 min-w-0"><h1 className="text-xl font-bold">{t("materialsLibrary")}</h1><p className="text-sm text-slate-500">{t("materialsLibraryHint")}</p></div>
+    <div className="mb-4 flex flex-wrap gap-2">
+      <button type="button" onClick={() => setDraft({ ...EMPTY })} className="flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white"><Plus className="h-4 w-4" />{t("addItem")}</button>
+      <button type="button" onClick={() => setImporting((v) => !v)} className="flex min-h-11 items-center gap-2 rounded-xl border border-brand-500 px-4 text-sm font-semibold text-brand-700"><Upload className="h-4 w-4" />{t("importCsv")}</button>
     </div>
     {notice && <div role="status" className="mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">{notice}</div>}
     {(error || msg) && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error ? t("errLoadMaterials") : msg}</div>}
@@ -64,7 +85,7 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
       <h2 className="font-semibold">{t("importCsv")}</h2>
       <p className="text-sm text-slate-500">{t("importHint")}</p>
       <div className="flex flex-wrap gap-2">
-        <label className="flex min-h-11 cursor-pointer items-center rounded-xl border border-slate-200 px-4 text-sm font-semibold">{t("importChooseFile")}<input type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setImportText(await f.text()); e.target.value = ""; }} /></label>
+        <label className="flex min-h-11 cursor-pointer items-center rounded-xl border border-slate-200 px-4 text-sm font-semibold">{t("importChooseFile")}<input type="file" accept=".xlsx,.csv,.tsv,.txt,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) await loadFile(f); }} /></label>
         <a href={`data:text/csv;charset=utf-8,${encodeURIComponent(IMPORT_TEMPLATE)}`} download="bidpower-materials-template.csv" className="flex min-h-11 items-center rounded-xl border border-slate-200 px-4 text-sm">{t("importTemplate")}</a>
       </div>
       <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={4} aria-label={t("importPaste")} placeholder={t("importPaste")} className={input} />

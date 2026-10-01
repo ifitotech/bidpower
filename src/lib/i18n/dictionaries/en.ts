@@ -1056,9 +1056,9 @@ const en: Dictionary = {
   feedbackMine: "Your previous comments",
   errFeedbackEmpty: "Write a comment first.",
   orDivider: "or",
-  importCsv: "Import list",
-  importHint: "Upload a CSV (or paste from Excel) with columns: description, part number, manufacturer, unit, category and aliases. Existing items are skipped by part number.",
-  importChooseFile: "Choose CSV file",
+  importCsv: "Import list (Excel or CSV)",
+  importHint: "Upload an Excel (.xlsx) or CSV file, or paste from Excel, with columns: description, part number, manufacturer, unit, category and aliases. Items that already exist are skipped by part number.",
+  importChooseFile: "Choose Excel or CSV file",
   importPaste: "…or paste the rows here",
   importTemplate: "Download template",
   importPreview: "{count} items ready to import",
@@ -1139,6 +1139,8 @@ const en: Dictionary = {
   teamPurchases: "Team purchases",
   teamBought: "{name} bought at {vendor}",
   teamReceiptsOverdue: "{name} has {count} receipt(s) not uploaded (oldest: {days} days ago)",
+  importXlsError: "The Excel file could not be read. Save it as .xlsx or CSV and try again.",
+  importXlsOld: "Old .xls files cannot be read. In Excel use Save as → .xlsx or CSV.",
 };
 
 export default en;

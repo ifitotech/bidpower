@@ -1057,9 +1057,9 @@ const pt: Dictionary = {
   feedbackMine: "Seus comentários anteriores",
   errFeedbackEmpty: "Escreva um comentário primeiro.",
   orDivider: "ou",
-  importCsv: "Importar lista",
-  importHint: "Envie um CSV (ou cole do Excel) com colunas: descrição, número da peça, fabricante, unidade, categoria e apelidos. Os já existentes são ignorados pelo número da peça.",
-  importChooseFile: "Escolher arquivo CSV",
+  importCsv: "Importar lista (Excel ou CSV)",
+  importHint: "Envie um arquivo Excel (.xlsx) ou CSV, ou cole do Excel, com colunas: descrição, número da peça, fabricante, unidade, categoria e apelidos. Os que já existem são ignorados pelo número da peça.",
+  importChooseFile: "Escolher arquivo Excel ou CSV",
   importPaste: "…ou cole as linhas aqui",
   importTemplate: "Baixar modelo",
   importPreview: "{count} itens prontos para importar",
@@ -1140,6 +1140,8 @@ const pt: Dictionary = {
   teamPurchases: "Compras da equipe",
   teamBought: "{name} comprou em {vendor}",
   teamReceiptsOverdue: "{name} tem {count} recibo(s) sem enviar (o mais antigo: {days} dias)",
+  importXlsError: "Não foi possível ler o arquivo do Excel. Salve como .xlsx ou CSV e tente novamente.",
+  importXlsOld: "Arquivos .xls antigos não podem ser lidos. No Excel use Salvar como → .xlsx ou CSV.",
 };
 
 export default pt;

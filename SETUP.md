@@ -251,3 +251,8 @@ The quantity step never guesses the unit: it starts from the library item's own 
 - **Block.** Migration `20260816000026_po_pending_receipts_block.sql`: an employee with 2 or more of their own POs waiting for the receipt (`pending_document`, `received`) cannot create another (`pending_receipts`, shown as `errPendingReceipts`). Owners and managers are never blocked.
 - **Templates.** `employee_basic` can only ask for material. `employee_purchasing` can also create POs up to the PO limit (500 by default) but cannot send them or request quotes. `manager` can do everything except see profit.
 - e2e: `node scripts/e2e/flows.js emp`.
+
+## 28. Import from Excel and a floating "+" that follows the page
+
+- Materials → "Import list (Excel or CSV)": `.xlsx` files are read in the browser (`read-excel-file`) and go through the same preview and de-duplication as CSV/paste. Old `.xls` files ask to be saved as `.xlsx` or CSV. The two buttons (add item / import) are always labelled, also on the phone. `/materials?add=1` and `/materials?import=1` open them directly.
+- The floating "+" offers what can be started from the current page (home, projects, a project, clients, proposals, suppliers, quote requests, purchase orders, library, expenses, invoices, team) and always respects the person's permissions. It is hidden on forms and on screens with nothing to create (settings, reports, accounting).

@@ -1,22 +1,65 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { CalendarPlus, FileText, Plus, Receipt, ShoppingCart, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Building2, CalendarPlus, ClipboardList, FileText, PackagePlus, Plus, Receipt, Send, ShoppingCart, Upload, UserPlus, Users, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
 import { usePermissions } from "@/lib/permissions-context";
 
+type Action = { href: string; label: string; icon: typeof Plus };
+const UUID_PATH = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
 export function FloatingCreateButton() {
   const { t } = useI18n();
-  const { isManagerOrAbove, permissions } = usePermissions();
+  const pathname = usePathname();
+  const { isManagerOrAbove, isOwner, permissions } = usePermissions();
   const [open, setOpen] = useState(false);
-  // Four things a contractor does; everything else starts from inside one of them.
-  const actions = [
-    ...(isManagerOrAbove ? [{ href: "/projects/new", label: t("newProject"), icon: CalendarPlus }] : []),
-    ...(permissions.can_request_material ? [{ href: "/material", label: t("navMaterial"), icon: ShoppingCart }] : []),
-    ...(isManagerOrAbove ? [{ href: "/quotes/new", label: t("createProposal"), icon: FileText }] : []),
-    ...(isManagerOrAbove || permissions.can_upload_documents ? [{ href: "/expenses/new", label: t("newExpense"), icon: Receipt }] : []),
-  ];
+  useEffect(() => setOpen(false), [pathname]);
+
+  // Every possible action, already filtered by what this person may do.
+  const can = {
+    project: isManagerOrAbove, material: permissions.can_request_material, proposal: isManagerOrAbove,
+    expense: isManagerOrAbove || permissions.can_upload_documents, quotes: isManagerOrAbove || permissions.can_create_pricing_request,
+    po: permissions.can_create_po, library: permissions.can_manage_library, invoice: isManagerOrAbove, team: isOwner,
+  };
+  const A = {
+    project: { href: "/projects/new", label: t("newProject"), icon: CalendarPlus },
+    client: { href: "/clients/new", label: t("newClient"), icon: Users },
+    material: { href: "/material", label: t("navMaterial"), icon: ShoppingCart },
+    proposal: { href: "/quotes/new", label: t("createProposal"), icon: FileText },
+    expense: { href: "/expenses/new", label: t("newExpense"), icon: Receipt },
+    quotes: { href: "/pricing/new", label: t("newPricingRequest"), icon: Send },
+    po: { href: "/pos/new", label: t("newPurchaseOrder"), icon: ClipboardList },
+    supplier: { href: "/suppliers#new-supplier", label: t("addSupplier"), icon: Building2 },
+    item: { href: "/materials?add=1", label: t("addItem"), icon: PackagePlus },
+    importList: { href: "/materials?import=1", label: t("importCsv"), icon: Upload },
+    invoice: { href: "/invoices/new", label: t("newInvoice"), icon: Receipt },
+    invite: { href: "/employees/invite", label: t("inviteEmployee"), icon: UserPlus },
+  } satisfies Record<string, Action>;
+  const pick = (list: [boolean, Action][]) => list.filter(([ok]) => ok).map(([, a]) => a);
+
+  // The button follows the page: what you can start from where you are.
+  let actions: Action[];
+  let hidden = false;
+  const detail = pathname.match(new RegExp(`^/projects/(${UUID_PATH})/?$`));
+  const projectLists = pathname.match(new RegExp(`^/projects/(${UUID_PATH})/materials/?$`));
+  if (/\/(new|edit|invite)\/?$/.test(pathname) || /^\/(settings|feedback|accounting|reports|more|notifications|supply)/.test(pathname)) hidden = true;
+  if (hidden) actions = [];
+  else if (detail) actions = pick([[can.material, { href: `/projects/${detail[1]}/materials/new`, label: t("newMaterialRequest"), icon: ShoppingCart }], [can.po, A.po], [can.expense, A.expense]]);
+  else if (projectLists) actions = pick([[can.material, { href: `/projects/${projectLists[1]}/materials/new`, label: t("newMaterialRequest"), icon: ShoppingCart }]]);
+  else if (pathname.startsWith("/projects")) actions = pick([[can.project, A.project], [can.project, A.client]]);
+  else if (pathname.startsWith("/clients")) actions = pick([[can.project, A.client], [can.project, A.project], [can.proposal, A.proposal]]);
+  else if (pathname.startsWith("/quotes")) actions = pick([[can.proposal, A.proposal], [can.project, A.client]]);
+  else if (pathname.startsWith("/suppliers")) actions = pick([[isManagerOrAbove, A.supplier], [can.quotes, A.quotes], [can.material, A.material]]);
+  else if (pathname.startsWith("/pricing")) actions = pick([[can.quotes, A.quotes], [can.material, A.material]]);
+  else if (pathname.startsWith("/pos")) actions = pick([[can.po, A.po], [can.material, A.material]]);
+  else if (pathname.startsWith("/materials")) actions = pick([[can.library, A.item], [can.library, A.importList], [can.material, A.material]]);
+  else if (pathname.startsWith("/material")) actions = pick([[can.quotes, A.quotes], [can.po, A.po]]);
+  else if (pathname.startsWith("/expenses")) actions = pick([[can.expense, A.expense]]);
+  else if (pathname.startsWith("/invoices")) actions = pick([[can.invoice, A.invoice], [can.project, A.proposal]]);
+  else if (pathname.startsWith("/employees")) actions = pick([[can.team, A.invite]]);
+  else actions = pick([[can.project, A.project], [can.material, A.material], [can.proposal, A.proposal], [can.expense, A.expense]]);
   if (actions.length === 0) return null;
 
   return <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] right-4 z-50 md:bottom-6 md:right-6">
