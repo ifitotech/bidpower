@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getActionContext } from "@/lib/action-context";
 import { getClients } from "@/lib/services/clients";
 import { getProjects } from "@/lib/services/projects";
+import { getMaterials } from "@/lib/services/materials";
 import NewQuoteForm from "./NewQuoteForm";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +13,9 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
   const { projectId } = await searchParams;
   const c = await getActionContext().catch(() => null);
   if (!c || !(c.role === "owner" || c.role === "manager")) redirect("/dashboard");
-  const [clients, projects] = await Promise.all([getClients(c.companyId).catch(() => []), getProjects(c.companyId).catch(() => [])]);
+  const [clients, projects, library] = await Promise.all([getClients(c.companyId).catch(() => []), getProjects(c.companyId).catch(() => []), getMaterials(c.companyId).catch(() => [])]);
+  const items = library.map((m) => ({ id: m.id, description: m.description, unit: m.unit, category: m.category, manufacturer: m.manufacturer, catalog_number: m.catalog_number, is_favorite: m.is_favorite, use_count: m.use_count, last_used_at: m.last_used_at, aliases: m.aliases }));
   const list = projects.map((p) => ({ id: p.id, name: p.name, client_id: (p as { client_id?: string | null }).client_id ?? null }));
   const chosen = projectId && UUID.test(projectId) ? list.find((p) => p.id === projectId) : undefined;
-  return <NewQuoteForm clients={(clients ?? []).map((x: { id: string; name: string }) => ({ id: x.id, name: x.name }))} projects={list} defaultProjectId={chosen?.id ?? ""} defaultClientId={chosen?.client_id ?? ""} />;
+  return <NewQuoteForm library={items} clients={(clients ?? []).map((x: { id: string; name: string }) => ({ id: x.id, name: x.name }))} projects={list} defaultProjectId={chosen?.id ?? ""} defaultClientId={chosen?.client_id ?? ""} />;
 }

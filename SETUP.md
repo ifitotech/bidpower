@@ -256,3 +256,11 @@ The quantity step never guesses the unit: it starts from the library item's own 
 
 - Materials → "Import list (Excel or CSV)": `.xlsx` files are read in the browser (`read-excel-file`) and go through the same preview and de-duplication as CSV/paste. Old `.xls` files ask to be saved as `.xlsx` or CSV. The two buttons (add item / import) are always labelled, also on the phone. `/materials?add=1` and `/materials?import=1` open them directly.
 - The floating "+" offers what can be started from the current page (home, projects, a project, clients, proposals, suppliers, quote requests, purchase orders, library, expenses, invoices, team) and always respects the person's permissions. It is hidden on forms and on screens with nothing to create (settings, reports, accounting).
+
+## 29. App icon and installed app (PWA)
+
+The PNG icons in `public/icons` were corrupt, so the installed app had no logo. They are now rendered from the brand SVGs with `node scripts/make-icons.js` (rounded tile for "any", full-bleed square for maskable and Apple icons). The manifest no longer locks portrait (iPad landscape works), has shortcuts, and the theme colour follows light/dark. The doubled top safe-area padding was removed. After installing, delete the old home-screen icon and add it again: iOS caches the icon.
+
+## 30. Suggestions while typing a proposal line
+
+In a new Proposal, the line "Description" suggests items from the company library while you type (same search as the material list: shorthand, colours, part numbers). Picking one fills the description, the part number and the unit. Arrow keys + Enter also work.
