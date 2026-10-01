@@ -19,7 +19,7 @@ function fail(e: unknown): POResult {
   const rules: [string, string][] = [
     ["po_locked", "errPoLocked"], ["po_needs_manager", "errPoNeedsManager"], ["po_needs_send_permission", "errPoNeedsSendPermission"],
     ["po_needs_document", "errPoNeedsDocument"], ["po_transition_invalid", "errPoTransition"], ["po_complete_via_function", "errPoTransition"],
-    ["invalid_amount", "errPoAmount"], ["no_expense_category", "errPoNoCategory"], ["po_no_priced_lines", "errPoNoPricedLines"], ["po_exists", "errPoExists"],
+    ["invalid_amount", "errPoAmount"], ["no_expense_category", "errPoNoCategory"], ["po_no_priced_lines", "errPoNoPricedLines"], ["po_exists", "errPoExists"], ["pending_receipts", "errPendingReceipts"],
     ["invalid_qty", "errQtyInvalid"], ["supplier_required", "errSupplierRequired"], ["request_not_pending", "errRequestNotPending"], ["request_empty", "errRequestEmpty"], ["check constraint", "errQtyInvalid"], ["file_type", "errFileType"], ["file_size", "errFileSize"], ["forbidden", "errForbidden"], ["row-level security", "errPoNotAllowed"],
   ];
   const hit = rules.find(([k]) => msg.includes(k));
@@ -89,7 +89,9 @@ export async function uploadPODocumentAction(formData: FormData): Promise<POResu
   const poId = String(formData.get("poId") ?? "");
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { errorCode: "errGeneric" };
-  return step(poId, (c) => c.perms.can_upload_documents, (co, u) => uploadPurchaseOrderDocument(co, u, poId, file, String(formData.get("kind") ?? "receipt")));
+  // Field staff hand in a photo of the receipt; owners and managers may also attach PDFs.
+  let photoOnly = false;
+  return step(poId, (c) => { photoOnly = !isReviewer(c.role); return c.perms.can_upload_documents; }, (co, u) => uploadPurchaseOrderDocument(co, u, poId, file, String(formData.get("kind") ?? "receipt"), photoOnly));
 }
 
 export async function completePOAction(poId: string, finalAmount: number, taxAmount: number | null): Promise<POResult> {

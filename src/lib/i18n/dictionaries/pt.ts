@@ -1125,6 +1125,18 @@ const pt: Dictionary = {
   unitLOT: "Lote (LOT)",
   unitCT: "Caixa fechada (CT)",
   unitPKG: "Pacote (PKG)",
+  takeReceiptPhoto: "Tirar foto do recibo",
+  chooseReceiptPhoto: "Escolher foto da galeria",
+  receiptRequiredHint: "O recibo é obrigatório: sem a foto, a compra não pode ser fechada.",
+  errPendingReceipts: "Você tem 2 compras sem recibo. Envie a foto do recibo antes de fazer outra compra.",
+  empReceiptsDue: "Recibos para enviar",
+  empReceiptsHint: "Envie a foto do recibo da sua compra.",
+  empReceiptsBlocked: "Você não pode fazer outra compra até enviar estes recibos.",
+  empAskMaterial: "Pedir material",
+  empBuy: "Comprar",
+  empBuyLimit: "Até ${amount} sem aprovação",
+  empMyOrders: "Meus pedidos e compras",
+  empNoOrders: "Você ainda não pediu nem comprou nada.",
 };
 
 export default pt;

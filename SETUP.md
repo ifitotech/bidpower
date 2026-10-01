@@ -243,3 +243,11 @@ las instrucciones para borrarlos están en la cabecera del script.
 In a new material list the search understands field shorthand: `thhn 8 red`, `THHN #8 RD`, `thhn 8 rojo` and `THHN-10-STR-BLK` find the same library items (colour words in ES/EN/PT, punctuation ignored, a plain number matches a whole number only so `8` does not match `#18`). Tapping a suggestion opens a quantity step (big number field, +1/+10/+50/+100 chips, unit) and "Add to list" puts it on the list and returns to the search. Typing the quantity with the item (`thhn 8 red x 500`, `500 x thhn 8 red`) and pressing Enter adds it straight away.
 
 The quantity step never guesses the unit: it starts from the library item's own unit (EA for free text) and shows a labelled unit selector right under the quantity (Pieza, Pies, Rollo, Caja...). Wire is not special-cased.
+
+## 27. The employee's own home and the mandatory receipt photo
+
+- **Same login, own first screen.** A field employee lands on `/dashboard` and gets `EmployeeHome`: ask for material, buy (only with the purchasing template, shows the PO limit), receipts to hand in, their own requests and purchases, and their assigned projects. No money, reports or clients.
+- **Receipt photo.** An employee uploads the receipt as a photo (camera button or gallery); PDFs are refused for them. Owners and managers can still attach PDF/JPG/PNG. A PO cannot be closed without a document (database rule `po_needs_document`).
+- **Block.** Migration `20260816000026_po_pending_receipts_block.sql`: an employee with 2 or more of their own POs waiting for the receipt (`pending_document`, `received`) cannot create another (`pending_receipts`, shown as `errPendingReceipts`). Owners and managers are never blocked.
+- **Templates.** `employee_basic` can only ask for material. `employee_purchasing` can also create POs up to the PO limit (500 by default) but cannot send them or request quotes. `manager` can do everything except see profit.
+- e2e: `node scripts/e2e/flows.js emp`.

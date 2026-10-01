@@ -206,8 +206,8 @@ const ALLOWED_FILES = ["application/pdf", "image/jpeg", "image/png", "image/webp
 const MAX_FILE = 10 * 1024 * 1024;
 
 /** Receipt / invoice / packing slip. The PO moves to "document received" and waits on the Owner to close it. */
-export async function uploadPurchaseOrderDocument(companyId: string, userId: string, poId: string, file: File, kind: string) {
-  if (!ALLOWED_FILES.includes(file.type)) throw new Error("file_type");
+export async function uploadPurchaseOrderDocument(companyId: string, userId: string, poId: string, file: File, kind: string, photoOnly = false) {
+  if (!ALLOWED_FILES.includes(file.type) || (photoOnly && !file.type.startsWith("image/"))) throw new Error("file_type");
   if (file.size > MAX_FILE) throw new Error("file_size");
   const supabase = await createClient();
   const { data: po, error: poErr } = await supabase.from("purchase_orders").select("id, status").eq("id", poId).eq("company_id", companyId).maybeSingle();

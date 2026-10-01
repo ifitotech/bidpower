@@ -1138,6 +1138,18 @@ const es = {
   unitLOT: "Lote (LOT)",
   unitCT: "Cartón (CT)",
   unitPKG: "Paquete (PKG)",
+  takeReceiptPhoto: "Tomar foto del recibo",
+  chooseReceiptPhoto: "Elegir foto de la galería",
+  receiptRequiredHint: "El recibo es obligatorio: sin la foto, la compra no se puede cerrar.",
+  errPendingReceipts: "Tienes 2 compras sin recibo. Sube la foto del recibo antes de hacer otra compra.",
+  empReceiptsDue: "Recibos por subir",
+  empReceiptsHint: "Sube la foto del recibo de tu compra.",
+  empReceiptsBlocked: "No puedes hacer otra compra hasta subir estos recibos.",
+  empAskMaterial: "Pedir material",
+  empBuy: "Comprar",
+  empBuyLimit: "Hasta ${amount} sin aprobación",
+  empMyOrders: "Mis pedidos y compras",
+  empNoOrders: "Aún no has pedido ni comprado nada.",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

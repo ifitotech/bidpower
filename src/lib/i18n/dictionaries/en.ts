@@ -1124,6 +1124,18 @@ const en: Dictionary = {
   unitLOT: "Lot (LOT)",
   unitCT: "Carton (CT)",
   unitPKG: "Package (PKG)",
+  takeReceiptPhoto: "Take a photo of the receipt",
+  chooseReceiptPhoto: "Choose a photo from the gallery",
+  receiptRequiredHint: "The receipt is required: without the photo the purchase cannot be closed.",
+  errPendingReceipts: "You have 2 purchases without a receipt. Upload the receipt photo before making another purchase.",
+  empReceiptsDue: "Receipts to hand in",
+  empReceiptsHint: "Upload the photo of your purchase receipt.",
+  empReceiptsBlocked: "You cannot make another purchase until you upload these receipts.",
+  empAskMaterial: "Ask for material",
+  empBuy: "Buy",
+  empBuyLimit: "Up to ${amount} without approval",
+  empMyOrders: "My requests and purchases",
+  empNoOrders: "You have not requested or bought anything yet.",
 };
 
 export default en;

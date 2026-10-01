@@ -3,7 +3,9 @@ import { getCurrentMember, getCurrentProfile } from "@/lib/auth";
 import { getDashboardMetrics, getOnboardingProgress } from "@/lib/services/dashboard";
 import { getProjects } from "@/lib/services/projects";
 import { getNeedsAttention } from "@/lib/services/project-control";
+import { getEmployeeHome } from "@/lib/services/employee-home";
 import DashboardClient from "./DashboardClient";
+import EmployeeHome from "./EmployeeHome";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,13 @@ export default async function DashboardPage() {
     const member = await getCurrentMember();
     if (!member?.company_id) throw new Error("no-company");
     const companyId = member.company_id as string;
+    if (member.role === "employee") {
+      // Field staff get their own home: the same login, a different first screen.
+      const c = await getActionContext();
+      const [profile, projects, mine] = await Promise.all([getCurrentProfile(), getProjects(companyId), getEmployeeHome(c)]);
+      const company = member.company as { name?: string } | null;
+      return <EmployeeHome firstName={(profile?.fullName || profile?.email || "").split(/[\s@]/)[0]} companyName={company?.name ?? ""} projects={projects.map((p) => ({ id: p.id, name: p.name, address: p.address }))} myPOs={mine.myPOs} myRequests={mine.myRequests} pendingReceipts={mine.pendingReceipts} />;
+    }
     const [profile, projects, metrics, items, onboarding] = await Promise.all([
       getCurrentProfile(),
       getProjects(companyId),
