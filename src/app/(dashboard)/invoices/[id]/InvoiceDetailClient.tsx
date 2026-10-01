@@ -5,7 +5,7 @@ import { ArrowLeft, CheckCircle, DollarSign } from "lucide-react";
 import { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
-import { recordInvoicePaymentAction } from "@/app/(dashboard)/actions";
+import { recordInvoicePaymentAction } from "@/app/(dashboard)/invoices/actions";
 import { useI18n } from "@/lib/i18n/provider";
 import { invoiceStatusKey } from "@/lib/invoice-status";
 

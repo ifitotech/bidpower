@@ -269,3 +269,12 @@ In a new Proposal, the line "Description" suggests items from the company librar
 
 - The menu has one Material entry (Purchasing: Material, Quotes, Purchase orders). The material lists and the library hang from the Material page ("More about material"), no longer from the menu. Quotes has its own icon.
 - "Request quotes": choose the material list (the latest is preselected) or "Another list: type or paste lines", then "Reply by", delivery (delivery to site by default) and notes. Title, type and links are under "More options".
+
+## 32. Restructuring R1 + R2
+
+- Actions are split by domain (`src/app/(dashboard)/<domain>/actions.ts`); shared helpers in `src/lib/action-helpers.ts`.
+- There is no free-form purchase order: `/pos/new` redirects to Material. A purchase always starts from a material list ("Buy now") or from a supplier's answer. A quote request always starts from a material list (`errPricingNeedsList`).
+- The employee has one door: "Ask for or buy material".
+- Lists of expenses, purchase orders, proposals and invoices accept `?projectId=` (the project's tools use it) and show a chip to clear the filter.
+- Removed: notifications page and service, time clock, unused document upload, PO exception flow, 124 unused texts.
+- e2e helpers: `createList` and `buyOne` in `scripts/e2e/lib.js`.

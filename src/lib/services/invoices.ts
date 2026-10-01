@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 
-export async function getInvoices(companyId: string) {
+export async function getInvoices(companyId: string, projectId?: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("invoices").select("*, client:clients(name), project:projects(name)").eq("company_id", companyId).order("created_at", { ascending: false });
+  let query = supabase.from("invoices").select("*, client:clients(name), project:projects(name)").eq("company_id", companyId).order("created_at", { ascending: false });
+  if (projectId) query = query.eq("project_id", projectId);
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }

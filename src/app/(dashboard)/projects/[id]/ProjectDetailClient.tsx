@@ -10,7 +10,7 @@ import { categoryLabel } from "@/lib/category-label";
 import { useI18n } from "@/lib/i18n/provider";
 import { usePermissions } from "@/lib/permissions-context";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
-import { setProjectAssignmentAction } from "@/app/(dashboard)/actions";
+import { setProjectAssignmentAction } from "@/app/(dashboard)/employees/actions";
 import type { ProjectMoney, TimelineItem, WaitingItem } from "@/lib/services/project-control";
 import { ActivityPanel, MoneyPanel, WaitingPanel } from "./ProjectControl";
 
@@ -67,11 +67,11 @@ export default function ProjectDetailClient({ project: p, error, team = [], canM
   const tools = [
     ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: `/projects/${p.id}/takeoff`, label: t("takeoffs"), icon: Zap }] : []),
     ...(permissions.can_request_material || isManagerOrAbove ? [{ href: `/projects/${p.id}/materials`, label: t("materialRequests"), icon: Package }] : []),
-    { href: "/expenses", label: t("expenses"), icon: Receipt },
-    { href: "/pos", label: t("toolPOs"), icon: ShoppingCart },
+    { href: `/expenses?projectId=${p.id}`, label: t("expenses"), icon: Receipt },
+    { href: `/pos?projectId=${p.id}`, label: t("toolPOs"), icon: ShoppingCart },
     ...(isManagerOrAbove ? [
-      { href: "/quotes", label: t("toolQuotes"), icon: FileText },
-      { href: "/invoices", label: t("toolInvoices"), icon: ClipboardList },
+      { href: `/quotes?projectId=${p.id}`, label: t("toolQuotes"), icon: FileText },
+      { href: `/invoices?projectId=${p.id}`, label: t("toolInvoices"), icon: ClipboardList },
     ] : []),
     { href: "/calendar", label: t("calendar"), icon: CalendarDays },
   ];

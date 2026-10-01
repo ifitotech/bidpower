@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { categoryLabel } from "@/lib/category-label";
 import { useI18n } from "@/lib/i18n/provider";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
-import { createExpenseAction } from "@/app/(dashboard)/actions";
+import { createExpenseAction } from "@/app/(dashboard)/expenses/actions";
 
 const field = "w-full mt-1.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-500";
 

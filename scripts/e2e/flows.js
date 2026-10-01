@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // End-to-end flows (phases 3+), run against the local harness (real PostgREST + RLS).
-const { BASE: B, RUN, ok, failures, launch, page, register, createProject, inviteEmployee } = require("./lib");
+const { BASE: B, RUN, ok, failures, launch, page, register, createProject, inviteEmployee, createList, buyOne } = require("./lib");
 const only = process.argv[2] || "all";
 const want = (n) => only === "all" || only === n;
 const state = {};
@@ -162,12 +162,8 @@ async function phase45(browser) {
 
   // employee with PO limit: over-limit PO waits for approval
   const lim = await inviteEmployee(browser, o, "Pedro Compras", `pedro-${RUN}@bidpower-smoke.test`, "employee_purchasing", state.projectId);
-  await lim.goto(B + "/pos/new");
-  await lim.locator("select[name=projectId]").selectOption({ index: 1 });
-  await lim.locator("input[name=vendorName]").fill("Home Depot");
-  await lim.locator("input[name=estimatedAmount]").fill("900");
-  await lim.getByRole("button", { name: /Crear PO|Create PO|Crear orden de compra/ }).click();
-  await lim.waitForURL(/\/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  const limPO = await buyOne(lim, state.projectId, "Home Depot", 900);
+  if (!limPO) throw new Error("limit employee could not buy");
   ok("po limit: over the limit waits for approval", (await lim.getByText(/Por aprobar|Pending approval/).count()) > 0);
   ok("po limit: creator cannot approve", (await lim.getByRole("button", { name: /^Aprobar$|^Approve$/ }).count()) === 0);
   const limUrl = lim.url();
@@ -386,10 +382,9 @@ async function phase9(browser) {
   ok("contractor: connected, supplier record shows Connected", (await o.getByText("Graybar Supply").count()) > 0 && (await o.getByText(/^Conectado$|^Connected$/).count()) > 0);
 
   // pricing request sent inside the app
+  await createList(o, state.projectId, "12 x 2x4 LED panel\n40 x Duplex outlet", 2);
   await o.goto(B + "/pricing/new");
-  const fromList = o.getByLabel(/Desde una lista de material|From a material list/);
-  if (await fromList.count()) await fromList.selectOption("");
-  await o.locator("textarea").first().fill("12 x 2x4 LED panel\n40 x Duplex outlet");
+  ok("pricing: no blank form, the list is chosen", (await o.getByLabel(/Desde una lista de material|From a material list/).count()) > 0 && (await o.getByText(/Líneas \(una por línea|Lines \(one per line/).count()) === 0);
   await o.locator("summary").filter({ hasText: /Más opciones|More options/ }).click();
   await o.getByLabel(/^Título|^Title/).fill("Lobby package");
   await o.locator("input[type=date]").fill("2030-02-01");
@@ -688,23 +683,13 @@ async function phaseEmployee(browser) {
   } else emp = await inviteEmployee(browser, o, "Pedro Compras", `pedro-${RUN}@bidpower-smoke.test`, "employee_purchasing", state.projectId);
   const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
   await emp.goto(B + "/dashboard");
-  ok("employee home: own screen with ask-material and buy", (await emp.getByRole("link", { name: /Pedir material|Ask for material/ }).count()) > 0 && (await emp.getByRole("link", { name: /^Comprar|^Buy/ }).count()) > 0);
+  ok("employee home: one door to ask for or buy material", (await emp.getByRole("link", { name: /Pedir o comprar material|Ask for or buy material/ }).count()) > 0);
   ok("employee home: no money or clients on it", (await emp.locator("main, body").first().innerText()).search(/Ganancia|Profit|Clientes|Clients/) === -1);
-  const newPO = async (vendor) => {
-    await emp.goto(B + "/pos/new");
-    await emp.locator("select").first().selectOption({ index: 1 });
-    await emp.getByPlaceholder("Home Depot").fill(vendor);
-    await emp.getByPlaceholder("0.00").fill("50");
-    await emp.getByRole("button", { name: /Crear PO|Create PO/ }).click();
-  };
-  await newPO("Corner A");
-  await emp.waitForURL(/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  await buyOne(emp, state.projectId, "Corner A", 50);
   const first = emp.url();
-  await newPO("Corner B");
-  await emp.waitForURL(/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
-  await newPO("Corner C");
-  await emp.locator("div[role=alert]").filter({ hasText: /\S/ }).first().waitFor({ timeout: 15000 });
-  ok("receipts: a third purchase is refused while two receipts are missing", /2 compras sin recibo|2 purchases without a receipt/.test(await emp.locator("div[role=alert]").filter({ hasText: /\S/ }).first().innerText()));
+  await buyOne(emp, state.projectId, "Corner B", 50);
+  const third = await buyOne(emp, state.projectId, "Corner C", 50);
+  ok("receipts: a third purchase is refused while two receipts are missing", third === false && /2 compras sin recibo|2 purchases without a receipt/.test(await emp.locator("div[role=alert]").filter({ hasText: /\S/ }).first().innerText()));
   await emp.goto(B + "/dashboard");
   ok("receipts: home shows the receipts due", (await emp.getByText(/Recibos por subir|Receipts to hand in/).count()) > 0);
   await emp.goto(first);
@@ -716,9 +701,7 @@ async function phaseEmployee(browser) {
   await emp.waitForTimeout(2000);
   await emp.reload();
   ok("receipts: the photo is attached to the purchase order", (await emp.getByText("receipt.png").count()) > 0);
-  await newPO("Corner C");
-  await emp.waitForURL(/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
-  ok("receipts: handing in one receipt lets the employee buy again", true);
+  ok("receipts: handing in one receipt lets the employee buy again", (await buyOne(emp, state.projectId, "Corner D", 50)) !== false);
   await o.goto(B + "/dashboard");
   ok("owner home: team purchases lists who bought where", (await o.getByRole("region", { name: /Compras del equipo|Team purchases/ }).getByText(/compró en Corner|bought at Corner/).count()) > 0);
 }

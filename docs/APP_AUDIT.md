@@ -220,3 +220,13 @@ Cada fase se prueba de punta a punta antes de pasar a la siguiente y no mezcla f
 - Revisé las 27 migraciones y busqué qué tablas tiene código que las use.
 - Medí textos sin uso y repetidos contra el código.
 - No probé la app desplegada con un navegador real; lo que sé del comportamiento sale del código y de la batería local.
+
+---
+
+## 11. Estado de la reestructuración (actualizado)
+
+**R1 hecha (limpieza):** el archivo de acciones comunes se repartió por dominio (`settings`, `employees`, `clients`, `projects`, `invoices`, `expenses`, `quotes`) con ayudantes comunes en `src/lib/action-helpers.ts`. Se borraron las notificaciones huérfanas, el reloj de entrada/salida, la subida de documentos sin uso, el flujo de excepción de PO y 124 textos sin uso. Las herramientas de un proyecto (Gastos, PO, Propuestas, Facturas) ahora abren filtradas por ese proyecto, con una etiqueta para quitar el filtro.
+
+**R2 hecha (un solo camino de compra):** no existe la PO libre (`/pos/new` lleva a Material). Toda compra nace de una lista de material con "Comprar ya", o de la respuesta de un supply. La Cotización siempre parte de una lista (el servidor lo exige). El empleado tiene una sola puerta: "Pedir o comprar material".
+
+**Pendiente de decisión:** los estados `open` y `exception_*` siguen en la base de datos pero ya no se pueden alcanzar desde ninguna pantalla. Quitarlos requiere una migración; se hace junto con R5.

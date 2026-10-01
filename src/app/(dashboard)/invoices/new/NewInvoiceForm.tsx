@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { createInvoiceAction } from "@/app/(dashboard)/actions";
+import { createInvoiceAction } from "@/app/(dashboard)/invoices/actions";
 import { useI18n } from "@/lib/i18n/provider";
 import { useState } from "react";
 
