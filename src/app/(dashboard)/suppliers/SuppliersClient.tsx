@@ -49,7 +49,7 @@ export default function SuppliersClient({ rows, error = false }: { rows: Supplie
     <p className="mb-4 text-sm text-slate-500">{t("suppliersHint")}</p>
     {(error || msg) && <div role={msg?.ok ? "status" : "alert"} className={`mb-4 rounded-xl border p-3 text-sm ${msg?.ok ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-800"}`}>{error ? t("errGeneric") : msg?.text}</div>}
 
-    <section className="mb-6 space-y-2 rounded-xl border border-slate-200 bg-white p-4" aria-label={t("addSupplierWithContact")}>
+    <section id="new-supplier" className="mb-6 space-y-2 rounded-xl border border-slate-200 bg-white p-4" aria-label={t("addSupplierWithContact")}>
       <h2 className="font-semibold">{t("addSupplierWithContact")}</h2>
       <input value={name} maxLength={120} aria-label={t("supplierCompanyName")} placeholder={t("supplierCompanyName")} onChange={(e) => setName(e.target.value)} className={field} />
       <ContactFields value={contact} onChange={setContact} />

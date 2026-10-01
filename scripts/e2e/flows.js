@@ -539,6 +539,14 @@ async function phaseLang(browser) {
   await o.getByRole("button", { name: /^Importar$|^Import$/ }).click();
   await o.waitForTimeout(2000);
   ok("import: an existing part number is skipped, the new one is created", (await o.getByText(/Importados: 1\. Ya existían: 1|Imported: 1\. Already existed: 1/).count()) > 0);
+  // an Excel file is read as it is, no need to save it as CSV first
+  await o.goto(B + "/materials");
+  await o.getByRole("button", { name: /Importar lista|Import list/ }).click();
+  await o.locator("input[type=file]").setInputFiles(require("path").join(__dirname, "fixtures", "materials.xlsx"));
+  await o.getByText(/2 materiales listos|2 items ready/).waitFor({ timeout: 15000 });
+  await o.getByRole("button", { name: /^Importar$|^Import$/ }).click();
+  await o.waitForTimeout(2000);
+  ok("import: an Excel (.xlsx) file is read and imported", (await o.getByText(/Importados: 2|Imported: 2/).count()) > 0);
   // price history comes only from real POs and quotes; an empty history says so
   await o.goto(B + "/materials");
   if (await o.locator("ul li button.flex-1").count()) {
@@ -638,6 +646,19 @@ async function phaseFlow(browser) {
     const blocked = await emp.request.get(B + "/quotes", { maxRedirects: 0 });
     ok("flow: the employee cannot open Proposals", blocked.status() >= 300 || !(await emp.goto(B + "/quotes").then(() => emp.url().includes("/quotes"))));
   }
+
+  // The floating + follows the page it is on
+  const fabItems = async (path) => {
+    await o.goto(B + path);
+    await o.getByRole("button", { name: /^Crear$|^Create$/ }).click();
+    return (await o.locator("div.fixed a").allInnerTexts()).join("|");
+  };
+  ok("fab: home offers the four starts", /Nuevo proyecto|New project/.test(await fabItems("/dashboard")));
+  ok("fab: suppliers offers add supplier and request quotes", /Agregar supplier|Add supplier/.test(await fabItems("/suppliers")) && /Pedir cotización|Request quotes/.test(await o.locator("div.fixed a").allInnerTexts().then((a) => a.join("|"))));
+  ok("fab: library offers add item and import", /Agregar ítem|Add item/.test(await fabItems("/materials")) && /Importar lista|Import list/.test(await o.locator("div.fixed a").allInnerTexts().then((a) => a.join("|"))));
+  ok("fab: projects offers new project and new client", /Nuevo cliente|New client/.test(await fabItems("/projects")));
+  await o.goto(B + "/projects/new");
+  ok("fab: hidden on forms", (await o.getByRole("button", { name: /^Crear$|^Create$/ }).count()) === 0);
 }
 
 async function phaseEmployee(browser) {
