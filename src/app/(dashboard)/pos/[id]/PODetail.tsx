@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileText, Upload } from "lucide-react";
+import { ArrowLeft, Camera, FileText, Upload } from "lucide-react";
 import { POStatusBadge } from "@/components/shared/StatusBadge";
 import { DeliveryTag } from "@/components/shared/DeliveryTag";
 import { WaitingOn } from "@/components/shared/RequestStatusBadge";
@@ -32,6 +32,7 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
   const [deliveryDate, setDeliveryDate] = useState(po.expected_delivery ?? "");
   const [tax, setTax] = useState(po.tax_amount != null ? String(po.tax_amount) : "");
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const money = (n: number | null | undefined) => (n == null ? "—" : formatCurrency(Number(n)));
   const num = (s: string) => (s.trim() === "" ? null : Number(s.replace(",", ".")));
 
@@ -47,6 +48,15 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
     const res = await getPODocumentUrlAction(id).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string; url?: string }));
     if (res.errorCode || !res.url) { setError(t((res.errorCode ?? "errGeneric") as keyof Dictionary)); return; }
     window.open(res.url, "_blank", "noopener,noreferrer");
+  }
+
+  function uploadPhoto(file: File | undefined) {
+    if (!file) return;
+    const form = new FormData();
+    form.set("poId", po.id); form.set("kind", "receipt"); form.set("file", file);
+    run(() => uploadPODocumentAction(form));
+    if (fileRef.current) fileRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
   }
 
   function upload(file: File | undefined) {
@@ -104,12 +114,18 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
       <h2 className="mb-3 font-semibold">{t("poDocuments")}</h2>
       {po.documents.length === 0 ? <p className="mb-3 text-sm text-slate-500">{status === "completed" ? t("poNoDocsYet") : t("poDocsRequired")}</p> :
         <ul className="mb-3 space-y-1.5">{po.documents.map((d) => <li key={d.id}><button type="button" onClick={() => openDoc(d.id)} className="flex min-h-10 w-full items-center gap-2 rounded-lg border border-slate-200 px-3 text-left text-sm"><FileText className="h-4 w-4 shrink-0 text-slate-400" /><span className="min-w-0 flex-1 truncate">{d.name}</span><span className="text-xs text-slate-400">{d.document_kind ? t(KIND_KEYS[d.document_kind]) : ""}</span></button></li>)}</ul>}
-      {canUploadNow && <div className="space-y-2">
+      {canUploadNow && (isReviewer ? <div className="space-y-2">
         <select value={kind} aria-label={t("poReceiptKind")} onChange={(e) => setKind(e.target.value)} className={field}>{Object.entries(KIND_KEYS).map(([k, key]) => <option key={k} value={k}>{t(key)}</option>)}</select>
         <input ref={fileRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
         <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className={`${btn} flex w-full items-center justify-center gap-2 border border-dashed border-slate-300`}><Upload className="h-4 w-4" />{t("uploadDocument")}</button>
         <p className="text-xs text-slate-400">PDF, JPG, PNG, WEBP · 10 MB</p>
-      </div>}
+      </div> : <div className="space-y-2">
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => uploadPhoto(e.target.files?.[0])} />
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => uploadPhoto(e.target.files?.[0])} />
+        <button type="button" disabled={busy} onClick={() => cameraRef.current?.click()} className={`${btn} flex w-full items-center justify-center gap-2 bg-brand-600 text-white`}><Camera className="h-5 w-5" />{t("takeReceiptPhoto")}</button>
+        <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className={`${btn} flex w-full items-center justify-center gap-2 border border-slate-200`}><Upload className="h-4 w-4" />{t("chooseReceiptPhoto")}</button>
+        <p className="text-xs text-slate-400">{t("receiptRequiredHint")}</p>
+      </div>)}
     </section>}
 
     {canCloseOut && po.documents.length > 0 && <section className="mb-4 space-y-2 rounded-xl border border-brand-500 bg-white p-5">

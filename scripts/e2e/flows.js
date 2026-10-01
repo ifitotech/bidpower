@@ -25,6 +25,8 @@ async function phase3(browser) {
   await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("tubo");
   ok("request: alias search finds the library item", (await o.getByRole("button", { name: /3\/4 in EMT conduit/ }).count()) > 0);
   await o.getByRole("button", { name: /3\/4 in EMT conduit/ }).first().click();
+  await o.getByLabel(/^Cant\.$|^Qty$|^Qtd\.?$/).fill("1");
+  await o.getByRole("button", { name: /Agregar a la lista|Add to list/ }).click();
   await o.getByRole("button", { name: /Pegar lista|Paste list/ }).click();
   await o.locator("textarea").first().fill("20 x 12/2 Romex 250ft\n5 ea Mud ring\n3/4 in EMT conduit x 10");
   await o.getByRole("button", { name: /Agregar 3 líneas|Add 3 lines/ }).click();
@@ -41,6 +43,7 @@ async function phase3(browser) {
   await emp.goto(`${B}/projects/${state.projectId}/materials/new`);
   await emp.getByPlaceholder(/Busca un ítem|Search an item/).fill("Breaker 20A");
   await emp.getByRole("button", { name: /Agregar "Breaker 20A"|Add "Breaker 20A"/ }).click();
+  await emp.getByRole("button", { name: /Agregar a la lista|Add to list/ }).click();
   await emp.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
   await emp.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
   ok("employee: can create a request", true);
@@ -497,7 +500,7 @@ async function phaseLang(browser) {
   await o.goto(B + "/dashboard");
   await o.evaluate(() => localStorage.setItem("bidpower-locale", "en"));
   await o.reload({ waitUntil: "networkidle" });
-  const en = await o.locator("body").innerText();
+  const en = (await o.locator("nav, aside").allInnerTexts()).join(" ");
   ok("language EN: navigation is in English", /sales/i.test(en) && /purchasing/i.test(en) && /connections/i.test(en) && !/ventas|compras|conexiones/i.test(en));
   await o.goto(B + "/settings/categories");
   ok("language EN: system categories are translated", (await o.getByText("Materials").count()) > 0 && (await o.getByText("Materiales").count()) === 0);
@@ -562,7 +565,7 @@ async function phaseFlow(browser) {
   await o.goto(B + "/material");
   if (!/materials\/new$/.test(o.url())) await o.locator("main a[href$='/materials/new']").first().click();
   await o.waitForURL(/materials\/new$/);
-  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Conduit 1 in EMT");
+  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Conduit 1 in EMT x 20");
   await o.keyboard.press("Enter");
   await o.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
   await o.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
@@ -602,7 +605,7 @@ async function phaseFlow(browser) {
   await o.goto(B + "/material");
   if (!/materials\/new$/.test(o.url())) await o.locator("main a[href$='/materials/new']").first().click();
   await o.waitForURL(/materials\/new$/);
-  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Wire 12 AWG black");
+  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("Wire 12 AWG black x 100");
   await o.keyboard.press("Enter");
   await o.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
   await o.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
@@ -637,6 +640,57 @@ async function phaseFlow(browser) {
   }
 }
 
+async function phaseEmployee(browser) {
+  const o = state.owner;
+  // The purchasing template is the one that may buy (up to its PO limit).
+  // (The Free plan allows 3 employees, so a full run reuses Luis and gives him the purchasing template.)
+  let emp;
+  if (state.emp) {
+    emp = state.emp;
+    await o.goto(B + "/employees");
+    await o.getByText("Luis Tester").first().click();
+    await o.waitForURL(/employees\/[0-9a-f-]{36}/);
+    await o.getByRole("button", { name: /Empleado con compras|Employee with purchasing/ }).click();
+    await o.getByRole("button", { name: /Guardar cambios|Save changes/ }).click();
+    await o.waitForTimeout(1500);
+  } else emp = await inviteEmployee(browser, o, "Pedro Compras", `pedro-${RUN}@bidpower-smoke.test`, "employee_purchasing", state.projectId);
+  const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+  await emp.goto(B + "/dashboard");
+  ok("employee home: own screen with ask-material and buy", (await emp.getByRole("link", { name: /Pedir material|Ask for material/ }).count()) > 0 && (await emp.getByRole("link", { name: /^Comprar|^Buy/ }).count()) > 0);
+  ok("employee home: no money or clients on it", (await emp.locator("main, body").first().innerText()).search(/Ganancia|Profit|Clientes|Clients/) === -1);
+  const newPO = async (vendor) => {
+    await emp.goto(B + "/pos/new");
+    await emp.locator("select").first().selectOption({ index: 1 });
+    await emp.getByPlaceholder("Home Depot").fill(vendor);
+    await emp.getByPlaceholder("0.00").fill("50");
+    await emp.getByRole("button", { name: /Crear PO|Create PO/ }).click();
+  };
+  await newPO("Corner A");
+  await emp.waitForURL(/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  const first = emp.url();
+  await newPO("Corner B");
+  await emp.waitForURL(/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  await newPO("Corner C");
+  await emp.locator("div[role=alert]").filter({ hasText: /\S/ }).first().waitFor({ timeout: 15000 });
+  ok("receipts: a third purchase is refused while two receipts are missing", /2 compras sin recibo|2 purchases without a receipt/.test(await emp.locator("div[role=alert]").filter({ hasText: /\S/ }).first().innerText()));
+  await emp.goto(B + "/dashboard");
+  ok("receipts: home shows the receipts due", (await emp.getByText(/Recibos por subir|Receipts to hand in/).count()) > 0);
+  await emp.goto(first);
+  ok("receipts: the employee sees the camera button, not a document-type picker", (await emp.getByRole("button", { name: /Tomar foto del recibo|Take a photo of the receipt/ }).count()) > 0 && (await emp.locator("select").count()) === 0);
+  await emp.locator("input[type=file]:not([capture])").setInputFiles({ name: "specs.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 test") });
+  await emp.waitForTimeout(1500);
+  ok("receipts: a PDF is refused for the employee (photo only)", (await emp.locator("div[role=alert]").filter({ hasText: /\S/ }).count()) > 0);
+  await emp.locator("input[capture]").setInputFiles({ name: "receipt.png", mimeType: "image/png", buffer: PNG });
+  await emp.waitForTimeout(2000);
+  await emp.reload();
+  ok("receipts: the photo is attached to the purchase order", (await emp.getByText("receipt.png").count()) > 0);
+  await newPO("Corner C");
+  await emp.waitForURL(/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  ok("receipts: handing in one receipt lets the employee buy again", true);
+  await o.goto(B + "/dashboard");
+  ok("owner home: team purchases lists who bought where", (await o.getByRole("region", { name: /Compras del equipo|Team purchases/ }).getByText(/compró en Corner|bought at Corner/).count()) > 0);
+}
+
 (async () => {
   const browser = await launch();
   try {
@@ -653,6 +707,7 @@ async function phaseFlow(browser) {
     if (want("all") || want("10")) await phase10(browser);
     if (want("all") || want("lang")) await phaseLang(browser);
     if (want("all") || want("flow")) await phaseFlow(browser);
+    if (want("all") || want("emp")) await phaseEmployee(browser);
   } catch (e) {
     console.error("ERROR", e.message.split("\n").slice(0, 4).join(" | "));
     process.exitCode = 2;

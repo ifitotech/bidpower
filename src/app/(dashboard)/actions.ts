@@ -489,6 +489,7 @@ export async function createPOAction(formData: FormData) {
   } catch (err) {
     const message = err instanceof Error ? err.message : (err as { message?: string })?.message || "Error al crear PO";
     if (message.includes("NEXT_REDIRECT")) throw err;
+    if (message.includes("pending_receipts")) return { errorCode: "errPendingReceipts" };
     if (message.includes("row-level security")) return { errorCode: "errPoNotAllowed" };
     return { errorCode: "errGeneric" };
   }

@@ -12,6 +12,8 @@ import type { Dictionary } from "@/lib/i18n/dictionaries/es";
 import type { AttentionItem } from "@/lib/services/project-control";
 import type { OnboardingStep } from "@/lib/services/dashboard";
 import { OnboardingChecklist } from "@/components/shared/OnboardingChecklist";
+import { POStatusBadge } from "@/components/shared/StatusBadge";
+import type { OverdueReceipts, TeamPO } from "@/lib/services/team-purchases";
 
 type HomeProject = { id: string; name: string; status: string; address?: string | null; clientName?: string | null };
 
@@ -23,6 +25,7 @@ export default function DashboardClient({
   attention,
   items = [],
   onboarding = [],
+  team,
   error,
 }: {
   firstName: string;
@@ -32,6 +35,7 @@ export default function DashboardClient({
   attention: { invoices: number; quotes: number };
   items?: AttentionItem[];
   onboarding?: OnboardingStep[];
+  team?: { recent: TeamPO[]; overdue: OverdueReceipts[] };
   error?: "errNoSupabase" | "errLoadProjects";
 }) {
   const { t } = useI18n();
@@ -64,6 +68,14 @@ export default function DashboardClient({
       })()}
 
       {onboarding.length > 0 && <OnboardingChecklist steps={onboarding} />}
+
+      {team && (team.overdue.length > 0 || team.recent.length > 0) && (
+        <section className="mb-6" aria-label={t("teamPurchases")}>
+          <h2 className="mb-2 text-sm font-bold">{t("teamPurchases")}</h2>
+          {team.overdue.length > 0 && <ul className="mb-2 space-y-2">{team.overdue.map((o) => <li key={o.who} className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><Receipt className="h-4 w-4 shrink-0" />{t("teamReceiptsOverdue", { name: o.who, count: String(o.count), days: String(o.days) })}</li>)}</ul>}
+          {team.recent.length > 0 && <ul className="space-y-2">{team.recent.map((p) => <li key={p.id}><Link href={`/pos/${p.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"><span className="min-w-0"><span className="block truncate text-sm font-semibold">{t("teamBought", { name: p.who ?? "—", vendor: p.vendor })}</span><span className="block truncate text-xs text-slate-500">{[p.number, p.project, p.amount != null ? `$${p.amount.toLocaleString()}` : null].filter(Boolean).join(" · ")}</span></span><POStatusBadge status={p.status} /></Link></li>)}</ul>}
+        </section>
+      )}
 
       {(attentionItems.length > 0 || items.length > 0) && (
         <section className="mb-6">
