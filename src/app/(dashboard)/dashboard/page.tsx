@@ -4,6 +4,7 @@ import { getDashboardMetrics, getOnboardingProgress } from "@/lib/services/dashb
 import { getProjects } from "@/lib/services/projects";
 import { getNeedsAttention } from "@/lib/services/project-control";
 import { getEmployeeHome } from "@/lib/services/employee-home";
+import { getTeamPurchases } from "@/lib/services/team-purchases";
 import DashboardClient from "./DashboardClient";
 import EmployeeHome from "./EmployeeHome";
 
@@ -25,13 +26,15 @@ export default async function DashboardPage() {
       const company = member.company as { name?: string } | null;
       return <EmployeeHome firstName={(profile?.fullName || profile?.email || "").split(/[\s@]/)[0]} companyName={company?.name ?? ""} projects={projects.map((p) => ({ id: p.id, name: p.name, address: p.address }))} myPOs={mine.myPOs} myRequests={mine.myRequests} pendingReceipts={mine.pendingReceipts} />;
     }
-    const [profile, projects, metrics, items, onboarding] = await Promise.all([
+    const isReviewer = member.role === "owner" || member.role === "manager";
+    const [profile, projects, metrics, items, onboarding, team] = await Promise.all([
       getCurrentProfile(),
       getProjects(companyId),
       // Attention data is optional context; the project list must still render without it.
       getDashboardMetrics(companyId).catch(() => null),
       getActionContext().then((c) => getNeedsAttention(c)).catch(() => []),
       member.role === "owner" ? getOnboardingProgress(companyId).catch(() => []) : Promise.resolve([]),
+      isReviewer ? getActionContext().then((c) => getTeamPurchases({ companyId, userId: c.userId, canCosts: member.role === "owner" || c.perms.can_view_costs })).catch(() => undefined) : Promise.resolve(undefined),
     ]);
     const company = member.company as { name?: string } | null;
     const firstName = (profile?.fullName || profile?.email || "").split(/[\s@]/)[0];
@@ -44,6 +47,7 @@ export default async function DashboardPage() {
         attention={{ invoices: metrics?.pendingInvoices ?? 0, quotes: metrics?.pendingQuotes ?? 0 }}
         items={items}
         onboarding={onboarding}
+        team={team}
       />
     );
   } catch {

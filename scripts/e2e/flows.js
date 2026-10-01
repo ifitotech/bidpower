@@ -500,7 +500,7 @@ async function phaseLang(browser) {
   await o.goto(B + "/dashboard");
   await o.evaluate(() => localStorage.setItem("bidpower-locale", "en"));
   await o.reload({ waitUntil: "networkidle" });
-  const en = await o.locator("body").innerText();
+  const en = (await o.locator("nav, aside").allInnerTexts()).join(" ");
   ok("language EN: navigation is in English", /sales/i.test(en) && /purchasing/i.test(en) && /connections/i.test(en) && !/ventas|compras|conexiones/i.test(en));
   await o.goto(B + "/settings/categories");
   ok("language EN: system categories are translated", (await o.getByText("Materials").count()) > 0 && (await o.getByText("Materiales").count()) === 0);
@@ -687,6 +687,8 @@ async function phaseEmployee(browser) {
   await newPO("Corner C");
   await emp.waitForURL(/pos\/[0-9a-f-]{36}$/, { timeout: 30000 });
   ok("receipts: handing in one receipt lets the employee buy again", true);
+  await o.goto(B + "/dashboard");
+  ok("owner home: team purchases lists who bought where", (await o.getByRole("region", { name: /Compras del equipo|Team purchases/ }).getByText(/compró en Corner|bought at Corner/).count()) > 0);
 }
 
 (async () => {

@@ -1150,6 +1150,9 @@ const es = {
   empBuyLimit: "Hasta ${amount} sin aprobación",
   empMyOrders: "Mis pedidos y compras",
   empNoOrders: "Aún no has pedido ni comprado nada.",
+  teamPurchases: "Compras del equipo",
+  teamBought: "{name} compró en {vendor}",
+  teamReceiptsOverdue: "{name} tiene {count} recibo(s) sin subir (el más viejo, hace {days} días)",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

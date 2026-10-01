@@ -1137,6 +1137,9 @@ const pt: Dictionary = {
   empBuyLimit: "Até ${amount} sem aprovação",
   empMyOrders: "Meus pedidos e compras",
   empNoOrders: "Você ainda não pediu nem comprou nada.",
+  teamPurchases: "Compras da equipe",
+  teamBought: "{name} comprou em {vendor}",
+  teamReceiptsOverdue: "{name} tem {count} recibo(s) sem enviar (o mais antigo: {days} dias)",
 };
 
 export default pt;
