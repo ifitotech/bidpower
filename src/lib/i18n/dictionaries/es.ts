@@ -424,7 +424,7 @@ const es = {
   prStatusAwarded: "Adjudicado",
   prStatusClosed: "Cerrado",
   fromMaterialRequest: "Desde una lista de material",
-  noSourceRequest: "Sin pedido: pegar o escribir líneas",
+  noSourceRequest: "Otra lista: escribir o pegar líneas",
   prLinesText: "Líneas (una por línea, ej.: 20 x EMT 3/4)",
   prProject: "Proyecto",
   noProjectOption: "Sin proyecto",
@@ -1155,6 +1155,11 @@ const es = {
   teamReceiptsOverdue: "{name} tiene {count} recibo(s) sin subir (el más viejo, hace {days} días)",
   importXlsError: "No se pudo leer el archivo de Excel. Guárdalo como .xlsx o CSV e inténtalo de nuevo.",
   importXlsOld: "Los archivos .xls antiguos no se pueden leer. En Excel usa Guardar como → .xlsx o CSV.",
+  materialMore: "Más sobre material",
+  materialListsHint: "Las listas que pidió tu equipo para revisar",
+  materialLibraryHint: "Tus ítems, con números de parte. Importa desde Excel",
+  prAnswerBy: "Responder antes de",
+  prMoreOptions: "Más opciones (título, tipo, enlaces)",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

@@ -264,3 +264,8 @@ The PNG icons in `public/icons` were corrupt, so the installed app had no logo. 
 ## 30. Suggestions while typing a proposal line
 
 In a new Proposal, the line "Description" suggests items from the company library while you type (same search as the material list: shorthand, colours, part numbers). Picking one fills the description, the part number and the unit. Arrow keys + Enter also work.
+
+## 31. One Material place and a simpler "Request quotes"
+
+- The menu has one Material entry (Purchasing: Material, Quotes, Purchase orders). The material lists and the library hang from the Material page ("More about material"), no longer from the menu. Quotes has its own icon.
+- "Request quotes": choose the material list (the latest is preselected) or "Another list: type or paste lines", then "Reply by", delivery (delivery to site by default) and notes. Title, type and links are under "More options".

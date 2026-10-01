@@ -71,6 +71,7 @@ async function phase45(browser) {
   // Pricing Request from the reviewed Material Request of the employee
   await o.goto(B + "/pricing/new");
   await o.getByLabel(/Desde una lista de material|From a material list/).selectOption({ index: 1 });
+  await o.locator("summary").filter({ hasText: /Más opciones|More options/ }).click();
   await o.getByLabel(/^Título|^Title/).fill("Panel package");
   await o.locator("input[type=date]").fill("2030-01-15");
   await o.getByRole("button", { name: /Pedir cotización|Request quotes/ }).click();
@@ -386,7 +387,10 @@ async function phase9(browser) {
 
   // pricing request sent inside the app
   await o.goto(B + "/pricing/new");
+  const fromList = o.getByLabel(/Desde una lista de material|From a material list/);
+  if (await fromList.count()) await fromList.selectOption("");
   await o.locator("textarea").first().fill("12 x 2x4 LED panel\n40 x Duplex outlet");
+  await o.locator("summary").filter({ hasText: /Más opciones|More options/ }).click();
   await o.getByLabel(/^Título|^Title/).fill("Lobby package");
   await o.locator("input[type=date]").fill("2030-02-01");
   await o.getByRole("button", { name: /Pedir cotización|Request quotes/ }).click();

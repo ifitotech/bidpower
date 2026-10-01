@@ -410,7 +410,7 @@ const en: Dictionary = {
   prStatusAwarded: "Awarded",
   prStatusClosed: "Closed",
   fromMaterialRequest: "From a material list",
-  noSourceRequest: "No request: paste or type lines",
+  noSourceRequest: "Another list: type or paste lines",
   prLinesText: "Lines (one per line, e.g. 20 x 3/4 EMT)",
   prProject: "Project",
   noProjectOption: "No project",
@@ -1141,6 +1141,11 @@ const en: Dictionary = {
   teamReceiptsOverdue: "{name} has {count} receipt(s) not uploaded (oldest: {days} days ago)",
   importXlsError: "The Excel file could not be read. Save it as .xlsx or CSV and try again.",
   importXlsOld: "Old .xls files cannot be read. In Excel use Save as → .xlsx or CSV.",
+  materialMore: "More about material",
+  materialListsHint: "Lists your team asked for, to review",
+  materialLibraryHint: "Your items with part numbers. Import from Excel",
+  prAnswerBy: "Reply by",
+  prMoreOptions: "More options (title, type, links)",
 };
 
 export default en;

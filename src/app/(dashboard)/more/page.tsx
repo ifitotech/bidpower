@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { BarChart3, Package, Building2, ChevronRight, LogOut, Settings, UserCog, FileSpreadsheet, Users, CalendarDays, MessageSquare, Receipt } from "lucide-react";
+import { BarChart3, Package, Send, ShoppingCart, Building2, ChevronRight, LogOut, Settings, UserCog, FileSpreadsheet, Users, CalendarDays, MessageSquare, Receipt } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
 import { usePermissions } from "@/lib/permissions-context";
 import { logoutAction } from "@/app/(auth)/actions";
@@ -14,9 +14,9 @@ export default function MorePage() {
   const groups: { title: string; items: { href: string; label: string; icon: typeof Package }[] }[] = [
     { title: t("areaSales"), items: isEmployee ? [] : [{ href: "/invoices", label: t("navInvoices"), icon: FileSpreadsheet }] },
     { title: t("areaPurchasing"), items: [
-      ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: "/pos", label: t("navPurchaseOrders"), icon: Package }] : []),
-      ...(isManagerOrAbove ? [{ href: "/materials/requests", label: t("materialRequests"), icon: Package }] : []),
-      ...(permissions.can_manage_library ? [{ href: "/materials", label: t("materialsLibrary"), icon: Package }] : []),
+      ...(permissions.can_request_material || permissions.can_manage_library ? [{ href: "/material", label: t("navMaterial"), icon: Package }] : []),
+      ...(isManagerOrAbove || permissions.can_create_pricing_request ? [{ href: "/pricing", label: t("navPricing"), icon: Send }] : []),
+      ...(isManagerOrAbove || permissions.can_create_po ? [{ href: "/pos", label: t("navPurchaseOrders"), icon: ShoppingCart }] : []),
     ] },
     { title: t("areaMoney"), items: [
       ...(isManagerOrAbove ? [{ href: "/reports", label: t("navReports"), icon: BarChart3 }] : []),
