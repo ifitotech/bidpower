@@ -28,6 +28,8 @@ export const metadata: Metadata = {
       { url: "/icons/apple-touch-icon-152.png", sizes: "152x152", type: "image/png" },
     ],
   },
+  applicationName: "BidPower",
+  formatDetection: { telephone: false },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -41,7 +43,10 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: "cover",
-  themeColor: "#0B1F3B",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0B1F3B" },
+    { media: "(prefers-color-scheme: dark)", color: "#07152B" },
+  ],
 };
 
 export default async function RootLayout({
