@@ -10,6 +10,33 @@ import { formatCurrency } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
 import { createQuoteAction } from "@/app/(dashboard)/actions";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
+import { searchLibrary, splitQuantity, type LibraryItem } from "@/lib/materials";
+
+const QUOTE_UNIT: Record<string, string> = { EA: "each", FT: "ft", BOX: "box", ROLL: "roll", LOT: "lot" };
+
+/** Description field that suggests items from the company library while typing; picking one fills part number and unit. */
+function DescriptionField({ value, library, onText, onPick }: { value: string; library: LibraryItem[]; onText: (v: string) => void; onPick: (item: LibraryItem) => void }) {
+  const [focus, setFocus] = useState(false);
+  const [active, setActive] = useState(0);
+  const query = splitQuantity(value).text;
+  const results = query.trim().length >= 2 ? searchLibrary(library, query, 6) : [];
+  const open = focus && results.length > 0;
+  return <div className="relative">
+    <input type="text" value={value} autoComplete="off" required onFocus={() => setFocus(true)} onBlur={() => setTimeout(() => setFocus(false), 120)}
+      onChange={(e) => { onText(e.target.value); setActive(0); }}
+      onKeyDown={(e) => {
+        if (!open) return;
+        if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, results.length - 1)); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
+        else if (e.key === "Enter") { e.preventDefault(); onPick(results[active]); setFocus(false); }
+        else if (e.key === "Escape") setFocus(false);
+      }}
+      className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+    {open && <ul role="listbox" className="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+      {results.map((r, i) => <li key={r.id} role="option" aria-selected={i === active}><button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(r); setFocus(false); }} className={`flex min-h-12 w-full flex-col items-start px-3 py-2 text-left text-sm ${i === active ? "bg-brand-50" : "hover:bg-slate-50"}`}><span className="w-full truncate font-medium">{r.description}</span>{(r.manufacturer || r.catalog_number) && <span className="w-full truncate text-xs text-slate-400">{[r.manufacturer, r.catalog_number].filter(Boolean).join(" · ")}</span>}</button></li>)}
+    </ul>}
+  </div>;
+}
 
 interface LineItem {
   id: string;
@@ -21,7 +48,7 @@ interface LineItem {
   notes: string;
 }
 
-export default function NewQuoteForm({ clients, projects, defaultProjectId, defaultClientId }: { clients: { id: string; name: string }[]; projects: { id: string; name: string; client_id: string | null }[]; defaultProjectId: string; defaultClientId: string }) {
+export default function NewQuoteForm({ library = [], clients, projects, defaultProjectId, defaultClientId }: { library?: LibraryItem[]; clients: { id: string; name: string }[]; projects: { id: string; name: string; client_id: string | null }[]; defaultProjectId: string; defaultClientId: string }) {
   const router = useRouter();
   const { t } = useI18n();
   const [saving, setSaving] = useState(false);
@@ -131,13 +158,8 @@ export default function NewQuoteForm({ clients, projects, defaultProjectId, defa
                       {t("description")}
                     </label>
                   )}
-                  <input
-                    type="text"
-                    value={item.description}
-                    onChange={(e) => updateItem(item.id, "description", e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                    required
-                  />
+                  <DescriptionField value={item.description} library={library} onText={(v) => updateItem(item.id, "description", v)}
+                    onPick={(m) => setItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, description: m.description, part_number: m.catalog_number ?? x.part_number, unit: QUOTE_UNIT[m.unit] ?? "each" } : x)))} />
                   <input
                     type="text"
                     value={item.notes}

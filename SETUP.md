@@ -260,3 +260,7 @@ The quantity step never guesses the unit: it starts from the library item's own 
 ## 29. App icon and installed app (PWA)
 
 The PNG icons in `public/icons` were corrupt, so the installed app had no logo. They are now rendered from the brand SVGs with `node scripts/make-icons.js` (rounded tile for "any", full-bleed square for maskable and Apple icons). The manifest no longer locks portrait (iPad landscape works), has shortcuts, and the theme colour follows light/dark. The doubled top safe-area padding was removed. After installing, delete the old home-screen icon and add it again: iOS caches the icon.
+
+## 30. Suggestions while typing a proposal line
+
+In a new Proposal, the line "Description" suggests items from the company library while you type (same search as the material list: shorthand, colours, part numbers). Picking one fills the description, the part number and the unit. Arrow keys + Enter also work.

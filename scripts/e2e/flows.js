@@ -647,6 +647,13 @@ async function phaseFlow(browser) {
     ok("flow: the employee cannot open Proposals", blocked.status() >= 300 || !(await emp.goto(B + "/quotes").then(() => emp.url().includes("/quotes"))));
   }
 
+  // Proposal lines suggest items from the library while typing
+  await o.goto(B + "/quotes/new");
+  const desc = o.locator("input[autocomplete=off]").first();
+  await desc.fill("emt");
+  await o.getByRole("option", { name: /3\/4 in EMT conduit/ }).first().click();
+  ok("proposal: typing in the description suggests library items and fills the line", (await desc.inputValue()).includes("3/4 in EMT conduit"));
+
   // The floating + follows the page it is on
   const fabItems = async (path) => {
     await o.goto(B + path);
