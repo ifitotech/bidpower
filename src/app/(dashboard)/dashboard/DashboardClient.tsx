@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Briefcase, ChevronRight, Clock3, FileText, MapPin, Package, Plus, Receipt } from "lucide-react";
+import { AlertTriangle, Search, Briefcase, ChevronRight, Clock3, FileText, MapPin, Package, Plus, Receipt } from "lucide-react";
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
 import { formatCurrency } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
@@ -56,6 +56,8 @@ export default function DashboardClient({
         {companyName && <p className="mt-1 text-sm text-slate-500">{companyName}</p>}
       </header>
 
+
+      <form action="/search" role="search" className="relative mb-5"><Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" /><input name="q" autoComplete="off" aria-label={t("searchEverything")} placeholder={t("searchEverything")} className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-9 pr-3 text-base outline-none focus:border-brand-500" /></form>
       {error && <div role="alert" className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{t(error)}</div>}
 
       {!error && (() => {

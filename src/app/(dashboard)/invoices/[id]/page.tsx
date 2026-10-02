@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCurrentMember } from "@/lib/auth";
+import { effectiveInvoiceStatus } from "@/lib/invoice-status";
 import { getInvoiceById } from "@/lib/services/invoices";
 import InvoiceDetailClient from "./InvoiceDetailClient";
 
@@ -11,5 +12,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   if (!member?.company_id) notFound();
   const invoice = await getInvoiceById(id, member.company_id as string).catch(() => null);
   if (!invoice) notFound();
-  return <InvoiceDetailClient invoice={invoice} />;
+  const status = effectiveInvoiceStatus(invoice.status, invoice.due_date, Number(invoice.total), Number(invoice.amount_paid ?? 0));
+  return <InvoiceDetailClient invoice={invoice} displayStatus={status} canManage={member.role === "owner" || member.role === "manager"} />;
 }

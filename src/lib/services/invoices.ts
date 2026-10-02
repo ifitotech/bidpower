@@ -37,8 +37,13 @@ export async function recordInvoicePayment(invoiceId: string, companyId: string,
   if (error) throw error;
 }
 
-export async function updateInvoiceStatus(invoiceId: string, companyId: string, status: string) {
+/** Draft -> sent, and cancel while nothing has been paid. Anything else is refused. */
+export async function updateInvoiceStatus(invoiceId: string, companyId: string, status: "sent" | "cancelled") {
   const supabase = await createClient();
+  const { data: inv, error: readError } = await supabase.from("invoices").select("status, amount_paid").eq("id", invoiceId).eq("company_id", companyId).single();
+  if (readError) throw readError;
+  const allowed = status === "sent" ? inv.status === "draft" : (inv.status === "draft" || inv.status === "sent") && Number(inv.amount_paid) === 0;
+  if (!allowed) throw new Error("invoice_transition_invalid");
   const { error } = await supabase.from("invoices").update({ status, updated_at: new Date().toISOString() }).eq("id", invoiceId).eq("company_id", companyId);
   if (error) throw error;
 }
@@ -79,4 +84,25 @@ export async function nextInvoiceNumber(companyId: string): Promise<string> {
     if (!data) return candidate;
   }
   return `INV-${Date.now()}`;
+}
+
+/** Money billed, collected and still owed on a project (cancelled invoices do not count). */
+export async function getProjectBilling(projectId: string, companyId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("invoices").select("total, amount_paid, status").eq("company_id", companyId).eq("project_id", projectId);
+  if (error) throw error;
+  const live = (data ?? []).filter((i) => i.status !== "cancelled" && i.status !== "draft");
+  const invoiced = live.reduce((sum, i) => sum + Number(i.total), 0);
+  const collected = live.reduce((sum, i) => sum + Number(i.amount_paid ?? 0), 0);
+  return { invoiced: Math.round(invoiced * 100) / 100, collected: Math.round(collected * 100) / 100, owed: Math.round((invoiced - collected) * 100) / 100 };
+}
+
+/** A client's invoices and what they still owe (drafts and cancelled invoices are not owed yet). */
+export async function getClientInvoices(clientId: string, companyId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("invoices").select("id, number, status, total, amount_paid, due_date").eq("company_id", companyId).eq("client_id", clientId).neq("status", "cancelled").order("created_at", { ascending: false }).limit(50);
+  if (error) throw error;
+  const rows = (data ?? []).map((i) => ({ id: i.id as string, number: i.number as string, status: i.status as string, total: Number(i.total), amount_paid: Number(i.amount_paid ?? 0), due_date: (i.due_date as string | null) ?? null }));
+  const owed = Math.round(rows.filter((i) => i.status !== "draft").reduce((sum, i) => sum + (i.total - i.amount_paid), 0) * 100) / 100;
+  return { rows, owed };
 }

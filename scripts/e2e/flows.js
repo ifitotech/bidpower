@@ -253,9 +253,14 @@ async function phase6(browser) {
   ok("billing: the invoice number is suggested", /INV-\d{4}/.test(await o.locator("input[name=number]").inputValue()));
   await o.getByRole("button", { name: /^30%/ }).click();
   ok("billing: 30% of 1,290 fills the amount (387)", (await o.locator("input[name=amount]").inputValue()) === "387");
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  await o.locator("input[name=dueDate]").fill(yesterday);
   await o.getByRole("button", { name: /Guardar borrador|Save draft/ }).click();
   await o.waitForURL(quoteUrl, { timeout: 30000 });
   ok("billing: progress shows what has been billed", /387/.test(await o.locator("main").innerText()) && /Facturado|Billed/.test(await o.locator("main").innerText()));
+  await o.goto(B + "/dashboard");
+  ok("home: an approved proposal not fully billed reminds what is left (903)", (await o.getByText(/faltan .*903.* por facturar|903.* left to bill/).count()) > 0);
+  await o.goto(quoteUrl);
   await o.getByRole("link", { name: /Crear factura|Create invoice/ }).click();
   await o.getByRole("button", { name: /Lo que falta|The rest/ }).click();
   ok("billing: the rest is what is left (903)", (await o.locator("input[name=amount]").inputValue()) === "903");
@@ -268,6 +273,40 @@ async function phase6(browser) {
   await o.getByRole("button", { name: /Guardar borrador|Save draft/ }).click();
   await o.waitForURL(quoteUrl, { timeout: 30000 });
   ok("billing: fully billed, no more invoice button", (await o.getByRole("link", { name: /Crear factura|Create invoice/ }).count()) === 0);
+  // The invoice itself: PDF, marked as sent, and cancelling only before anything is paid
+  await o.locator("main a[href^='/invoices/']").first().click();
+  await o.waitForURL(/invoices\/[0-9a-f-]{36}$/);
+  const invUrl = o.url();
+  ok("invoice: links back to its proposal", (await o.getByRole("link", { name: /Propuesta Q|Proposal Q|Propuesta |Proposal /}).count()) > 0);
+  const pdf = await o.request.get(invUrl.replace(B + "/invoices/", B + "/api/invoices/") + "/pdf?lang=es");
+  ok("invoice: the printable page answers with the number and the balance", pdf.status() === 200 && /INV-\d{4}/.test(await pdf.text()));
+  await o.getByRole("button", { name: /Marcar como enviada|Mark as sent/ }).click();
+  await o.waitForTimeout(1500);
+  ok("invoice: marked as sent", (await o.getByText(/^Enviada$|^Sent$/).count()) > 0 && (await o.getByRole("button", { name: /Marcar como enviada|Mark as sent/ }).count()) === 0);
+  await o.locator("main input[type=number]").first().fill("100");
+  await o.getByRole("button", { name: /Registrar pago|Record payment/ }).click();
+  await o.waitForTimeout(1500);
+  ok("invoice: after a payment it can no longer be cancelled", (await o.getByRole("button", { name: /Cancelar factura|Cancel invoice/ }).count()) === 0 && (await o.getByText(/^Pago parcial$|^Partially paid$/).count()) > 0);
+  ok("invoice: past its due date and not fully paid it shows as overdue", (await o.getByText(/^Vencida$|^Overdue$/).count()) > 0);
+  await o.goto(B + "/dashboard");
+  ok("home: the overdue invoice is listed with what you are owed", (await o.getByText(/vencida el .*287|overdue since .*287/).count()) > 0);
+  await o.goto(`${B}/projects/${state.projectId}`);
+  ok("project: shows billed, collected and still owed (287)", (await o.getByText(/Por cobrar|Still owed/).count()) > 0 && /287/.test(await o.locator("main").innerText()));
+  await o.goto(B + "/clients");
+  await o.locator("main a[href^='/clients/']").filter({ hasText: /Cliente Miami/ }).first().click();
+  ok("client: shows what the client owes", (await o.getByText(/Te debe .*287|Owes you .*287/).count()) > 0);
+  await o.goto(B + "/calendar");
+  ok("calendar: has the month list of deliveries and due dates", (await o.getByRole("region", { name: /Este mes|This month/ }).count()) > 0);
+  // One box to find anything
+  await o.goto(B + "/dashboard");
+  await o.getByRole("search").getByRole("textbox").fill("Miami");
+  await o.keyboard.press("Enter");
+  await o.waitForURL(/\/search\?q=Miami/);
+  ok("search: finds the project and the client by name", (await o.getByRole("link", { name: /Miami Beach/ }).count()) > 0 && (await o.getByRole("link", { name: /Cliente Miami/ }).count()) > 0);
+  await o.goto(B + "/search?q=Corner");
+  ok("search: finds purchase orders by supplier", (await o.getByRole("link", { name: /Corner/ }).count()) > 0);
+  await o.goto(B + "/search?q=a");
+  ok("search: a single letter asks for more", (await o.getByText(/al menos 2 letras|at least 2 letters/).count()) > 0);
   await o.goto(`${B}/projects/${state.projectId}`);
   ok("project: contract value taken from the approved proposal", /1[.,]290/.test(await o.locator("main").innerText()));
 

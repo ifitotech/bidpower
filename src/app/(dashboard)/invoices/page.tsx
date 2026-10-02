@@ -1,5 +1,6 @@
 import { getCurrentMember } from "@/lib/auth";
 import { getInvoices } from "@/lib/services/invoices";
+import { effectiveInvoiceStatus } from "@/lib/invoice-status";
 import { readProjectFilter } from "@/lib/project-filter";
 import { ProjectFilter } from "@/components/shared/ProjectFilter";
 import InvoicesClient from "./InvoicesClient";
@@ -15,7 +16,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     const project = await readProjectFilter(companyId, projectId);
     return <>
       {project && <ProjectFilter name={project.name} clearHref="/invoices" />}
-      <InvoicesClient invoices={await getInvoices(companyId, project?.id)} />
+      <InvoicesClient invoices={(await getInvoices(companyId, project?.id)).map((i: { status: string; due_date?: string | null; total: number; amount_paid?: number }) => ({ ...i, status: effectiveInvoiceStatus(i.status, i.due_date, Number(i.total), Number(i.amount_paid ?? 0)) })) as never} />
     </>;
   } catch {
     return <InvoicesClient invoices={[]} error />;

@@ -294,3 +294,11 @@ The detail of a quote request shows a strip with four steps (what you ask, to wh
 - A supply house generating a connection code also gets a shareable link (`/suppliers?code=...`, with copy and WhatsApp). The contractor opens it, signs in and lands on Suppliers with the code typed.
 - Any link opened while signed out goes to the login with `?next=` and comes back there after signing in (only internal paths are accepted).
 - Migration `20260818000028_po_no_exception_states.sql`: no purchase order can enter the three exception statuses any more (trigger); existing rows, if any, are untouched.
+
+## 36. Money follow-through, a real calendar and one search box
+
+- **Invoice:** printable page (`/api/invoices/[id]/pdf?lang=`), "Mark as sent", "Cancel" only while nothing is paid, a link back to its proposal, and a computed **Overdue** status (not stored: sent or partly paid, past its due date, with a balance). Payments are not offered on a cancelled invoice.
+- **Needs Attention** (owner/manager) now also lists approved proposals with something left to bill and invoices past their due date with what is owed.
+- **Project** shows billed, collected and still owed; **client** shows their invoices and what they owe.
+- **Calendar** shows real dates besides project starts: purchase order deliveries, invoices to collect, quote answers due, proposals about to expire and estimated project ends, with a "This month" list. Employees only see their own purchases arriving.
+- **Search** (`/search?q=`, the box on the home screen): projects, clients, proposals, invoices, purchase orders, material lists, quote requests, library items and suppliers. Row security decides what each person finds; money documents only for owners and managers.

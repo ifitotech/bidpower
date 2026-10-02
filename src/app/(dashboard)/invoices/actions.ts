@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createInvoice, getQuoteInvoicing, recordInvoicePayment } from "@/lib/services/invoices";
+import { createInvoice, getQuoteInvoicing, recordInvoicePayment, updateInvoiceStatus } from "@/lib/services/invoices";
 import { logActivity } from "@/lib/services/activity";
 import { errCodeOf, getContext } from "@/lib/action-helpers";
 
@@ -40,4 +40,20 @@ export async function createInvoiceAction(formData: FormData) {
 
 export async function recordInvoicePaymentAction(formData: FormData) {
   try { const { companyId } = await getContext(); await recordInvoicePayment(String(formData.get("invoiceId") || ""), companyId, Number(formData.get("amount") || 0)); revalidatePath("/invoices"); revalidatePath(`/invoices/${String(formData.get("invoiceId") || "")}`); return { success: true }; } catch (err) { return { errorCode: errCodeOf(err) }; }
+}
+
+export async function setInvoiceStatusAction(invoiceId: string, status: string) {
+  try {
+    const { companyId, role } = await getContext();
+    if (role !== "owner" && role !== "manager") return { errorCode: "errForbidden" };
+    if (status !== "sent" && status !== "cancelled") return { errorCode: "errGeneric" };
+    await updateInvoiceStatus(invoiceId, companyId, status);
+    revalidatePath("/invoices");
+    revalidatePath(`/invoices/${invoiceId}`);
+    return { success: true };
+  } catch (err) {
+    const m = err instanceof Error ? err.message : "";
+    if (m.includes("invoice_transition_invalid")) return { errorCode: "errInvoiceTransition" };
+    return { errorCode: errCodeOf(err) };
+  }
 }

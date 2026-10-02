@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, MapPin, Package } from "lucide-react";
+import { Camera, MapPin, Package, Search } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
 import { POStatusBadge } from "@/components/shared/StatusBadge";
 import { RequestStatusBadge } from "@/components/shared/RequestStatusBadge";
@@ -26,6 +26,8 @@ export default function EmployeeHome({ firstName, companyName, projects, myPOs, 
       <h1 className="text-2xl font-bold tracking-tight">{firstName ? t(greetingKey, { name: firstName }) : t("navHome")}</h1>
       {companyName && <p className="mt-1 text-sm text-slate-500">{companyName}</p>}
     </header>
+
+    <form action="/search" role="search" className="relative mb-5"><Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" /><input name="q" autoComplete="off" aria-label={t("searchEverything")} placeholder={t("searchEverything")} className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-9 pr-3 text-base outline-none focus:border-brand-500" /></form>
 
     {pendingReceipts.length > 0 && <section aria-label={t("empReceiptsDue")} className="mb-5 rounded-2xl border-2 border-red-300 bg-red-50 p-4">
       <p className="flex items-center gap-2 font-semibold text-red-800"><Camera className="h-5 w-5" />{t("empReceiptsDue")} ({pendingReceipts.length})</p>

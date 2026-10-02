@@ -4,6 +4,7 @@ import { getProjectById } from "@/lib/services/projects";
 import { getProjectTeam } from "@/lib/services/employees";
 import { getProjectMoney, getProjectTimeline, getProjectWaiting } from "@/lib/services/project-control";
 import { getMyPermissions } from "@/lib/auth";
+import { getProjectBilling } from "@/lib/services/invoices";
 import ProjectDetailClient from "./ProjectDetailClient";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,5 +49,6 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     companyId ? getProjectWaiting(id, companyId).catch(() => []) : Promise.resolve([]),
     companyId ? getProjectTimeline(id, companyId).catch(() => []) : Promise.resolve([]),
   ]);
-  return <ProjectDetailClient project={project} team={team} canManageTeam={canManageTeam} money={money} waiting={waiting} timeline={timeline} />;
+  const billing = canManageTeam && companyId ? await getProjectBilling(id, companyId).catch(() => null) : null;
+  return <ProjectDetailClient project={project} team={team} canManageTeam={canManageTeam} money={money} waiting={waiting} timeline={timeline} billing={billing} />;
 }
