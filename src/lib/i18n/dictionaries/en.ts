@@ -356,7 +356,7 @@ const en: Dictionary = {
   prTitle: "Title (optional)",
   bidDate: "Bid Date",
   prStatusDraft: "Draft",
-  prStatusSent: "Sent",
+  prStatusSent: "Waiting for the supplier",
   prStatusQuestion: "Question open",
   prStatusResponded: "Responded",
   prStatusAwarded: "Awarded",
@@ -1046,6 +1046,14 @@ const en: Dictionary = {
   marginTitle: "Project margin",
   marginLine: "Contract {contract} · actual cost {actual} + committed {committed}",
   marginResult: "Estimated margin: {amount} ({pct}%)",
+  prSteps: "Quote steps",
+  prStep1: "What you ask",
+  prStep2: "To whom",
+  prStep3: "Answers",
+  prStep4: "Decide",
+  prStep1Title: "1 · What you ask",
+  prStep2Title: "2 · Who you ask",
+  prStep3Title: "3 · Answers and decision",
 };
 
 export default en;

@@ -370,7 +370,7 @@ const es = {
   prTitle: "Título (opcional)",
   bidDate: "Bid Date",
   prStatusDraft: "Borrador",
-  prStatusSent: "Enviado",
+  prStatusSent: "Esperando al supply",
   prStatusQuestion: "Pregunta abierta",
   prStatusResponded: "Respondió",
   prStatusAwarded: "Adjudicado",
@@ -1060,6 +1060,14 @@ const es = {
   marginTitle: "Margen del proyecto",
   marginLine: "Contrato {contract} · costo real {actual} + comprometido {committed}",
   marginResult: "Margen estimado: {amount} ({pct}%)",
+  prSteps: "Pasos de la cotización",
+  prStep1: "Lo que pides",
+  prStep2: "A quién",
+  prStep3: "Respuestas",
+  prStep4: "Decidir",
+  prStep1Title: "1 · Lo que pides",
+  prStep2Title: "2 · A quién se lo pides",
+  prStep3Title: "3 · Respuestas y decisión",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

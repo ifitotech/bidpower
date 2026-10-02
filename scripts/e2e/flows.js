@@ -93,7 +93,8 @@ async function phase45(browser) {
   const link = (await linkBox.innerText()).trim();
   ok("pricing: supplier link generated", /\/supplier\/[a-f0-9]{64}$/.test(link));
   await o.reload();
-  ok("pricing: request is sent, waiting on supplier", (await o.getByText(/Enviado|Sent/).count()) > 0);
+  ok("pricing: the four steps are shown and the current one is marked", (await o.getByRole("list", { name: /Pasos de la cotización|Quote steps/ }).locator("li").count()) === 4 && (await o.locator("li[aria-current=step]").count()) === 1);
+  ok("pricing: request is sent, waiting on supplier", (await o.getByText(/Esperando al supply|Waiting for the supplier/).count()) > 0);
 
   // Supply, no account
   const sup = await page(browser, 390, 844, "en-US");
@@ -645,7 +646,7 @@ async function phaseFlow(browser) {
   await o.getByRole("button", { name: /Pedir cotización|Request quotes/ }).click();
   await o.waitForURL(/pricing\/[0-9a-f-]{36}$/, { timeout: 30000 });
   {
-    const sel = o.locator("section").filter({ hasText: /Enlaces para suppliers|Supplier links/ }).locator("select").first();
+    const sel = o.locator("section").filter({ hasText: /2 · A quién se lo pides|2 · Who you ask/ }).locator("select").first();
     await sel.selectOption({ label: "Acme Supply" });
     ok("connections: choosing the supplier offers its contacts and fills the email", (await o.getByText(/Laura Ventas/).count()) > 0 && (await o.locator("input[type=email]").first().inputValue()) === "laura@acme.test");
   }

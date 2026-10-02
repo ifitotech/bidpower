@@ -230,3 +230,9 @@ Cada fase se prueba de punta a punta antes de pasar a la siguiente y no mezcla f
 **R2 hecha (un solo camino de compra):** no existe la PO libre (`/pos/new` lleva a Material). Toda compra nace de una lista de material con "Comprar ya", o de la respuesta de un supply. La Cotización siempre parte de una lista (el servidor lo exige). El empleado tiene una sola puerta: "Pedir o comprar material".
 
 **Pendiente de decisión:** los estados `open` y `exception_*` siguen en la base de datos pero ya no se pueden alcanzar desde ninguna pantalla. Quitarlos requiere una migración; se hace junto con R5.
+
+**R3 hecha (cotización ordenada):** el detalle de una cotización muestra cuatro pasos en una franja (Lo que pides → A quién → Respuestas → Decidir), marca el paso actual y numera las secciones. El estado "Enviado" ahora dice "Esperando al supply", que es verdad sea cual sea el canal (enlace o cuenta conectada).
+
+**R4 hecha (propuesta → proyecto → factura):** aprobar una propuesta a mano mueve el proyecto igual que el enlace del cliente; una propuesta aprobada se factura en partes (30 %, 50 %, lo que falta) sin pasar de su total, y muestra lo facturado y el margen del proyecto.
+
+**Sigue pendiente:** R5 (envío real de correo y notificaciones; necesita elegir el proveedor de correo), R6 (supply y membresía) y quitar de la base de datos los estados de PO que ya no se usan.

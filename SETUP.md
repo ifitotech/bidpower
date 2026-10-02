@@ -284,3 +284,7 @@ In a new Proposal, the line "Description" suggests items from the company librar
 - Migration `20260817000027_proposal_approved_sets_contract.sql`: approving a proposal by hand (like the customer's link already did) gives a project without a contract value the proposal's total and moves a lead/quoted project to approved. A contract value that was already set is never overwritten.
 - An approved proposal shows "Billing": billed vs total, its invoices, and "Create invoice". The invoice form suggests the number (INV-0001...), offers 30%, 50% and "the rest", and refuses more than what is left (`errInvoiceTooMuch`). Only an approved proposal can be billed (`errInvoiceQuoteNotApproved`); client and project come from the proposal. Invoices are Owner/Manager work.
 - With cost permission the proposal also shows the project's margin (contract vs actual + committed cost; profit only with "view profit").
+
+## 34. R3: quote request in four steps
+
+The detail of a quote request shows a strip with four steps (what you ask, to whom, answers, decide), marks the current one and numbers the sections. The status "Sent" reads "Waiting for the supplier", which is true for a link and for a connected supply account.
