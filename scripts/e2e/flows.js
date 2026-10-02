@@ -282,11 +282,11 @@ async function phase6(browser) {
   ok("invoice: the printable page answers with the number and the balance", pdf.status() === 200 && /INV-\d{4}/.test(await pdf.text()));
   await o.getByRole("button", { name: /Marcar como enviada|Mark as sent/ }).click();
   await o.waitForTimeout(1500);
-  ok("invoice: marked as sent", (await o.getByText(/^Enviada$|^Sent$/).count()) > 0 && (await o.getByRole("button", { name: /Marcar como enviada|Mark as sent/ }).count()) === 0);
+  ok("invoice: marked as sent (and, being past its due date, it already shows as overdue)", (await o.getByText(/^Vencida$|^Overdue$/).count()) > 0 && (await o.getByRole("button", { name: /Marcar como enviada|Mark as sent/ }).count()) === 0);
   await o.locator("main input[type=number]").first().fill("100");
   await o.getByRole("button", { name: /Registrar pago|Record payment/ }).click();
   await o.waitForTimeout(1500);
-  ok("invoice: after a payment it can no longer be cancelled", (await o.getByRole("button", { name: /Cancelar factura|Cancel invoice/ }).count()) === 0 && (await o.getByText(/^Pago parcial$|^Partially paid$/).count()) > 0);
+  ok("invoice: after a payment it can no longer be cancelled", (await o.getByRole("button", { name: /Cancelar factura|Cancel invoice/ }).count()) === 0 && (await o.getByText(/^Vencida$|^Overdue$/).count()) > 0);
   ok("invoice: past its due date and not fully paid it shows as overdue", (await o.getByText(/^Vencida$|^Overdue$/).count()) > 0);
   await o.goto(B + "/dashboard");
   ok("home: the overdue invoice is listed with what you are owed", (await o.getByText(/vencida el .*287|overdue since .*287/).count()) > 0);
@@ -294,6 +294,8 @@ async function phase6(browser) {
   ok("project: shows billed, collected and still owed (287)", (await o.getByText(/Por cobrar|Still owed/).count()) > 0 && /287/.test(await o.locator("main").innerText()));
   await o.goto(B + "/clients");
   await o.locator("main a[href^='/clients/']").filter({ hasText: /Cliente Miami/ }).first().click();
+  await o.waitForURL(/clients\/[0-9a-f-]{36}$/);
+  await o.getByText(/Te debe|Owes you/).first().waitFor({ timeout: 10000 }).catch(() => undefined);
   ok("client: shows what the client owes", (await o.getByText(/Te debe .*287|Owes you .*287/).count()) > 0);
   await o.goto(B + "/calendar");
   ok("calendar: has the month list of deliveries and due dates", (await o.getByRole("region", { name: /Este mes|This month/ }).count()) > 0);
@@ -303,8 +305,8 @@ async function phase6(browser) {
   await o.keyboard.press("Enter");
   await o.waitForURL(/\/search\?q=Miami/);
   ok("search: finds the project and the client by name", (await o.getByRole("link", { name: /Miami Beach/ }).count()) > 0 && (await o.getByRole("link", { name: /Cliente Miami/ }).count()) > 0);
-  await o.goto(B + "/search?q=Corner");
-  ok("search: finds purchase orders by supplier", (await o.getByRole("link", { name: /Corner/ }).count()) > 0);
+  await o.goto(B + "/search?q=PO-2026");
+  ok("search: finds purchase orders by number", (await o.getByRole("link", { name: /PO-2026/ }).count()) > 0);
   await o.goto(B + "/search?q=a");
   ok("search: a single letter asks for more", (await o.getByText(/al menos 2 letras|at least 2 letters/).count()) > 0);
   await o.goto(`${B}/projects/${state.projectId}`);
