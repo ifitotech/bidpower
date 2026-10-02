@@ -98,6 +98,7 @@ async function phase45(browser) {
 
   // Supply, no account
   const sup = await page(browser, 390, 844, "en-US");
+  state.publicLinks = [...(state.publicLinks || []), link];
   await sup.goto(link);
   ok("supplier: sees company, no login", (await sup.locator("h1").innerText()).includes("Smoke Electric") && sup.url().includes("/supplier/"));
   ok("supplier: does NOT see the project name", (await sup.locator("body").innerText()).indexOf("Miami Beach") === -1);
@@ -229,6 +230,7 @@ async function phase6(browser) {
   ok("proposal: sent, waiting on the customer", (await o.getByText(/Enviada|Enviado|Sent/).count()) > 0);
 
   const cust = await page(browser, 390, 844, "en-US");
+  state.publicLinks = [...(state.publicLinks || []), link];
   await cust.goto(link);
   ok("customer: sees the proposal with total, no login", /1,290/.test(await cust.locator("main").innerText()) && cust.url().includes("/customer/"));
   ok("customer: sees no supplier/cost data", !/PO-|Graybar|Home Depot|margin|profit/i.test(await cust.locator("main").innerText()));
@@ -290,6 +292,7 @@ async function phase6(browser) {
   await coBox.waitFor({ timeout: 30000 });
   const coLink = (await coBox.innerText()).trim();
   const cust2 = await page(browser, 390, 844, "en-US");
+  state.publicLinks = [...(state.publicLinks || []), coLink];
   await cust2.goto(coLink);
   ok("customer: change order page shows the difference", /300/.test(await cust2.locator("main").innerText()));
   await cust2.getByLabel(/Your full name/).fill("Carlos Cliente");
@@ -383,6 +386,7 @@ async function phase9(browser) {
   ok("supply register: business type selector is hidden for supply", (await sp.locator("select[name=businessType]").count()) === 0);
   await sp.getByRole("button", { name: /Crear empresa|Create free company/ }).click();
   await sp.waitForURL("**/supply", { timeout: 30000 });
+  state.supply = sp;
   ok("supply: lands on the supply inbox", (await sp.getByText(/Bandeja|Inbox/).count()) > 0);
   await sp.goto(B + "/dashboard");
   ok("supply: contractor dashboard is not reachable (redirected)", sp.url().endsWith("/supply"));
@@ -770,11 +774,16 @@ async function phaseCrawl(browser) {
     ok(`crawl: employee reached ${emp.pages} pages, none broken, none scrolling sideways, no errors`, emp.bad.length === 0, emp.bad.slice(0, 12).join(" | "));
   }
   // The doors that need no login, on the three sizes
+  if (state.supply) {
+    const sup = await crawlAs(state.supply, "supply", ["/supply", "/supply/contractors"], 40);
+    ok(`crawl: the supply account reached ${sup.pages} pages, none broken, none scrolling sideways, no errors`, sup.bad.length === 0, sup.bad.slice(0, 12).join(" | "));
+  }
   const anon = await page(browser, 390, 844);
   const publicBad = [];
   const publicErrors = [];
   anon.on("pageerror", (e) => publicErrors.push(String(e.message).slice(0, 100)));
-  for (const path of ["/", "/login", "/register", "/forgot-password", "/reset-password", "/this-page-does-not-exist"]) {
+  const tokenPaths = (state.publicLinks || []).map((u) => u.replace(B, ""));
+  for (const path of ["/", "/login", "/register", "/forgot-password", "/reset-password", "/this-page-does-not-exist", ...tokenPaths]) {
     for (const [w, h, name] of VIEWPORTS) {
       await anon.setViewportSize({ width: w, height: h });
       publicErrors.length = 0;
@@ -787,7 +796,7 @@ async function phaseCrawl(browser) {
       if (publicErrors.length) publicBad.push(`${name} ${path} error: ${publicErrors[0]}`);
     }
   }
-  ok("crawl: the public pages (home, login, register, password, not found) answer on phone, tablet and desktop without errors or sideways scroll", publicBad.length === 0, publicBad.slice(0, 8).join(" | "));
+  ok("crawl: the public pages (home, login, register, password, not found, supplier and customer links) answer on phone, tablet and desktop without errors or sideways scroll", publicBad.length === 0, publicBad.slice(0, 8).join(" | "));
   // Offline: the installed app shows its own page instead of the browser error
   const sw = await state.owner.evaluate(async () => { const r = await navigator.serviceWorker.ready; return Boolean(r.active); }).catch(() => false);
   ok("pwa: the service worker is active", sw);
