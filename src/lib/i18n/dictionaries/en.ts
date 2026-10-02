@@ -1029,6 +1029,23 @@ const en: Dictionary = {
   prListHint: "The materials and the project come from the list.",
   onlyProject: "Only: {name}",
   showAll: "Show all",
+  invFromProposal: "Invoice for Proposal {number}",
+  invBilled: "Billed",
+  invLeft: "Left",
+  invHowMuch: "How much will you bill?",
+  invRest: "The rest",
+  invFullDesc: "Proposal {number}",
+  invPercentDesc: "{pct}% of Proposal {number}",
+  invRestDesc: "Balance of Proposal {number}",
+  invAllBilled: "This proposal is fully billed.",
+  errInvoiceQuoteNotApproved: "Only an approved proposal can be billed.",
+  errInvoiceTooMuch: "The amount is more than what is left to bill on the proposal.",
+  createInvoiceFromProposal: "Create invoice",
+  billingTitle: "Billing",
+  billingProgress: "Billed {billed} of {total}",
+  marginTitle: "Project margin",
+  marginLine: "Contract {contract} · actual cost {actual} + committed {committed}",
+  marginResult: "Estimated margin: {amount} ({pct}%)",
 };
 
 export default en;

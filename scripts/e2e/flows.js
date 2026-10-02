@@ -241,6 +241,30 @@ async function phase6(browser) {
   await o.reload();
   ok("proposal: approved by the customer's name", (await o.getByText(/Carlos Cliente/).count()) > 0);
   ok("proposal: no signature is claimed", (await o.getByText(/no es una firma|not a handwritten signature/i).count()) > 0);
+  // Approved proposal -> bill it in parts, never more than its total
+  const quoteUrl = o.url();
+  await o.reload();
+  ok("billing: an approved proposal offers to create an invoice", (await o.getByRole("link", { name: /Crear factura|Create invoice/ }).count()) > 0);
+  await o.getByRole("link", { name: /Crear factura|Create invoice/ }).click();
+  await o.waitForURL(/invoices\/new\?quoteId=/);
+  ok("billing: the invoice number is suggested", /INV-\d{4}/.test(await o.locator("input[name=number]").inputValue()));
+  await o.getByRole("button", { name: /^30%/ }).click();
+  ok("billing: 30% of 1,290 fills the amount (387)", (await o.locator("input[name=amount]").inputValue()) === "387");
+  await o.getByRole("button", { name: /Guardar borrador|Save draft/ }).click();
+  await o.waitForURL(quoteUrl, { timeout: 30000 });
+  ok("billing: progress shows what has been billed", /387/.test(await o.locator("main").innerText()) && /Facturado|Billed/.test(await o.locator("main").innerText()));
+  await o.getByRole("link", { name: /Crear factura|Create invoice/ }).click();
+  await o.getByRole("button", { name: /Lo que falta|The rest/ }).click();
+  ok("billing: the rest is what is left (903)", (await o.locator("input[name=amount]").inputValue()) === "903");
+  await o.locator("main form").evaluate((f) => { f.noValidate = true; });
+  await o.locator("input[name=amount]").fill("1000");
+  await o.getByRole("button", { name: /Guardar borrador|Save draft/ }).click();
+  await o.locator("p[role=alert]").waitFor({ timeout: 15000 });
+  ok("billing: more than what is left is refused", /mayor a lo que falta|more than what is left/.test(await o.locator("p[role=alert]").innerText()));
+  await o.locator("input[name=amount]").fill("903");
+  await o.getByRole("button", { name: /Guardar borrador|Save draft/ }).click();
+  await o.waitForURL(quoteUrl, { timeout: 30000 });
+  ok("billing: fully billed, no more invoice button", (await o.getByRole("link", { name: /Crear factura|Create invoice/ }).count()) === 0);
   await o.goto(`${B}/projects/${state.projectId}`);
   ok("project: contract value taken from the approved proposal", /1[.,]290/.test(await o.locator("main").innerText()));
 

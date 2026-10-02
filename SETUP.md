@@ -278,3 +278,9 @@ In a new Proposal, the line "Description" suggests items from the company librar
 - Lists of expenses, purchase orders, proposals and invoices accept `?projectId=` (the project's tools use it) and show a chip to clear the filter.
 - Removed: notifications page and service, time clock, unused document upload, PO exception flow, 124 unused texts.
 - e2e helpers: `createList` and `buyOne` in `scripts/e2e/lib.js`.
+
+## 33. R4: proposal -> project -> invoice, with margin
+
+- Migration `20260817000027_proposal_approved_sets_contract.sql`: approving a proposal by hand (like the customer's link already did) gives a project without a contract value the proposal's total and moves a lead/quoted project to approved. A contract value that was already set is never overwritten.
+- An approved proposal shows "Billing": billed vs total, its invoices, and "Create invoice". The invoice form suggests the number (INV-0001...), offers 30%, 50% and "the rest", and refuses more than what is left (`errInvoiceTooMuch`). Only an approved proposal can be billed (`errInvoiceQuoteNotApproved`); client and project come from the proposal. Invoices are Owner/Manager work.
+- With cost permission the proposal also shows the project's margin (contract vs actual + committed cost; profit only with "view profit").

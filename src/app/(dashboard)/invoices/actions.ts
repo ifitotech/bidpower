@@ -2,20 +2,37 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createInvoice, recordInvoicePayment } from "@/lib/services/invoices";
+import { createInvoice, getQuoteInvoicing, recordInvoicePayment } from "@/lib/services/invoices";
 import { logActivity } from "@/lib/services/activity";
 import { errCodeOf, getContext } from "@/lib/action-helpers";
 
 export async function createInvoiceAction(formData: FormData) {
   try {
-    const { userId, companyId } = await getContext();
+    const { userId, companyId, role } = await getContext();
+    if (role !== "owner" && role !== "manager") return { errorCode: "errForbidden" };
     const description = String(formData.get("description") || "").trim();
     const amount = Number(formData.get("amount") || 0);
-    if (!description || amount <= 0) return { errorCode: "errInvoiceRequired" };
-    const invoice = await createInvoice(companyId, userId, { number: String(formData.get("number") || `INV-${Date.now()}`), clientId: String(formData.get("clientId") || "") || undefined, dueDate: String(formData.get("dueDate") || "") || undefined, notes: String(formData.get("notes") || "") || undefined, items: [{ description, quantity: 1, unitPrice: amount }] });
+    if (!description || !(amount > 0)) return { errorCode: "errInvoiceRequired" };
+    const quoteId = String(formData.get("quoteId") || "");
+    let clientId = String(formData.get("clientId") || "") || undefined;
+    let projectId: string | undefined;
+    if (quoteId) {
+      // Billing a proposal: client and project come from it, and the proposal's total cannot be exceeded.
+      const billing = await getQuoteInvoicing(companyId, quoteId);
+      if (!billing || billing.quote.status !== "approved") return { errorCode: "errInvoiceQuoteNotApproved" };
+      if (amount > billing.remaining + 0.005) return { errorCode: "errInvoiceTooMuch" };
+      clientId = billing.quote.client_id ?? undefined;
+      projectId = billing.quote.project_id ?? undefined;
+    }
+    const invoice = await createInvoice(companyId, userId, {
+      number: String(formData.get("number") || `INV-${Date.now()}`), clientId, projectId, quoteId: quoteId || undefined,
+      dueDate: String(formData.get("dueDate") || "") || undefined, notes: String(formData.get("notes") || "") || undefined,
+      items: [{ description, quantity: 1, unitPrice: amount }],
+    });
     await logActivity({ companyId, userId, action: "create", entityType: "invoice", entityId: invoice.id, newValues: { number: invoice.number } });
     revalidatePath("/invoices");
-    redirect("/invoices");
+    if (quoteId) revalidatePath(`/quotes/${quoteId}`);
+    redirect(quoteId ? `/quotes/${quoteId}` : "/invoices");
   } catch (err) {
     return { errorCode: errCodeOf(err) };
   }

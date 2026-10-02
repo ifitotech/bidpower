@@ -2,6 +2,9 @@ import { notFound, redirect } from "next/navigation";
 import { getActionContext } from "@/lib/action-context";
 import { getQuoteById } from "@/lib/services/quotes";
 import { getProposalExtras } from "@/lib/services/proposals";
+import { getQuoteInvoicing } from "@/lib/services/invoices";
+import { getProjectMoney } from "@/lib/services/project-control";
+import { getProjectById } from "@/lib/services/projects";
 import QuoteDetailClient from "./QuoteDetailClient";
 
 export const dynamic = "force-dynamic";
@@ -16,5 +19,12 @@ export default async function QuotePage({ params }: { params: Promise<{ id: stri
   const quote = await getQuoteById(id, c.companyId).catch(() => null);
   if (!quote) notFound();
   const extras = await getProposalExtras(id, c.companyId, quote.number).catch(() => null);
-  return <QuoteDetailClient quote={quote} extras={extras} canManage={c.role === "owner" || c.role === "manager"} />;
+  const canManage = c.role === "owner" || c.role === "manager";
+  // Approved proposals show what has been billed and, with cost permission, how the project is doing against the contract.
+  const approved = quote.status === "approved";
+  const billing = canManage && approved ? await getQuoteInvoicing(c.companyId, id).catch(() => null) : null;
+  const projectId = (quote as { project_id?: string | null }).project_id ?? null;
+  const project = approved && projectId ? await getProjectById(projectId, c.companyId).catch(() => null) : null;
+  const money = project ? await getProjectMoney(projectId as string, c.companyId, Number((project as { contract_value?: number }).contract_value ?? 0), Number((project as { budget_total?: number }).budget_total ?? 0), c.perms).catch(() => null) : null;
+  return <QuoteDetailClient quote={quote} extras={extras} canManage={canManage} billing={billing ? { invoiced: billing.invoiced, total: billing.quote.total, remaining: billing.remaining, invoices: billing.invoices } : null} money={money ? { contractValue: money.contractValue, actualCost: money.actualCost, committedCost: money.committedCost, estimatedProfit: money.estimatedProfit, estimatedMargin: money.estimatedMargin } : null} />;
 }

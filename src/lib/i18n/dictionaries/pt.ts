@@ -1030,6 +1030,23 @@ const pt: Dictionary = {
   prListHint: "Os materiais e o projeto vêm da lista.",
   onlyProject: "Somente: {name}",
   showAll: "Ver tudo",
+  invFromProposal: "Fatura da Proposta {number}",
+  invBilled: "Faturado",
+  invLeft: "Falta",
+  invHowMuch: "Quanto vai cobrar?",
+  invRest: "O restante",
+  invFullDesc: "Proposta {number}",
+  invPercentDesc: "{pct}% da Proposta {number}",
+  invRestDesc: "Saldo da Proposta {number}",
+  invAllBilled: "Esta proposta já está totalmente faturada.",
+  errInvoiceQuoteNotApproved: "Só uma proposta aprovada pode ser faturada.",
+  errInvoiceTooMuch: "O valor é maior do que falta faturar da proposta.",
+  createInvoiceFromProposal: "Criar fatura",
+  billingTitle: "Faturamento",
+  billingProgress: "Faturado {billed} de {total}",
+  marginTitle: "Margem do projeto",
+  marginLine: "Contrato {contract} · custo real {actual} + comprometido {committed}",
+  marginResult: "Margem estimada: {amount} ({pct}%)",
 };
 
 export default pt;

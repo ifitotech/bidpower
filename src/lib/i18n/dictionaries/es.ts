@@ -1043,6 +1043,23 @@ const es = {
   prListHint: "Los materiales y el proyecto salen de la lista.",
   onlyProject: "Solo: {name}",
   showAll: "Ver todo",
+  invFromProposal: "Factura de la Propuesta {number}",
+  invBilled: "Facturado",
+  invLeft: "Falta",
+  invHowMuch: "¿Cuánto vas a cobrar?",
+  invRest: "Lo que falta",
+  invFullDesc: "Propuesta {number}",
+  invPercentDesc: "{pct}% de la Propuesta {number}",
+  invRestDesc: "Saldo de la Propuesta {number}",
+  invAllBilled: "Esta propuesta ya está facturada completa.",
+  errInvoiceQuoteNotApproved: "Solo se factura una propuesta aprobada.",
+  errInvoiceTooMuch: "El monto es mayor a lo que falta por facturar de la propuesta.",
+  createInvoiceFromProposal: "Crear factura",
+  billingTitle: "Facturación",
+  billingProgress: "Facturado {billed} de {total}",
+  marginTitle: "Margen del proyecto",
+  marginLine: "Contrato {contract} · costo real {actual} + comprometido {committed}",
+  marginResult: "Margen estimado: {amount} ({pct}%)",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each
