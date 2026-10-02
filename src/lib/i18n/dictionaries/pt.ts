@@ -1055,6 +1055,10 @@ const pt: Dictionary = {
   prStep1Title: "1 · O que você pede",
   prStep2Title: "2 · A quem você pede",
   prStep3Title: "3 · Respostas e decisão",
+  installTitle: "Instale o BidPower na tela inicial",
+  installHint: "Abre como um app, em tela cheia e mais rápido.",
+  installButton: "Instalar",
+  installIos: "No Safari toque em Compartilhar e depois em \"Adicionar à Tela de Início\".",
 };
 
 export default pt;

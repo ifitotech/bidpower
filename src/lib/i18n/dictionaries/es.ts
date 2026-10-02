@@ -1068,6 +1068,10 @@ const es = {
   prStep1Title: "1 · Lo que pides",
   prStep2Title: "2 · A quién se lo pides",
   prStep3Title: "3 · Respuestas y decisión",
+  installTitle: "Instala BidPower en tu pantalla de inicio",
+  installHint: "Se abre como una app, a pantalla completa y más rápido.",
+  installButton: "Instalar",
+  installIos: "En Safari toca Compartir y luego \"Agregar a pantalla de inicio\".",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

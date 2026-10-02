@@ -731,6 +731,76 @@ async function phaseEmployee(browser) {
   ok("owner home: team purchases lists who bought where", (await o.getByRole("region", { name: /Compras del equipo|Team purchases/ }).getByText(/compró en Corner|bought at Corner/).count()) > 0);
 }
 
+// Walks the whole app by following its own links, as the owner and as the employee, on a phone, a tablet and a desktop.
+// Every page must answer, throw no error, and not scroll sideways.
+async function phaseCrawl(browser) {
+  const VIEWPORTS = [[390, 844, "phone"], [820, 1180, "tablet"], [1300, 900, "desktop"]];
+  const skip = /^\/(api|auth)\b|logout|\/(customer|supplier|invite)\//;
+  const crawlAs = async (pg, who, seeds, max) => {
+    const seen = new Set(), queue = [...seeds], bad = [];
+    const errors = [];
+    pg.on("pageerror", (e) => errors.push(String(e.message).slice(0, 120)));
+    pg.on("console", (m) => { if (m.type() === "error" && !/favicon|Failed to load resource.*(404|401)/.test(m.text())) errors.push(m.text().slice(0, 120)); });
+    while (queue.length && seen.size < max) {
+      const path = queue.shift();
+      const key = path.split("#")[0];
+      if (seen.has(key) || skip.test(key)) continue;
+      seen.add(key);
+      for (const [w, h, name] of VIEWPORTS) {
+        await pg.setViewportSize({ width: w, height: h });
+        errors.length = 0;
+        const res = await pg.goto(B + key, { waitUntil: "networkidle" }).catch(() => null);
+        const status = res ? res.status() : 0;
+        const overflow = await pg.evaluate(() => document.documentElement.scrollWidth - window.innerWidth).catch(() => 0);
+        if (status >= 400 || status === 0) bad.push(`${who} ${name} ${key} -> ${status}`);
+        else if (overflow > 1) bad.push(`${who} ${name} ${key} scrolls sideways by ${overflow}px`);
+        if (errors.length) bad.push(`${who} ${name} ${key} error: ${errors[0]}`);
+        if (name === "phone" && status < 400) {
+          const hrefs = await pg.$$eval("a[href^='/']", (as) => as.map((a) => a.getAttribute("href")));
+          for (const href of hrefs) if (href && !seen.has(href.split("#")[0]) && !queue.includes(href)) queue.push(href);
+        }
+      }
+    }
+    return { pages: seen.size, bad };
+  };
+  const owner = await crawlAs(state.owner, "owner", ["/dashboard", "/more"], 140);
+  ok(`crawl: owner reached ${owner.pages} pages, none broken, none scrolling sideways, no errors`, owner.bad.length === 0, owner.bad.slice(0, 12).join(" | "));
+  if (state.emp) {
+    const emp = await crawlAs(state.emp, "employee", ["/dashboard", "/more"], 60);
+    ok(`crawl: employee reached ${emp.pages} pages, none broken, none scrolling sideways, no errors`, emp.bad.length === 0, emp.bad.slice(0, 12).join(" | "));
+  }
+  // The doors that need no login, on the three sizes
+  const anon = await page(browser, 390, 844);
+  const publicBad = [];
+  const publicErrors = [];
+  anon.on("pageerror", (e) => publicErrors.push(String(e.message).slice(0, 100)));
+  for (const path of ["/", "/login", "/register", "/forgot-password", "/reset-password", "/this-page-does-not-exist"]) {
+    for (const [w, h, name] of VIEWPORTS) {
+      await anon.setViewportSize({ width: w, height: h });
+      publicErrors.length = 0;
+      const res = await anon.goto(B + path, { waitUntil: "networkidle" }).catch(() => null);
+      const expected = 200;
+      const unknownToLogin = path === "/this-page-does-not-exist" && anon.url().includes("/login");
+      const overflow = await anon.evaluate(() => document.documentElement.scrollWidth - window.innerWidth).catch(() => 0);
+      if (!res || (res.status() !== expected && !(res.status() === 404) && !unknownToLogin)) publicBad.push(`${name} ${path} -> ${res ? res.status() : 0}`);
+      else if (overflow > 1) publicBad.push(`${name} ${path} scrolls sideways by ${overflow}px`);
+      if (publicErrors.length) publicBad.push(`${name} ${path} error: ${publicErrors[0]}`);
+    }
+  }
+  ok("crawl: the public pages (home, login, register, password, not found) answer on phone, tablet and desktop without errors or sideways scroll", publicBad.length === 0, publicBad.slice(0, 8).join(" | "));
+  // Offline: the installed app shows its own page instead of the browser error
+  const sw = await state.owner.evaluate(async () => { const r = await navigator.serviceWorker.ready; return Boolean(r.active); }).catch(() => false);
+  ok("pwa: the service worker is active", sw);
+  // (Playwright cannot cut the network for a service worker, so this checks that the offline page is stored and is the right one.)
+  const offlineText = await state.owner.evaluate(async () => { const r = await caches.match("/offline.html"); return r ? await r.text() : ""; });
+  ok("pwa: the friendly offline page is stored for when the network is down", /Sin conexión/.test(offlineText) && /You are offline/.test(offlineText) && /Sem conexão/.test(offlineText));
+  const mani = await state.owner.request.get(B + "/manifest.json");
+  const icons = (await mani.json()).icons;
+  const iconStatus = await Promise.all(icons.map((i) => state.owner.request.get(B + i.src).then((r) => r.status())));
+  ok("pwa: the manifest and all its icons load", mani.status() === 200 && iconStatus.every((s) => s === 200));
+  await state.owner.setViewportSize({ width: 1300, height: 900 });
+}
+
 (async () => {
   const browser = await launch();
   try {
@@ -748,6 +818,7 @@ async function phaseEmployee(browser) {
     if (want("all") || want("lang")) await phaseLang(browser);
     if (want("all") || want("flow")) await phaseFlow(browser);
     if (want("all") || want("emp")) await phaseEmployee(browser);
+    if (only === "all") await phaseCrawl(browser);
   } catch (e) {
     console.error("ERROR", e.message.split("\n").slice(0, 4).join(" | "));
     process.exitCode = 2;

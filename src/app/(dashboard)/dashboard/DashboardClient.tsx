@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AlertTriangle, Briefcase, ChevronRight, Clock3, FileText, MapPin, Package, Plus, Receipt } from "lucide-react";
 import { ProjectStatusBadge } from "@/components/shared/StatusBadge";
+import { formatCurrency } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
 import { APP_NAME } from "@/lib/constants";
 import { Logo } from "@/components/shared/Logo";
@@ -73,7 +74,7 @@ export default function DashboardClient({
         <section className="mb-6" aria-label={t("teamPurchases")}>
           <h2 className="mb-2 text-sm font-bold">{t("teamPurchases")}</h2>
           {team.overdue.length > 0 && <ul className="mb-2 space-y-2">{team.overdue.map((o) => <li key={o.who} className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><Receipt className="h-4 w-4 shrink-0" />{t("teamReceiptsOverdue", { name: o.who, count: String(o.count), days: String(o.days) })}</li>)}</ul>}
-          {team.recent.length > 0 && <ul className="space-y-2">{team.recent.map((p) => <li key={p.id}><Link href={`/pos/${p.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"><span className="min-w-0"><span className="block truncate text-sm font-semibold">{t("teamBought", { name: p.who ?? "—", vendor: p.vendor })}</span><span className="block truncate text-xs text-slate-500">{[p.number, p.project, p.amount != null ? `$${p.amount.toLocaleString()}` : null].filter(Boolean).join(" · ")}</span></span><POStatusBadge status={p.status} /></Link></li>)}</ul>}
+          {team.recent.length > 0 && <ul className="space-y-2">{team.recent.map((p) => <li key={p.id}><Link href={`/pos/${p.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"><span className="min-w-0"><span className="block truncate text-sm font-semibold">{t("teamBought", { name: p.who ?? "—", vendor: p.vendor })}</span><span className="block truncate text-xs text-slate-500">{[p.number, p.project, p.amount != null ? formatCurrency(p.amount) : null].filter(Boolean).join(" · ")}</span></span><POStatusBadge status={p.status} /></Link></li>)}</ul>}
         </section>
       )}
 

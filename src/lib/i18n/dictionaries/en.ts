@@ -1054,6 +1054,10 @@ const en: Dictionary = {
   prStep1Title: "1 · What you ask",
   prStep2Title: "2 · Who you ask",
   prStep3Title: "3 · Answers and decision",
+  installTitle: "Install BidPower on your home screen",
+  installHint: "It opens like an app, full screen and faster.",
+  installButton: "Install",
+  installIos: "In Safari tap Share and then \"Add to Home Screen\".",
 };
 
 export default en;
