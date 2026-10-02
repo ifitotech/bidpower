@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // End-to-end flows (phases 3+), run against the local harness (real PostgREST + RLS).
-const { BASE: B, RUN, ok, failures, launch, page, register, createProject, inviteEmployee, createList, buyOne } = require("./lib");
+const { BASE: B, RUN, PASSWORD, ok, failures, launch, page, register, createProject, inviteEmployee, createList, buyOne } = require("./lib");
 const only = process.argv[2] || "all";
 const want = (n) => only === "all" || only === n;
 const state = {};
@@ -400,6 +400,17 @@ async function phase9(browser) {
   await sp.getByRole("button", { name: /Generar código|Generate code/ }).click();
   const code = (await sp.getByTestId("connect-code").innerText()).trim();
   ok("supply: single-use code generated (24 hex)", /^[a-f0-9]{24}$/.test(code));
+  const joinLink = (await sp.getByTestId("connect-link").innerText()).trim();
+  ok("supply: a link to share carries the code", joinLink.endsWith(`/suppliers?code=${code}`));
+  // The contractor opens the link signed out: login first, then straight to the supplier page with the code filled in
+  const guest = await page(browser, 390, 844);
+  await guest.goto(joinLink);
+  ok("link: signed-out visitor goes to login and remembers where they were going", guest.url().includes("/login"));
+  await guest.locator("input[type=email]").fill(`owner-${RUN}@bidpower-smoke.test`);
+  await guest.locator("input[type=password]").fill(PASSWORD);
+  await guest.getByRole("button", { name: /^Entrar$|^Sign in$|^Log in$/ }).click();
+  await guest.waitForURL(/\/suppliers\?code=/, { timeout: 30000 });
+  ok("link: after login the supplier page opens with the code already typed", (await guest.getByLabel(/Código que te dio el supply|Code the supply gave you/).inputValue()) === code);
   await o.goto(B + "/suppliers");
   await o.getByLabel(/Código que te dio el supply|Code the supply gave you/).fill("0".repeat(24));
   await o.getByRole("button", { name: /Conectar con un código|Connect with a code/ }).last().click();

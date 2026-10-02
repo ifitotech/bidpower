@@ -1059,6 +1059,10 @@ const pt: Dictionary = {
   installHint: "Abre como um app, em tela cheia e mais rápido.",
   installButton: "Instalar",
   installIos: "No Safari toque em Compartilhar e depois em \"Adicionar à Tela de Início\".",
+  supplyShareLink: "Link para o seu cliente (empreiteiro)",
+  supplyCodeAlso: "Você também pode dar o código:",
+  supplyCodeOnce: "Mostrado uma única vez. O empreiteiro abre, entra na conta e fica conectado.",
+  supplyCopyLink: "Copiar link",
 };
 
 export default pt;

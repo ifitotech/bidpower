@@ -1072,6 +1072,10 @@ const es = {
   installHint: "Se abre como una app, a pantalla completa y más rápido.",
   installButton: "Instalar",
   installIos: "En Safari toca Compartir y luego \"Agregar a pantalla de inicio\".",
+  supplyShareLink: "Enlace para tu cliente (contratista)",
+  supplyCodeAlso: "También puedes darle el código:",
+  supplyCodeOnce: "Se muestra una sola vez. El contratista lo abre, entra a su cuenta y queda conectado.",
+  supplyCopyLink: "Copiar enlace",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

@@ -1058,6 +1058,10 @@ const en: Dictionary = {
   installHint: "It opens like an app, full screen and faster.",
   installButton: "Install",
   installIos: "In Safari tap Share and then \"Add to Home Screen\".",
+  supplyShareLink: "Link for your customer (contractor)",
+  supplyCodeAlso: "You can also give the code:",
+  supplyCodeOnce: "Shown only once. The contractor opens it, signs in and is connected.",
+  supplyCopyLink: "Copy link",
 };
 
 export default en;
