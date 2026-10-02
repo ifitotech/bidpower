@@ -288,3 +288,9 @@ In a new Proposal, the line "Description" suggests items from the company librar
 ## 34. R3: quote request in four steps
 
 The detail of a quote request shows a strip with four steps (what you ask, to whom, answers, decide), marks the current one and numbers the sections. The status "Sent" reads "Waiting for the supplier", which is true for a link and for a connected supply account.
+
+## 35. Supply connect link, login that remembers, closed PO exceptions
+
+- A supply house generating a connection code also gets a shareable link (`/suppliers?code=...`, with copy and WhatsApp). The contractor opens it, signs in and lands on Suppliers with the code typed.
+- Any link opened while signed out goes to the login with `?next=` and comes back there after signing in (only internal paths are accepted).
+- Migration `20260818000028_po_no_exception_states.sql`: no purchase order can enter the three exception statuses any more (trigger); existing rows, if any, are untouched.
