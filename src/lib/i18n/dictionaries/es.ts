@@ -1126,6 +1126,10 @@ const es = {
   importAlsoList: "Guardar también como lista (con las cantidades)",
   importListNamePh: "Nombre de la lista",
   importListSaved: "Lista “{name}” guardada con {count} ítems",
+  catalogBadge: "Catálogo",
+  catalogSection: "Del catálogo estándar",
+  catalogAddToLibrary: "Agregar a mi biblioteca",
+  catalogAdded: "{count} ítem(s) agregados a tu biblioteca",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

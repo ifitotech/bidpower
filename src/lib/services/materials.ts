@@ -15,6 +15,21 @@ const toItem = (m: MaterialRow): LibraryItem & { notes: string | null; allow_sub
   aliases: (m.aliases ?? []).map((a) => a.alias),
 });
 
+/**
+ * Brings a standard-catalog item into the company's own library (so it gets history, favorites and prices) and returns its id.
+ * If the company already has an item with the same name it is reused, never duplicated.
+ */
+export async function ensureMaterialFromCatalog(companyId: string, userId: string, c: { n: string; u: string; c: string; a: string[]; m?: string }): Promise<string> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("company_materials").select("id").eq("company_id", companyId).eq("description", c.n).limit(1);
+  if (error) throw error;
+  if (data && data.length) {
+    await supabase.from("company_materials").update({ is_active: true }).eq("id", data[0].id).eq("company_id", companyId).eq("is_active", false);
+    return data[0].id as string;
+  }
+  return createMaterial(companyId, userId, { description: c.n, unit: c.u, category: c.c, manufacturer: c.m ?? null, aliases: c.a });
+}
+
 /** Active library items of the company (RLS also limits the rows). */
 export async function getMaterials(companyId: string) {
   const supabase = await createClient();

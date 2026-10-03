@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ClipboardPaste, FileSpreadsheet, History, ListChecks, Minus, Plus, Save, Search, Star, Trash2, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
@@ -11,15 +11,19 @@ import { readSheetText } from "@/lib/read-sheet";
 import { MATERIAL_UNITS, findExact, normalizeUnit, parsePastedList, searchLibrary, splitQuantity, type LibraryItem } from "@/lib/materials";
 import { createMaterialRequestAction, saveListAction } from "@/app/(dashboard)/materials/actions";
 import { confirmAsk } from "@/lib/confirm";
+import { CATALOG_PREFIX, catalogToLibrary, type CatalogItem } from "@/lib/catalog/types";
+import { loadCatalog } from "@/lib/catalog/client";
 import type { RepeatableRequest } from "@/lib/services/material-requests";
 
-type Line = { key: string; materialId: string | null; description: string; quantity: number; unit: string; category: string | null; notes: string; allowSubstitution: boolean; saveToLibrary: boolean };
+type Line = { key: string; catalogId?: string | null; materialId: string | null; description: string; quantity: number; unit: string; category: string | null; notes: string; allowSubstitution: boolean; saveToLibrary: boolean };
 type LibItem = LibraryItem & { allow_substitution?: boolean };
 type SavedList = { id: string; name: string; items: { materialId: string; quantity: number }[] };
 
 let counter = 0;
 const nextKey = () => `l${++counter}`;
 const round2 = (n: number) => Math.round(n * 100) / 100;
+/** What a line points at: the company library item, or a standard-catalog item not yet in the library. */
+const refOf = (l: { materialId: string | null; catalogId?: string | null }) => l.materialId ?? (l.catalogId ? CATALOG_PREFIX + l.catalogId : null);
 
 /**
  * Building a material list should feel like filling a cart: tap + to add, tap again for one more, type a number for many.
@@ -38,18 +42,26 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
   const [pasteText, setPasteText] = useState("");
   const [saving, setSaving] = useState<string | null>(null); // list name being typed; null = closed
   const [flash, setFlash] = useState("");
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const typed = useMemo(() => splitQuantity(query), [query]);
-  const results = useMemo(() => searchLibrary(items, typed.text, typed.text ? 8 : 5), [items, typed.text]);
-  const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  // The standard catalog downloads the first time somebody types; the company's own items always rank first.
+  useEffect(() => { if (query.trim().length >= 2 && catalog.length === 0) void loadCatalog().then(setCatalog); }, [query, catalog.length]);
+  const catalogItems = useMemo(() => {
+    const own = new Set(items.map((i) => i.description.toLowerCase()));
+    return catalog.filter((c) => !own.has(c.n.toLowerCase())).map(catalogToLibrary);
+  }, [catalog, items]);
+  const everything = useMemo(() => [...items, ...catalogItems], [items, catalogItems]);
+  const results = useMemo(() => searchLibrary(typed.text ? everything : items, typed.text, typed.text ? 8 : 5), [everything, items, typed.text]);
+  const byId = useMemo(() => new Map(everything.map((i) => [i.id, i])), [everything]);
   const frequent = useMemo(() => (typed.text ? [] : [...items].filter((i) => i.use_count > 1 && !i.is_favorite).sort((a, b) => b.use_count - a.use_count).slice(0, 5)), [items, typed.text]);
   const favorites = useMemo(() => (typed.text ? [] : items.filter((i) => i.is_favorite).slice(0, 8)), [items, typed.text]);
   const qtyIn = useMemo(() => {
     const m = new Map<string, number>();
-    for (const l of lines) if (l.materialId) m.set(l.materialId, round2((m.get(l.materialId) ?? 0) + l.quantity));
+    for (const l of lines) { const r = refOf(l); if (r) m.set(r, round2((m.get(r) ?? 0) + l.quantity)); }
     return m;
   }, [lines]);
 
@@ -57,13 +69,18 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
 
   function addLine(line: Omit<Line, "key">) {
     setLines((prev) => {
-      const same = prev.find((l) => l.unit === line.unit && (line.materialId ? l.materialId === line.materialId : !l.materialId && l.description.toLowerCase() === line.description.toLowerCase()));
+      const ref = refOf(line);
+      const same = prev.find((l) => l.unit === line.unit && (ref ? refOf(l) === ref : !refOf(l) && l.description.toLowerCase() === line.description.toLowerCase()));
       if (same) return prev.map((l) => (l === same ? { ...l, quantity: round2(l.quantity + line.quantity) } : l));
       return [...prev, { ...line, key: nextKey() }];
     });
   }
 
   function addLibrary(item: LibItem, quantity = 1) {
+    if (item.id.startsWith(CATALOG_PREFIX)) {
+      addLine({ materialId: null, catalogId: item.id.slice(CATALOG_PREFIX.length), description: item.description, quantity, unit: item.unit, category: item.category, notes: "", allowSubstitution: false, saveToLibrary: false });
+      return;
+    }
     addLine({ materialId: item.id, description: item.description, quantity, unit: item.unit, category: item.category, notes: "", allowSubstitution: Boolean(item.allow_substitution), saveToLibrary: false });
   }
   function addFree(text: string, quantity = 1) {
@@ -79,17 +96,17 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
   }
   function tapRemoveOne(item: LibItem) {
     setLines((prev) => {
-      const line = prev.find((l) => l.materialId === item.id);
+      const line = prev.find((l) => refOf(l) === item.id);
       if (!line) return prev;
       return line.quantity > 1 ? prev.map((l) => (l === line ? { ...l, quantity: round2(l.quantity - 1) } : l)) : prev.filter((l) => l !== line);
     });
   }
   function setLibraryQty(item: LibItem, value: number) {
     setLines((prev) => {
-      const mine = prev.filter((l) => l.materialId === item.id);
+      const mine = prev.filter((l) => refOf(l) === item.id);
       if (mine.length === 0) return prev;
-      if (!(value > 0)) return prev.filter((l) => l.materialId !== item.id);
-      return prev.map((l) => (l === mine[0] ? { ...l, quantity: value } : l)).filter((l) => l === mine[0] || l.materialId !== item.id);
+      if (!(value > 0)) return prev.filter((l) => refOf(l) !== item.id);
+      return prev.map((l) => (l === mine[0] ? { ...l, quantity: value } : l)).filter((l) => l === mine[0] || refOf(l) !== item.id);
     });
   }
 
@@ -137,7 +154,7 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
     if (!name || lines.length === 0) return;
     if (lists.some((l) => l.name.toLowerCase() === name.toLowerCase()) && !(await confirmAsk(t("mbListReplaceConfirm", { name })))) return;
     setBusy(true);
-    const res = await saveListAction({ name, lines: lines.map((l) => ({ materialId: l.materialId, description: l.description, quantity: l.quantity, unit: l.unit, category: l.category })) }).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string }));
+    const res = await saveListAction({ name, lines: lines.map((l) => ({ materialId: l.materialId, catalogId: l.catalogId ?? null, description: l.description, quantity: l.quantity, unit: l.unit, category: l.category })) }).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string }));
     setBusy(false);
     if (res.errorCode) { setError(t(res.errorCode as keyof Dictionary)); return; }
     setError(null);
@@ -173,7 +190,7 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
     setBusy(true);
     const result = await createMaterialRequestAction({
       projectId, neededBy: neededBy || null, notes: notes || null,
-      lines: lines.map((l) => ({ materialId: l.materialId, description: l.description, quantity: l.quantity, unit: l.unit, category: l.category, notes: l.notes, allowSubstitution: l.allowSubstitution, saveToLibrary: l.saveToLibrary })),
+      lines: lines.map((l) => ({ materialId: l.materialId, catalogId: l.catalogId ?? null, description: l.description, quantity: l.quantity, unit: l.unit, category: l.category, notes: l.notes, allowSubstitution: l.allowSubstitution, saveToLibrary: l.saveToLibrary })),
     }).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string; id?: string }));
     if (result.errorCode) { setError(t(result.errorCode as keyof Dictionary)); setBusy(false); return; }
     router.push(`/projects/${projectId}/materials/${result.id}`);
@@ -190,7 +207,7 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
       <button type="button" onClick={() => tapAdd(item)} aria-label={`${t("mbAddOne")}: ${item.description}`} className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-2 py-2 text-left text-sm">
         {item.is_favorite ? <Star className="h-4 w-4 shrink-0 fill-amber-400 text-amber-400" /> : <span className="w-4 shrink-0" />}
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium">{item.description}</span>
+          <span className="block truncate font-medium">{item.description}{item.id.startsWith(CATALOG_PREFIX) && <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase text-slate-500">{t("catalogBadge")}</span>}</span>
           <span className="block truncate text-xs text-slate-400">{[item.manufacturer, item.catalog_number, item.unit, hint ?? (item.use_count > 1 ? t("mbUsedTimes", { count: String(item.use_count) }) : "")].filter(Boolean).join(" · ")}</span>
         </span>
       </button>

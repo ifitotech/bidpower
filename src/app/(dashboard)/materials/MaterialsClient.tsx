@@ -12,7 +12,9 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import type { PricePoint } from "@/lib/services/materials";
 import { IMPORT_TEMPLATE, MAX_IMPORT_ROWS, parseMaterialImport } from "@/lib/material-import";
 import { readSheetText } from "@/lib/read-sheet";
-import { importMaterialsAction, getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
+import { catalogToLibrary, type CatalogItem } from "@/lib/catalog/types";
+import { loadCatalog } from "@/lib/catalog/client";
+import { addCatalogItemsAction, importMaterialsAction, getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
 
 type Item = LibraryItem & { notes?: string | null; allow_substitution?: boolean };
 type SavedList = { id: string; name: string; items: { materialId: string; quantity: number }[] };
@@ -46,6 +48,14 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
     getMaterialPricesAction(draft.id).then((r) => { if (live) setPrices(r.prices ?? []); }).catch(() => { if (live) setPrices([]); });
     return () => { live = false; };
   }, [draft?.id, canViewCosts]);
+  // Standard-catalog suggestions for what is being searched (downloaded the first time somebody searches).
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  useEffect(() => { if (query.trim().length >= 2 && catalog.length === 0) void loadCatalog().then(setCatalog); }, [query, catalog.length]);
+  const catalogMatches = useMemo(() => {
+    if (query.trim().length < 2 || catalog.length === 0) return [];
+    const own = new Set(items.map((i) => i.description.toLowerCase()));
+    return searchLibrary(catalog.filter((c) => !own.has(c.n.toLowerCase())).map(catalogToLibrary), query, 6);
+  }, [catalog, items, query]);
   const shown = useMemo(() => searchLibrary(items, query, query ? 60 : 200), [items, query]);
   const input = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-brand-500";
 
@@ -77,6 +87,10 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
     {(error || msg) && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error ? t("errLoadMaterials") : msg}</div>}
     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("search")} aria-label={t("search")} className={`${input} mb-3`} />
 
+    {catalogMatches.length > 0 && !draft && <section className="mb-3 rounded-xl border border-slate-200 bg-white" aria-label={t("catalogSection")}>
+      <p className="px-4 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t("catalogSection")}</p>
+      <ul className="divide-y divide-slate-50">{catalogMatches.map((c) => <li key={c.id} className="flex min-h-12 items-center gap-2 px-4 py-1.5 text-sm"><span className="min-w-0 flex-1 truncate">{c.description}</span><button type="button" disabled={busy} onClick={() => run(async () => { const r = await addCatalogItemsAction([c.id.slice(4)]); if (r.success) setNotice(t("catalogAdded", { count: String(r.added ?? 0) })); return r; })} className="min-h-10 shrink-0 rounded-lg border border-brand-500 px-3 text-xs font-semibold text-brand-700 disabled:opacity-40">{t("catalogAddToLibrary")}</button></li>)}</ul>
+    </section>}
     {query.trim().length >= 2 && !draft && <button type="button" onClick={() => setDraft({ ...EMPTY, description: query.trim() })} className="mb-3 flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed border-brand-500 px-4 text-left text-sm font-medium text-brand-700 hover:bg-brand-50"><Plus className="h-4 w-4" />{t("mbCreateFromSearch", { text: query.trim() })}</button>}
 
     {importing && <div className="mb-4 space-y-3 rounded-xl border border-brand-500 bg-white p-4">

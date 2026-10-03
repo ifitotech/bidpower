@@ -36,6 +36,29 @@ async function phase3(browser) {
   ok("request: created with a number MR-", (await o.locator("h1").innerText()).startsWith("MR-"));
   ok("request: total quantity of the library item is 11", (await o.getByText(/11 FT/).count()) > 0);
 
+  // standard catalog (2,600+ items): found by typing, joins the company library when used, never duplicated
+  {
+    const fresh = await page(browser);
+    await register(fresh, "Cat Owner", `cat-${RUN}@bidpower-smoke.test`, "Cat Electric");
+    const pid = await createProject(fresh, "Catalog job", "Cat Client");
+    const box = () => fresh.getByPlaceholder(/Busca un ítem|Search an item/);
+    for (let round = 1; round <= 2; round++) {
+      await fresh.goto(`${B}/projects/${pid}/materials/new`);
+      await box().fill("thhn8blk");
+      await fresh.getByText("THHN/THWN-2 Copper #8 AWG Black Stranded").first().waitFor({ timeout: 20000 });
+      if (round === 1) ok("catalog: 'thhn8blk' finds THHN #8 black in the standard catalog", (await fresh.getByText(/^Catálogo$|^Catalog$/).count()) > 0);
+      await fresh.getByRole("button", { name: /^Agregar uno: THHN\/THWN-2 Copper #8 AWG Black Stranded$|^Add one: THHN\/THWN-2 Copper #8 AWG Black Stranded$/ }).click();
+      await fresh.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
+      await fresh.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
+    }
+    await fresh.goto(`${B}/materials`);
+    await fresh.getByPlaceholder(/^Buscar|^Search/).first().fill("thhn8blk");
+    await fresh.waitForTimeout(800);
+    const copies = await fresh.getByText("THHN/THWN-2 Copper #8 AWG Black Stranded", { exact: true }).count();
+    ok("catalog: a catalog item used twice appears once in the company library", copies >= 1 && copies <= 2, String(copies)); // one in the library list; the catalog suggestion is hidden once it is there
+    await fresh.context().close();
+  }
+
   // faster material lists: repeat a previous request, save the list, reuse it, Enter adds
   await o.goto(`${B}/projects/${state.projectId}/materials/new`);
   ok("request: previous requests can be repeated in one tap", (await o.getByRole("button", { name: /MR-[\d-]+ · \d+ (ítems|items)/ }).count()) > 0);

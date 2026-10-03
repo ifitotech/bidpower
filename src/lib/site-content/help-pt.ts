@@ -95,7 +95,7 @@ export const helpPt: HelpTopic[] = [
   { id: "materiais", title: "Materiais", blurb: "Biblioteca, listas de material e pedidos da equipe.", articles: [
     { id: "biblioteca", q: "Para que serve a biblioteca de materiais?", keywords: "biblioteca itens apelidos favoritos", a: [
       "É seu catálogo próprio de itens que você pede com frequência. Cada item tem descrição, número de peça, fabricante, unidade, categoria, notas e apelidos de campo (por exemplo “romex” ou “mud ring”) para achá-lo do jeito que você fala na obra. Você pode marcar favoritos. Ela aprende sozinha: o que você adiciona a uma lista como texto livre pode ser salvo na biblioteca.",
-      "Para adicionar um: Mais → Material → Biblioteca → Adicionar item. Arquivar um item não altera pedidos anteriores.",
+      "O BidPower também traz um catálogo padrão com mais de 2600 materiais elétricos (fio, conduíte, fittings, caixas, dispositivos, disjuntores, painéis, luminárias…): ao buscar em uma lista de material ele aparece com a etiqueta “Catálogo” e, ao usá-lo, passa sozinho para sua biblioteca. A busca entende abreviações e nomes colados: “thhn8blk” encontra “THHN/THWN-2 Copper #8 AWG Black Stranded”. Na biblioteca, ao buscar, você também pode tocar em “Adicionar à minha biblioteca”. Para criar um próprio: Mais → Material → Biblioteca → Adicionar item. Arquivar um item não altera pedidos anteriores.",
     ] },
     { id: "historico-precos", q: "Posso ver o histórico de preços de um material?", keywords: "preço histórico mais baixo", a: [
       "Sim. Ao abrir um item você vê o que pagou (pedidos de compra) e o que foi cotado, com o menor preço recente e o fornecedor. Só vê quem tem permissão de ver custos.",

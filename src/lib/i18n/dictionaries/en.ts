@@ -1112,6 +1112,10 @@ const en: Dictionary = {
   importAlsoList: "Also save as a list (with the quantities)",
   importListNamePh: "List name",
   importListSaved: "List “{name}” saved with {count} items",
+  catalogBadge: "Catalog",
+  catalogSection: "From the standard catalog",
+  catalogAddToLibrary: "Add to my library",
+  catalogAdded: "{count} item(s) added to your library",
 };
 
 export default en;

@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
 import { parseMaterialImport } from "@/lib/material-import";
+import { getCatalogItem } from "@/lib/catalog/server";
 import { CATEGORY_CODES, normalizeText, normalizeUnit, type RequestLineInput } from "@/lib/materials";
 import {
-  getMaterials, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
+  getMaterials, ensureMaterialFromCatalog, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
 } from "@/lib/services/materials";
 import { cancelMaterialRequest, createMaterialRequest, reviewMaterialRequest } from "@/lib/services/material-requests";
 
@@ -114,7 +115,7 @@ export async function deleteListAction(listId: string): Promise<MaterialResult> 
 
 type LinePayload = {
   materialId?: string | null; description?: string; quantity?: number; unit?: string; category?: string | null;
-  notes?: string | null; allowSubstitution?: boolean; saveToLibrary?: boolean;
+  notes?: string | null; allowSubstitution?: boolean; saveToLibrary?: boolean; catalogId?: string | null;
 };
 
 export type RequestPayload = {
@@ -142,7 +143,10 @@ export async function createMaterialRequestAction(payload: RequestPayload): Prom
       const unit = normalizeUnit(l.unit);
       const category = l.category && CATEGORY_CODES.includes(l.category) ? l.category : null;
       let materialId = l.materialId && UUID.test(l.materialId) ? l.materialId : null;
-      if (!materialId && l.saveToLibrary && c.perms.can_manage_library) {
+      // A standard-catalog pick joins the company library (reusing an item with the same name); without library permission it stays a named free-text line.
+      const fromCatalog = !materialId && l.catalogId ? getCatalogItem(String(l.catalogId)) : undefined;
+      if (fromCatalog && c.perms.can_manage_library) materialId = await ensureMaterialFromCatalog(c.companyId, c.userId, fromCatalog);
+      else if (!materialId && l.saveToLibrary && c.perms.can_manage_library) {
         materialId = await createMaterial(c.companyId, c.userId, { description, unit, category });
       }
       lines.push({
@@ -193,7 +197,7 @@ export async function cancelRequestAction(requestId: string): Promise<MaterialRe
  * Saves the lines being built as a reusable list, without sending a request. Lines typed as free text
  * are added to the library first, so the list never loses them. Saving under an existing name replaces that list.
  */
-export async function saveListAction(payload: { name: string; lines: { materialId?: string | null; description?: string; quantity?: number; unit?: string; category?: string | null }[] }): Promise<MaterialResult & { replaced?: boolean }> {
+export async function saveListAction(payload: { name: string; lines: { materialId?: string | null; catalogId?: string | null; description?: string; quantity?: number; unit?: string; category?: string | null }[] }): Promise<MaterialResult & { replaced?: boolean }> {
   const c = await ctx();
   if (!c) return { errorCode: "errGeneric" };
   if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
@@ -205,7 +209,9 @@ export async function saveListAction(payload: { name: string; lines: { materialI
       if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 1_000_000) continue;
       let materialId = l.materialId && UUID.test(l.materialId) ? l.materialId : null;
       const description = String(l.description ?? "").trim();
-      if (!materialId && description) {
+      const fromCatalog = !materialId && l.catalogId ? getCatalogItem(String(l.catalogId)) : undefined;
+      if (fromCatalog) materialId = await ensureMaterialFromCatalog(c.companyId, c.userId, fromCatalog);
+      else if (!materialId && description) {
         const category = l.category && CATEGORY_CODES.includes(l.category) ? l.category : null;
         materialId = await createMaterial(c.companyId, c.userId, { description, unit: normalizeUnit(l.unit), category });
       }
@@ -215,5 +221,22 @@ export async function saveListAction(payload: { name: string; lines: { materialI
     revalidatePath("/materials");
     revalidatePath("/projects");
     return { success: true, id: saved.id, replaced: saved.replaced };
+  } catch (e) { return fail(e); }
+}
+
+/** Adds standard-catalog items to the company library (from the library screen). Items already there are reused. */
+export async function addCatalogItemsAction(ids: string[]): Promise<MaterialResult & { added?: number }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 50) return { errorCode: "errGeneric" };
+  try {
+    let added = 0;
+    for (const id of ids) {
+      const item = typeof id === "string" ? getCatalogItem(id) : undefined;
+      if (item) { await ensureMaterialFromCatalog(c.companyId, c.userId, item); added++; }
+    }
+    revalidatePath("/materials");
+    return { success: true, added };
   } catch (e) { return fail(e); }
 }
