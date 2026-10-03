@@ -325,3 +325,5 @@ Variables de entorno opcionales (Vercel → Settings → Environment Variables; 
 - `NEXT_PUBLIC_SUPPORT_EMAIL`: correo de soporte público.
 
 Importante: son textos base redactados por el equipo de desarrollo; un abogado debe revisarlos para tu país/estado antes del lanzamiento comercial. Si cambias el producto (por ejemplo, empiezas a cobrar con Stripe o a enviar correos), actualiza los textos y `LEGAL_UPDATED` en `src/lib/site-content/types.ts`.
+
+Actualización: el centro de ayuda (`/help`) documenta cada función de la app en 17 temas y 73 respuestas (ES/EN/PT; el contenido está en `src/lib/site-content/help-{es,en,pt}.ts`, mismo orden en los tres). Enlaces profundos: `/help#id-del-tema` o `/help#id-de-la-respuesta` abren y desplazan a esa respuesta. Dentro de la app, la barra lateral y el botón + muestran "Ayuda sobre esta pantalla", que lleva al tema de la pantalla actual (`helpTopicIndexForPath`). Si cambias o agregas una función, actualiza los tres idiomas. El selector de idioma ahora es un botón compacto (ES/EN/PT) con menú, para no tapar contenido.

@@ -8,7 +8,7 @@ export type SiteContent = {
     back: string; updated: string; onThisPage: string; contactTitle: string; contactBody: string; contactInApp: string;
     emailUs: string; operator: string; helpTitle: string; helpIntro: string; searchPh: string; noResults: string;
     startTitle: string; startSteps: string[]; legalLinks: string; terms: string; privacy: string; help: string;
-    acceptNote: string; footerRights: string; print: string; topics: string; related: string;
+    acceptNote: string; helpHere: string; footerRights: string; print: string; topics: string; related: string;
   };
   terms: LegalDoc;
   privacy: LegalDoc;

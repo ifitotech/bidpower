@@ -75,7 +75,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0B2A5C] to-[#07152B] text-white">
       <div className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-10">
-        <LanguageSwitcher />
+        <LanguageSwitcher tone="dark" />
       </div>
       <div className="flex-1 flex flex-col justify-center px-6 max-w-md mx-auto w-full py-12">
         <div className="text-center mb-8">

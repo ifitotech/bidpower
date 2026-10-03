@@ -1,4 +1,5 @@
 import type { SiteContent } from "./types";
+import { helpEs } from "./help-es";
 
 const es: SiteContent = {
   ui: {
@@ -16,7 +17,7 @@ const es: SiteContent = {
       "Cuando el trabajo avance, factura desde la propuesta aprobada y registra los pagos que recibas.",
     ],
     legalLinks: "Información legal", terms: "Términos y condiciones", privacy: "Política de privacidad", help: "Ayuda",
-    acceptNote: "Al crear tu cuenta aceptas los", footerRights: "Todos los derechos reservados.", print: "Imprimir", topics: "Temas", related: "Relacionado",
+    acceptNote: "Al crear tu cuenta aceptas los", helpHere: "Ayuda sobre esta pantalla", footerRights: "Todos los derechos reservados.", print: "Imprimir", topics: "Temas", related: "Relacionado",
   },
   terms: {
     title: "Términos y condiciones",
@@ -60,7 +61,7 @@ const es: SiteContent = {
       ] },
       { id: "enlaces", title: "6. Documentos compartidos con clientes y suppliers", body: [
         "Las propuestas, órdenes de compra y solicitudes de precios se comparten mediante enlaces seguros. Quien tenga el enlace puede ver ese documento, así que envíalo solo a la persona correcta y trátalo como privado. El cliente no ve costos de supplier, márgenes ni información interna; el supply no ve lo que cobras a tu cliente.",
-        "Cuando un cliente aprueba una propuesta, BidPower registra el nombre que escribió y la fecha y hora. Ese registro no es una firma electrónica certificada. Si necesitas una firma con validez especial, usa un contrato firmado por separado.",
+        "Cuando un cliente aprueba una propuesta, BidPower registra el nombre que escribió, la fecha, la hora y la dirección IP. Ese registro no es una firma electrónica certificada. Si necesitas una firma con validez especial, usa un contrato firmado por separado.",
         "Los precios, disponibilidad y tiempos de entrega que responde un supply son su responsabilidad. BidPower solo los muestra.",
       ] },
       { id: "facturas", title: "7. Facturas, pagos e impuestos", body: [
@@ -113,6 +114,7 @@ const es: SiteContent = {
         "- Operación que tú cargas: proyectos, clientes y sus datos de contacto, listas de materiales, cotizaciones, órdenes de compra, propuestas, facturas, gastos, recibos, fotos y archivos PDF.",
         "- Equipo: personas invitadas, su rol, permisos y actividad dentro de los proyectos (por ejemplo, quién subió un recibo).",
         "- Mensajes que nos envías desde Ayuda y comentarios, con la página desde la que escribiste.",
+        "- Cuando un cliente responde una propuesta por enlace: el nombre que escribe, la fecha, la hora y su dirección IP.",
         "- Datos técnicos mínimos: registros del servidor y de errores para mantener la seguridad y corregir fallos.",
         "No pedimos datos de tarjetas ni de cuentas bancarias.",
       ] },
@@ -158,112 +160,6 @@ const es: SiteContent = {
       ] },
     ],
   },
-  help: [
-    { id: "empezar", title: "Primeros pasos", blurb: "Cuenta, empresa y proyecto.", articles: [
-      { id: "crear-cuenta", q: "¿Cómo creo mi cuenta?", keywords: "registro registrar sign up", a: [
-        "Entra a Crear cuenta, escribe tu nombre, correo y contraseña, y luego el nombre de tu empresa. Si eres un supply (casa de suministros), elige esa opción para recibir solicitudes de precios de contratistas.",
-        "Si te invitaron a un equipo, abre el enlace de invitación: tu correo ya viene puesto y quedas dentro de esa empresa.",
-      ] },
-      { id: "empresa", q: "¿Dónde pongo el logo y los datos de mi empresa?", keywords: "configuración logo moneda zona horaria", a: [
-        "En Más → Configuración (solo el propietario). Ahí están el nombre, logo, dirección, moneda y zona horaria. Esos datos salen en tus propuestas, órdenes de compra y facturas.",
-        "El logo puede ser JPG, PNG o WebP.",
-      ] },
-      { id: "proyecto", q: "¿Cómo creo un proyecto?", keywords: "nuevo proyecto cliente", a: [
-        "Primero agrega el cliente en Clientes, luego crea el proyecto desde Proyectos → Nuevo. Dentro del proyecto tienes materiales, compras, propuestas, facturas, gastos y actividad; no tienes que volver a escribir el nombre del proyecto.",
-      ] },
-      { id: "olvide", q: "Olvidé mi contraseña", keywords: "recuperar contraseña clave", a: [
-        "En la pantalla de inicio de sesión toca “¿Olvidaste tu contraseña?”. Te llega un enlace seguro al correo para crear una nueva. Revisa también la carpeta de spam.",
-      ] },
-      { id: "idioma", q: "¿Cómo cambio el idioma?", keywords: "español english português idioma", a: [
-        "Con el selector de idioma (arriba a la derecha en las pantallas de acceso, y en Configuración dentro de la app). BidPower está disponible en español, inglés y portugués.",
-      ] },
-    ] },
-    { id: "materiales", title: "Materiales y compras", blurb: "Lista de materiales, comprar ya y órdenes de compra.", articles: [
-      { id: "lista", q: "¿Cómo armo una lista de materiales?", keywords: "material lista carrito importar excel csv", a: [
-        "En el proyecto abre Material. Busca en tu biblioteca, escribe el artículo (por ejemplo “10 breakers 20A”: la cantidad se detecta sola) o importa una lista desde Excel/CSV. Cada vez que agregas algo, la biblioteca aprende para sugerírtelo después.",
-      ] },
-      { id: "comprar-ya", q: "¿Qué es “Comprar ya”?", keywords: "orden de compra PO comprar", a: [
-        "Úsalo cuando ya sabes dónde comprar. Se crea la orden de compra con tu lista, la envías al supplier y después subes el recibo. El costo se suma al proyecto cuando completas la compra.",
-      ] },
-      { id: "pedir-precios", q: "¿Qué es “Pedir cotización a suppliers”?", keywords: "cotización pricing request supply", a: [
-        "Úsalo cuando necesitas comparar precios. Se crea una solicitud de precios con tu lista y la envías a uno o varios suppliers. Cuando el supply responde, la respuesta aparece en la solicitud y desde ahí conviertes la elegida en orden de compra.",
-        "La solicitud de precios es para el supply. La propuesta es para tu cliente: son cosas distintas y nunca se mezclan.",
-      ] },
-      { id: "po-limite", q: "¿Por qué no puedo crear o enviar una orden de compra?", keywords: "permiso límite aprobación empleado", a: [
-        "Tu propietario decide si puedes comprar y hasta qué monto. Si una compra supera tu límite, queda esperando aprobación. Pídele que ajuste tu permiso en Equipo.",
-      ] },
-      { id: "recibo", q: "¿Cómo subo un recibo?", keywords: "recibo foto comprobante", a: [
-        "En la orden de compra toca la cámara y toma la foto del recibo. Los empleados deben entregar el recibo con foto antes de poder hacer otra compra. Se aceptan JPG, PNG y WebP (también fotos del iPhone) de hasta 10 MB.",
-      ] },
-    ] },
-    { id: "propuestas", title: "Propuestas y clientes", blurb: "Enviar, aprobar y cambiar propuestas.", articles: [
-      { id: "crear-propuesta", q: "¿Cómo creo una propuesta para mi cliente?", keywords: "proposal presupuesto quote", a: [
-        "En el proyecto, Propuesta → Nueva. Agrega las líneas (puedes elegirlas de tu biblioteca), impuestos o descuento, términos y notas. Cuando esté lista, envíala y comparte el enlace seguro con tu cliente.",
-      ] },
-      { id: "cliente-aprueba", q: "¿Cómo aprueba mi cliente?", keywords: "aprobar cambios enlace", a: [
-        "Abre el enlace sin necesidad de cuenta, revisa la propuesta y la aprueba escribiendo su nombre, o pide cambios con un comentario. Tú ves la respuesta en la propuesta y en lo que necesita tu atención.",
-        "La aprobación registra nombre, fecha y hora; no es una firma electrónica certificada.",
-      ] },
-      { id: "cliente-ve", q: "¿Qué ve mi cliente?", keywords: "privacidad costos margen", a: [
-        "Solo la propuesta y lo que compartes. Nunca ve precios de supplier, costos de órdenes de compra, margen ni ganancia.",
-      ] },
-      { id: "versiones", q: "El cliente pidió cambios, ¿qué hago?", keywords: "versión revisar editar", a: [
-        "Crea una nueva versión de la propuesta con los cambios y vuelve a enviarla. La anterior queda en el historial.",
-      ] },
-    ] },
-    { id: "facturas", title: "Facturas y dinero", blurb: "Facturar, registrar pagos y controlar costos.", articles: [
-      { id: "facturar", q: "¿Cómo emito una factura?", keywords: "invoice factura anticipo", a: [
-        "Desde una propuesta aprobada elige Facturar. Puedes facturar el total o una parte (por ejemplo un anticipo). La factura tiene PDF para enviar y su propio número.",
-      ] },
-      { id: "pagos", q: "¿BidPower cobra a mi cliente?", keywords: "pago cobrar stripe tarjeta", a: [
-        "No. BidPower no procesa pagos. Cuando tu cliente te paga, registras el pago en la factura y el saldo y el estado se actualizan solos (parcial, pagada o vencida).",
-      ] },
-      { id: "costos", q: "¿Dónde veo cuánto gano en el proyecto?", keywords: "ganancia presupuesto costo reportes", a: [
-        "En el proyecto verás presupuesto, costo real, costo comprometido y ganancia estimada. Solo lo ven los roles con permiso para ver costos o ganancias.",
-        "Son cifras operativas para decidir, no contabilidad. Compruébalas con tu contador.",
-      ] },
-      { id: "exportar", q: "¿Puedo exportar para mi contador?", keywords: "contabilidad quickbooks exportar csv", a: [
-        "Sí. En Más → Contabilidad exportas tus datos (gastos, facturas y más) en CSV o JSON para tu contador o para QuickBooks.",
-      ] },
-    ] },
-    { id: "equipo", title: "Equipo y permisos", blurb: "Invitar personas y decidir qué pueden hacer.", articles: [
-      { id: "invitar", q: "¿Cómo invito a un empleado?", keywords: "invitación equipo empleado manager", a: [
-        "En Equipo toca Invitar, escribe su nombre y correo, elige una plantilla de permisos y los proyectos donde trabajará. Comparte el enlace de invitación; al abrirlo crea su cuenta y queda dentro.",
-        "El plan Free permite hasta 3 empleados.",
-      ] },
-      { id: "permisos", q: "¿Qué puede hacer cada rol?", keywords: "owner manager employee permisos plantilla", a: [
-        "- Propietario: todo, incluido el equipo y la configuración.",
-        "- Manager: gestiona proyectos, compras y clientes.",
-        "- Empleado: ve solo los proyectos asignados, pide materiales y sube recibos. Puede comprar solo si el propietario se lo permite, con un límite de monto.",
-        "Los permisos se pueden cambiar o quitar en cualquier momento.",
-      ] },
-      { id: "desactivar", q: "Una persona dejó la empresa, ¿qué hago?", keywords: "desactivar baja", a: [
-        "Desactívala en Equipo. Pierde el acceso de inmediato y su historial se conserva en tus proyectos.",
-      ] },
-    ] },
-    { id: "supply", title: "Suppliers", blurb: "Responder solicitudes y conectar con contratistas.", articles: [
-      { id: "supply-responder", q: "Soy supplier: ¿cómo respondo una solicitud de precios?", keywords: "responder cotización quote pdf", a: [
-        "Abre el enlace que te enviaron (no necesitas cuenta) o entra a tu bandeja si tienes cuenta supply. Revisa la lista, planos y notas, haz preguntas si algo no está claro, y sube tu cotización en PDF con número, total, disponibilidad y tiempo de entrega.",
-        "No ves lo que el contratista cobra a su cliente.",
-      ] },
-      { id: "supply-conectar", q: "¿Cómo me conecto con un contratista?", keywords: "código conexión connect", a: [
-        "El supply genera un código de un solo uso (vence en 14 días) y se lo da al contratista. Él lo escribe en Suppliers y queda conectado. También puedes compartir el enlace de registro para que el contratista cree su cuenta.",
-      ] },
-    ] },
-    { id: "app", title: "App e instalación", blurb: "Instalar en iPhone, Android y computadora.", articles: [
-      { id: "instalar-iphone", q: "¿Cómo la instalo en el iPhone o iPad?", keywords: "pwa instalar pantalla de inicio safari", a: [
-        "Abre BidPower en Safari, toca Compartir y luego “Agregar a pantalla de inicio”. Se abre como una app, a pantalla completa.",
-      ] },
-      { id: "instalar-android", q: "¿Y en Android o en la computadora?", keywords: "chrome instalar android windows", a: [
-        "En Chrome o Edge toca “Instalar” cuando la app te lo ofrece (en Más → Instalar) o usa el menú del navegador → Instalar aplicación.",
-      ] },
-      { id: "sin-internet", q: "¿Funciona sin internet?", keywords: "offline conexión", a: [
-        "Necesita conexión para guardar y ver tus datos. Sin internet verás una página de aviso; al volver la conexión continúas donde estabas.",
-      ] },
-      { id: "falla", q: "Algo no funciona", keywords: "error bug problema lento", a: [
-        "Prueba cerrar y volver a abrir la app o recargar la página. Si el problema sigue, cuéntanos en Más → Ayuda y comentarios qué estabas haciendo y qué viste; se guarda la página donde estabas.",
-      ] },
-    ] },
-  ],
+  help: helpEs,
 };
 export default es;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
 import { getSiteContent } from "@/lib/site-content";
@@ -14,6 +14,19 @@ export function HelpCenter() {
   const c = getSiteContent(locale);
   const [query, setQuery] = useState("");
   const [topic, setTopic] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  // /help#article-id opens that answer and scrolls to it.
+  useEffect(() => {
+    const go = () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      if (!id) return;
+      setOpenId(id);
+      setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 50);
+    };
+    go();
+    window.addEventListener("hashchange", go);
+    return () => window.removeEventListener("hashchange", go);
+  }, []);
   const words = norm(query).split(/\s+/).filter(Boolean);
 
   const topics = useMemo(() => c.help
@@ -54,7 +67,7 @@ export function HelpCenter() {
           <p className="mb-3 text-sm text-slate-500">{t.blurb}</p>
           <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
             {t.articles.map((a) => (
-              <details key={a.id} id={a.id} className="group px-4 py-3" open={words.length > 0 && t.articles.length <= 3}>
+              <details key={a.id} id={a.id} className="group scroll-mt-20 px-4 py-3" open={openId === a.id || (words.length > 0 && t.articles.length <= 3)} onToggle={(e) => { const el = e.currentTarget; if (el.open) setOpenId(a.id); else if (openId === a.id) setOpenId(null); }}>
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[15px] font-medium text-slate-900">
                   <span>{a.q}</span><span aria-hidden className="text-slate-400 transition group-open:rotate-45">+</span>
                 </summary>

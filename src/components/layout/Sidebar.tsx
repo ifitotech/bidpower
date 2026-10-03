@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { getSiteContent } from "@/lib/site-content";
+import { getSiteContent, helpTopicIndexForPath } from "@/lib/site-content";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -32,7 +32,10 @@ const roleLabel: Record<string, "owner" | "manager" | "employee"> = { owner: "ow
 export function Sidebar({ companyName = "", userName = "", role = "" }: { companyName?: string; userName?: string; role?: string }) {
   const pathname = usePathname();
   const { t, locale } = useI18n();
-  const site = getSiteContent(locale).ui;
+  const siteContent = getSiteContent(locale);
+  const site = siteContent.ui;
+  const topicIndex = helpTopicIndexForPath(pathname);
+  const helpTopic = topicIndex === null ? null : siteContent.help[topicIndex]?.id ?? null;
   const { permissions, isManagerOrAbove } = usePermissions();
 
   const isEmployee = role === "employee";
@@ -66,6 +69,7 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
     { label: t("areaCompany"), items: [
       ...(role === "owner" ? [{ href: "/settings", label: t("navSettings"), icon: Settings }] : []),
       { href: "/feedback", label: t("navHelp"), icon: MessageSquare },
+      ...(helpTopic ? [{ href: `/help#${helpTopic}`, label: site.helpHere, icon: LifeBuoy }] : []),
       { href: "/help", label: site.helpTitle, icon: LifeBuoy },
       { href: "/terms", label: site.terms, icon: FileText },
       { href: "/privacy", label: site.privacy, icon: ShieldCheck },

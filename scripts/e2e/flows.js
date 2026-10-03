@@ -895,7 +895,7 @@ async function phaseCrawl(browser) {
     await anon.goto(B + "/help", { waitUntil: "networkidle" });
     await anon.getByRole("searchbox").fill("invoice");
     const hits = await anon.locator("details").count();
-    if (hits < 1 || hits > 6) problems.push(`help search "invoice" shows ${hits} answers`);
+    if (hits < 1 || hits > 15) problems.push(`help search "invoice" shows ${hits} answers`);
     await anon.getByRole("searchbox").fill("zzzzqqq");
     if (!(await anon.getByRole("status").innerText().catch(() => "")).trim()) problems.push("help search has no empty message");
     await anon.goto(B + "/register", { waitUntil: "networkidle" });

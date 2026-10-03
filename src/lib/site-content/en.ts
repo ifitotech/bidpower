@@ -1,4 +1,5 @@
 import type { SiteContent } from "./types";
+import { helpEn } from "./help-en";
 
 const en: SiteContent = {
   ui: {
@@ -16,7 +17,7 @@ const en: SiteContent = {
       "As the work moves forward, invoice from the approved proposal and record the payments you receive.",
     ],
     legalLinks: "Legal", terms: "Terms & conditions", privacy: "Privacy policy", help: "Help",
-    acceptNote: "By creating your account you accept the", footerRights: "All rights reserved.", print: "Print", topics: "Topics", related: "Related",
+    acceptNote: "By creating your account you accept the", helpHere: "Help for this screen", footerRights: "All rights reserved.", print: "Print", topics: "Topics", related: "Related",
   },
   terms: {
     title: "Terms & conditions",
@@ -60,7 +61,7 @@ const en: SiteContent = {
       ] },
       { id: "links", title: "6. Documents shared with customers and suppliers", body: [
         "Proposals, purchase orders and price requests are shared through secure links. Anyone who has the link can see that document, so send it only to the right person and treat it as private. The customer does not see supplier costs, margins or internal information; the supply house does not see what you charge your customer.",
-        "When a customer approves a proposal, BidPower records the name they typed and the date and time. That record is not a certified electronic signature. If you need a signature with special legal validity, use a separately signed contract.",
+        "When a customer approves a proposal, BidPower records the name they typed, the date, the time and the IP address. That record is not a certified electronic signature. If you need a signature with special legal validity, use a separately signed contract.",
         "The prices, availability and delivery times a supply house answers with are its responsibility. BidPower only displays them.",
       ] },
       { id: "invoices", title: "7. Invoices, payments and taxes", body: [
@@ -113,6 +114,7 @@ const en: SiteContent = {
         "- Operations you upload: projects, customers and their contact details, material lists, quotes, purchase orders, proposals, invoices, expenses, receipts, photos and PDF files.",
         "- Team: invited people, their role, permissions and activity in projects (for example, who uploaded a receipt).",
         "- Messages you send us from Help & feedback, with the page you wrote from.",
+        "- When a customer answers a proposal by link: the name they type, the date, the time and their IP address.",
         "- Minimal technical data: server and error logs to keep the service secure and fix failures.",
         "We do not ask for card or bank account details.",
       ] },
@@ -158,112 +160,6 @@ const en: SiteContent = {
       ] },
     ],
   },
-  help: [
-    { id: "start", title: "Getting started", blurb: "Account, company and project.", articles: [
-      { id: "create-account", q: "How do I create my account?", keywords: "register sign up registro", a: [
-        "Go to Create account, enter your name, email and password, then your company name. If you are a supply house, choose that option to receive price requests from contractors.",
-        "If you were invited to a team, open the invitation link: your email is already filled in and you join that company.",
-      ] },
-      { id: "company", q: "Where do I put my logo and company details?", keywords: "settings logo currency time zone", a: [
-        "In More → Settings (owner only). There you will find name, logo, address, currency and time zone. They appear on your proposals, purchase orders and invoices.",
-        "The logo can be JPG, PNG or WebP.",
-      ] },
-      { id: "project", q: "How do I create a project?", keywords: "new project customer", a: [
-        "First add the customer under Customers, then create the project from Projects → New. Inside the project you have materials, purchases, proposals, invoices, expenses and activity; you never retype the project name.",
-      ] },
-      { id: "forgot", q: "I forgot my password", keywords: "reset password recover", a: [
-        "On the sign-in screen tap “Forgot your password?”. A secure link arrives by email so you can create a new one. Check your spam folder too.",
-      ] },
-      { id: "language", q: "How do I change the language?", keywords: "español english português language", a: [
-        "With the language selector (top right on the access screens, and in Settings inside the app). BidPower is available in Spanish, English and Portuguese.",
-      ] },
-    ] },
-    { id: "materials", title: "Materials and purchases", blurb: "Material list, buy now and purchase orders.", articles: [
-      { id: "list", q: "How do I build a material list?", keywords: "material list cart import excel csv", a: [
-        "In the project open Material. Search your library, type the item (for example “10 breakers 20A”: the quantity is detected automatically) or import a list from Excel/CSV. Every time you add something, the library learns it so it can suggest it later.",
-      ] },
-      { id: "buy-now", q: "What is “Buy now”?", keywords: "purchase order PO buy", a: [
-        "Use it when you already know where to buy. A purchase order is created with your list, you send it to the supplier and then upload the receipt. The cost is added to the project when you complete the purchase.",
-      ] },
-      { id: "ask-prices", q: "What is “Request quotes from suppliers”?", keywords: "quote pricing request supply", a: [
-        "Use it when you need to compare prices. A price request is created with your list and you send it to one or more suppliers. When the supply house answers, the answer appears in the request and from there you turn the chosen one into a purchase order.",
-        "A price request is for the supply house. A proposal is for your customer: they are different things and never mix.",
-      ] },
-      { id: "po-limit", q: "Why can't I create or send a purchase order?", keywords: "permission limit approval employee", a: [
-        "Your owner decides whether you can buy and up to what amount. If a purchase exceeds your limit it waits for approval. Ask them to adjust your permission under Team.",
-      ] },
-      { id: "receipt", q: "How do I upload a receipt?", keywords: "receipt photo proof", a: [
-        "On the purchase order tap the camera and take a photo of the receipt. Employees must hand in the receipt photo before they can make another purchase. JPG, PNG and WebP (including iPhone photos) up to 10 MB are accepted.",
-      ] },
-    ] },
-    { id: "proposals", title: "Proposals and customers", blurb: "Send, approve and change proposals.", articles: [
-      { id: "create-proposal", q: "How do I create a proposal for my customer?", keywords: "proposal estimate quote", a: [
-        "In the project, Proposal → New. Add the lines (you can pick them from your library), tax or discount, terms and notes. When it is ready, send it and share the secure link with your customer.",
-      ] },
-      { id: "customer-approves", q: "How does my customer approve?", keywords: "approve changes link", a: [
-        "They open the link with no account, review the proposal and approve it by typing their name, or ask for changes with a comment. You see the response on the proposal and in what needs your attention.",
-        "Approval records name, date and time; it is not a certified electronic signature.",
-      ] },
-      { id: "customer-sees", q: "What does my customer see?", keywords: "privacy costs margin", a: [
-        "Only the proposal and what you share. They never see supplier prices, purchase order costs, margin or profit.",
-      ] },
-      { id: "versions", q: "The customer asked for changes, what do I do?", keywords: "version revise edit", a: [
-        "Create a new version of the proposal with the changes and send it again. The previous one stays in the history.",
-      ] },
-    ] },
-    { id: "invoices", title: "Invoices and money", blurb: "Invoice, record payments and track costs.", articles: [
-      { id: "invoice", q: "How do I issue an invoice?", keywords: "invoice deposit advance", a: [
-        "From an approved proposal choose Invoice. You can invoice the total or a part (for example a deposit). The invoice has a PDF to send and its own number.",
-      ] },
-      { id: "payments", q: "Does BidPower charge my customer?", keywords: "payment charge stripe card", a: [
-        "No. BidPower does not process payments. When your customer pays you, you record the payment on the invoice and the balance and status update on their own (partial, paid or overdue).",
-      ] },
-      { id: "costs", q: "Where do I see how much I make on the project?", keywords: "profit budget cost reports", a: [
-        "In the project you will see budget, actual cost, committed cost and estimated profit. Only roles with permission to view costs or profit see them.",
-        "These are operating figures to help you decide, not accounting. Check them with your accountant.",
-      ] },
-      { id: "export", q: "Can I export for my accountant?", keywords: "accounting quickbooks export csv", a: [
-        "Yes. In More → Accounting you export your data (expenses, invoices and more) as CSV or JSON for your accountant or for QuickBooks.",
-      ] },
-    ] },
-    { id: "team", title: "Team and permissions", blurb: "Invite people and decide what they can do.", articles: [
-      { id: "invite", q: "How do I invite an employee?", keywords: "invitation team employee manager", a: [
-        "Under Team tap Invite, enter their name and email, choose a permission template and the projects they will work on. Share the invitation link; when they open it they create their account and join.",
-        "The Free plan allows up to 3 employees.",
-      ] },
-      { id: "permissions", q: "What can each role do?", keywords: "owner manager employee permissions template", a: [
-        "- Owner: everything, including team and settings.",
-        "- Manager: manages projects, purchases and customers.",
-        "- Employee: sees only assigned projects, requests materials and uploads receipts. They can buy only if the owner allows it, with an amount limit.",
-        "Permissions can be changed or removed at any time.",
-      ] },
-      { id: "deactivate", q: "Someone left the company, what do I do?", keywords: "deactivate remove", a: [
-        "Deactivate them under Team. They lose access immediately and their history stays in your projects.",
-      ] },
-    ] },
-    { id: "supply", title: "Suppliers", blurb: "Answer requests and connect with contractors.", articles: [
-      { id: "supply-respond", q: "I'm a supplier: how do I answer a price request?", keywords: "respond quote pdf", a: [
-        "Open the link you were sent (no account needed) or go to your inbox if you have a supply account. Review the list, plans and notes, ask questions if something is unclear, and upload your quote PDF with number, total, availability and lead time.",
-        "You do not see what the contractor charges their customer.",
-      ] },
-      { id: "supply-connect", q: "How do I connect with a contractor?", keywords: "connect code", a: [
-        "The supply house generates a single-use code (it expires in 14 days) and gives it to the contractor. They enter it under Suppliers and are connected. You can also share the sign-up link so the contractor creates their account.",
-      ] },
-    ] },
-    { id: "app", title: "App and installation", blurb: "Install on iPhone, Android and computer.", articles: [
-      { id: "install-iphone", q: "How do I install it on iPhone or iPad?", keywords: "pwa install home screen safari", a: [
-        "Open BidPower in Safari, tap Share and then “Add to Home Screen”. It opens like an app, full screen.",
-      ] },
-      { id: "install-android", q: "And on Android or a computer?", keywords: "chrome install android windows", a: [
-        "In Chrome or Edge tap “Install” when the app offers it (More → Install) or use the browser menu → Install app.",
-      ] },
-      { id: "offline", q: "Does it work without internet?", keywords: "offline connection", a: [
-        "It needs a connection to save and view your data. Without internet you will see a notice page; when the connection returns you continue where you were.",
-      ] },
-      { id: "broken", q: "Something is not working", keywords: "error bug problem slow", a: [
-        "Try closing and reopening the app or reloading the page. If the problem continues, tell us in More → Help & feedback what you were doing and what you saw; the page you were on is saved.",
-      ] },
-    ] },
-  ],
+  help: helpEn,
 };
 export default en;
