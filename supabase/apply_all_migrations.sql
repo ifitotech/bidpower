@@ -4497,7 +4497,7 @@ CREATE POLICY "Signed-in users read the catalog" ON catalog_materials FOR SELECT
 -- Search: every pattern must match (regular expressions the app builds from what was typed). Capped so it stays cheap.
 CREATE OR REPLACE FUNCTION catalog_search(p_patterns TEXT[], p_query TEXT, p_limit INTEGER DEFAULT 200)
 RETURNS TABLE (id UUID, name TEXT, unit TEXT, category TEXT, manufacturer TEXT, aliases TEXT[])
-LANGUAGE plpgsql STABLE SET search_path = public AS $$
+LANGUAGE plpgsql STABLE SET search_path = public, extensions AS $$
 BEGIN
   IF p_patterns IS NULL OR array_length(p_patterns, 1) IS NULL OR array_length(p_patterns, 1) > 8 THEN RETURN; END IF;
   IF EXISTS (SELECT 1 FROM unnest(p_patterns) p WHERE length(p) > 120) THEN RETURN; END IF;
