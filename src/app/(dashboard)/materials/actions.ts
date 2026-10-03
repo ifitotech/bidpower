@@ -5,7 +5,7 @@ import { getActionContext } from "@/lib/action-context";
 import { parseMaterialImport } from "@/lib/material-import";
 import { CATEGORY_CODES, normalizeUnit, type RequestLineInput } from "@/lib/materials";
 import {
-  archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
+  archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
 } from "@/lib/services/materials";
 import { cancelMaterialRequest, createMaterialRequest, reviewMaterialRequest } from "@/lib/services/material-requests";
 
@@ -172,5 +172,34 @@ export async function cancelRequestAction(requestId: string): Promise<MaterialRe
     revalidatePath("/materials/requests");
     revalidatePath("/dashboard");
     return { success: true };
+  } catch (e) { return fail(e); }
+}
+
+/**
+ * Saves the lines being built as a reusable list, without sending a request. Lines typed as free text
+ * are added to the library first, so the list never loses them. Saving under an existing name replaces that list.
+ */
+export async function saveListAction(payload: { name: string; lines: { materialId?: string | null; description?: string; quantity?: number; unit?: string; category?: string | null }[] }): Promise<MaterialResult & { replaced?: boolean }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
+  if (!payload || typeof payload.name !== "string" || !Array.isArray(payload.lines)) return { errorCode: "errGeneric" };
+  try {
+    const items: { materialId: string; quantity: number }[] = [];
+    for (const l of payload.lines.slice(0, 301)) {
+      const quantity = Number(l.quantity);
+      if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 1_000_000) continue;
+      let materialId = l.materialId && UUID.test(l.materialId) ? l.materialId : null;
+      const description = String(l.description ?? "").trim();
+      if (!materialId && description) {
+        const category = l.category && CATEGORY_CODES.includes(l.category) ? l.category : null;
+        materialId = await createMaterial(c.companyId, c.userId, { description, unit: normalizeUnit(l.unit), category });
+      }
+      if (materialId) items.push({ materialId, quantity });
+    }
+    const saved = await upsertSavedList(c.companyId, c.userId, payload.name, items);
+    revalidatePath("/materials");
+    revalidatePath("/projects");
+    return { success: true, id: saved.id, replaced: saved.replaced };
   } catch (e) { return fail(e); }
 }

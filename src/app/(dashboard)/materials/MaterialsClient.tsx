@@ -83,6 +83,8 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
     {(error || msg) && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error ? t("errLoadMaterials") : msg}</div>}
     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("search")} aria-label={t("search")} className={`${input} mb-3`} />
 
+    {query.trim().length >= 2 && !draft && <button type="button" onClick={() => setDraft({ ...EMPTY, description: query.trim() })} className="mb-3 flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed border-brand-500 px-4 text-left text-sm font-medium text-brand-700 hover:bg-brand-50"><Plus className="h-4 w-4" />{t("mbCreateFromSearch", { text: query.trim() })}</button>}
+
     {importing && <div className="mb-4 space-y-3 rounded-xl border border-brand-500 bg-white p-4">
       <h2 className="font-semibold">{t("importCsv")}</h2>
       <p className="text-sm text-slate-500">{t("importHint")}</p>
@@ -121,7 +123,8 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
       </li>)}</ul>}
 
     {lists.length > 0 && <section className="mt-6"><h2 className="mb-2 font-semibold">{t("savedLists")}</h2>
-      <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{lists.map((l) => <li key={l.id} className="flex items-center gap-2 px-4 py-2 text-sm"><span className="min-w-0 flex-1 truncate font-medium">{l.name}</span><span className="text-xs text-slate-400">{t("itemsCount", { count: String(l.items.length) })}</span>
-        <button type="button" disabled={busy} aria-label={t("delete")} onClick={async () => { if (await confirmAsk(t("delete") + "?")) run(() => deleteListAction(l.id)); }} className="flex h-10 w-10 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></li>)}</ul></section>}
+      <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{lists.map((l) => <li key={l.id} className="px-4 py-1 text-sm"><details className="group"><summary className="flex min-h-11 cursor-pointer list-none items-center gap-2"><span className="min-w-0 flex-1 truncate font-medium">{l.name}</span><span className="text-xs text-slate-400">{t("itemsCount", { count: String(l.items.length) })}</span>
+        <button type="button" disabled={busy} aria-label={t("delete")} onClick={async (e) => { e.preventDefault(); if (await confirmAsk(t("delete") + "?")) run(() => deleteListAction(l.id)); }} className="flex h-10 w-10 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></summary>
+        <ul className="mb-2 ml-1 space-y-0.5 border-l border-slate-200 pl-3 text-xs text-slate-600">{l.items.map((e, k) => { const m = items.find((x) => x.id === e.materialId); return <li key={k} className="flex gap-2"><span className="w-10 shrink-0 text-right font-semibold">{e.quantity}</span><span className="min-w-0 truncate">{m?.description ?? "—"}</span></li>; })}</ul></details></li>)}</ul></section>}
   </div>;
 }

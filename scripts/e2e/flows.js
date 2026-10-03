@@ -17,7 +17,7 @@ async function phase3(browser) {
   await o.waitForTimeout(1500);
   ok("library: item saved and listed", (await o.getByText("3/4 in EMT conduit").count()) > 0);
   await o.getByRole("button", { name: /Favorito|Favorite/ }).first().click();
-  await o.waitForTimeout(1000);
+  await o.waitForFunction(() => document.querySelector("button[aria-pressed]")?.getAttribute("aria-pressed") === "true", null, { timeout: 15000 }).catch(() => {});
   ok("library: favorite toggles", (await o.getByRole("button", { name: /Favorito|Favorite/ }).first().getAttribute("aria-pressed")) === "true");
 
   // request builder as owner
@@ -25,8 +25,7 @@ async function phase3(browser) {
   await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("tubo");
   ok("request: alias search finds the library item", (await o.getByRole("button", { name: /3\/4 in EMT conduit/ }).count()) > 0);
   await o.getByRole("button", { name: /3\/4 in EMT conduit/ }).first().click();
-  await o.getByLabel(/^Cant\.$|^Qty$|^Qtd\.?$/).fill("1");
-  await o.getByRole("button", { name: /Agregar a la lista|Add to list/ }).click();
+  ok("request: one tap puts the item in the list with quantity 1", (await o.getByLabel(/Cant\.: 3\/4 in EMT|Qty: 3\/4 in EMT|Qtd\.?: 3\/4 in EMT/).first().inputValue()) === "1");
   await o.getByRole("button", { name: /Pegar lista|Paste list/ }).click();
   await o.locator("textarea").first().fill("20 x 12/2 Romex 250ft\n5 ea Mud ring\n3/4 in EMT conduit x 10");
   await o.getByRole("button", { name: /Agregar 3 líneas|Add 3 lines/ }).click();
@@ -37,13 +36,31 @@ async function phase3(browser) {
   ok("request: created with a number MR-", (await o.locator("h1").innerText()).startsWith("MR-"));
   ok("request: total quantity of the library item is 11", (await o.getByText(/11 FT/).count()) > 0);
 
+  // faster material lists: repeat a previous request, save the list, reuse it, Enter adds
+  await o.goto(`${B}/projects/${state.projectId}/materials/new`);
+  ok("request: previous requests can be repeated in one tap", (await o.getByRole("button", { name: /MR-[\d-]+ · \d+ (ítems|items)/ }).count()) > 0);
+  await o.getByRole("button", { name: /MR-[\d-]+ · \d+ (ítems|items)/ }).first().click();
+  const repeated = await o.locator("h2").filter({ hasText: /Ítems del pedido|Request items/ }).innerText();
+  ok("request: repeating brings back the earlier lines", /\((?:[3-9]|\d{2,})\)/.test(repeated), repeated);
+  await o.getByRole("button", { name: /Guardar como lista|Save as list/ }).click();
+  await o.getByPlaceholder(/Nombre \(ej|Name \(e\.g/).fill("Kit prueba");
+  await o.getByRole("button", { name: /^Guardar lista$|^Save list$/ }).click();
+  await o.getByText(/Lista “Kit prueba” guardada|List “Kit prueba” saved/).waitFor({ timeout: 15000 });
+  ok("request: the list is saved straight from the builder", true);
+  await o.goto(`${B}/projects/${state.projectId}/materials/new`);
+  await o.getByRole("button", { name: /Kit prueba/ }).click();
+  ok("request: tapping a saved list adds its items", (await o.getByText(/ítems agregados de “Kit prueba”|items added from “Kit prueba”/).count()) > 0);
+  await o.getByPlaceholder(/Busca un ítem|Search an item/).fill("romex x 5");
+  await o.keyboard.press("Enter");
+  await o.setViewportSize({ width: 390, height: 844 }); await o.screenshot({ path: "/tmp/builder.png" }); await o.setViewportSize({ width: 1280, height: 900 });
+  ok("request: Enter adds the first match and clears the search", (await o.getByPlaceholder(/Busca un ítem|Search an item/).inputValue()) === "");
+
   // employee with request permission (template employee_basic has can_request_material)
   const emp = await inviteEmployee(browser, o, "Luis Tester", `luis-${RUN}@bidpower-smoke.test`, "employee_basic", state.projectId);
   state.emp = emp;
   await emp.goto(`${B}/projects/${state.projectId}/materials/new`);
   await emp.getByPlaceholder(/Busca un ítem|Search an item/).fill("Breaker 20A");
   await emp.getByRole("button", { name: /Agregar "Breaker 20A"|Add "Breaker 20A"/ }).click();
-  await emp.getByRole("button", { name: /Agregar a la lista|Add to list/ }).click();
   await emp.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
   await emp.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
   ok("employee: can create a request", true);

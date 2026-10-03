@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getActionContext } from "@/lib/action-context";
 import { getMaterials, getSavedLists } from "@/lib/services/materials";
-import { getProjectBasic } from "@/lib/services/material-requests";
+import { getProjectBasic, getRepeatableRequests } from "@/lib/services/material-requests";
 import RequestBuilder from "./RequestBuilder";
 import { logged } from "@/lib/log";
 
@@ -16,6 +16,6 @@ export default async function NewMaterialRequestPage({ params }: { params: Promi
   if (!c.perms.can_request_material) redirect(`/projects/${id}`);
   const project = await getProjectBasic(id, c.companyId).catch(logged("/projects/[id]/materials/new", null));
   if (!project) notFound();
-  const [items, lists] = await Promise.all([getMaterials(c.companyId).catch(logged("/projects/[id]/materials/new", [])), getSavedLists(c.companyId).catch(logged("/projects/[id]/materials/new", []))]);
-  return <RequestBuilder projectId={id} projectName={project.name} items={items} lists={lists} />;
+  const [items, lists, repeatable] = await Promise.all([getMaterials(c.companyId).catch(logged("/projects/[id]/materials/new", [])), getSavedLists(c.companyId).catch(logged("/projects/[id]/materials/new", [])), getRepeatableRequests(id, c.companyId).catch(logged("/projects/[id]/materials/new", []))]);
+  return <RequestBuilder projectId={id} projectName={project.name} items={items} lists={lists} repeatable={repeatable} />;
 }

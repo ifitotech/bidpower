@@ -11,8 +11,11 @@ exports.failures = () => failed;
 exports.launch = () => chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
 exports.page = async (browser, w = 1280, h = 900, locale = "es-ES") => {
   const p = await (await browser.newContext({ viewport: { width: w, height: h }, locale })).newPage();
-  // The app asks "are you sure?" with its own dialog; a person would press Confirm, so the harness does too.
-  await p.addLocatorHandler(p.locator('[role="alertdialog"] button[data-confirm]'), (b) => b.click());
+  // The app asks "are you sure?" with its own dialog; a person would press Confirm, so the harness answers yes (test-side only).
+  await p.addInitScript(() => window.addEventListener("bp:confirm", (e) => { e.stopImmediatePropagation(); e.detail.resolve(true); }, true));
+  // Pages stream in behind a loading skeleton and some redirect after load: wait for the network to settle before checking.
+  const goto = p.goto.bind(p);
+  p.goto = (url, opts = {}) => goto(url, { waitUntil: "networkidle", ...opts });
   return p;
 };
 const B = exports.BASE;
