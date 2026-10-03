@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -135,7 +136,7 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
       <button type="button" disabled={busy || num(finalAmount) == null} onClick={() => run(() => completePOAction(po.id, num(finalAmount) ?? 0, num(tax)))} className={`${btn} w-full bg-brand-600 text-white`}>{t("completePO")}</button>
     </section>}
 
-    {!isTerminal(status) && (isReviewer || isCreator) && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("poConfirmCancel"))) run(() => cancelPOAction(po.id)); }} className={`${btn} w-full border border-red-100 bg-red-50 text-red-600`}>{t("poCancel")}</button>}
+    {!isTerminal(status) && (isReviewer || isCreator) && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("poConfirmCancel"))) run(() => cancelPOAction(po.id)); }} className={`${btn} w-full border border-red-100 bg-red-50 text-red-600`}>{t("poCancel")}</button>}
 
     {po.history.length > 0 && <section className="mt-8"><h2 className="mb-2 text-sm font-semibold text-slate-500">{t("poHistory")}</h2>
       <ul className="space-y-1 text-xs text-slate-500">{po.history.map((h) => <li key={h.id}>{formatDate(h.created_at)} · {t(PO_STATUS_KEYS[h.to_status as POStatus] as keyof Dictionary)}{h.changer?.full_name ? ` · ${h.changer.full_name}` : ""}{h.notes ? ` — ${h.notes}` : ""}</li>)}</ul></section>}

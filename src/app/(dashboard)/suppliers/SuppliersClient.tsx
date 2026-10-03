@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -65,7 +66,7 @@ export default function SuppliersClient({ rows, error = false }: { rows: Supplie
         <div className="flex items-center gap-2">
           <span className="min-w-0 flex-1 truncate font-medium">{r.name}</span>
           <Badge variant={r.connected ? "success" : "default"}>{r.connected ? t("supplierConnected") : t("supplierNotConnected")}</Badge>
-          {r.connectionId && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmDisconnect"))) run(() => revokeConnectionAction(r.connectionId as string)); }} className="min-h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold">{t("disconnect")}</button>}
+          {r.connectionId && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmDisconnect"))) run(() => revokeConnectionAction(r.connectionId as string)); }} className="min-h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold">{t("disconnect")}</button>}
         </div>
         <ul className="mt-2 space-y-1.5">
           {r.contacts.length === 0 && <li className="text-xs text-slate-400">{t("noContactsYet")}</li>}
@@ -76,7 +77,7 @@ export default function SuppliersClient({ rows, error = false }: { rows: Supplie
             {c.phone && <span className="flex items-center gap-1 text-xs text-slate-500"><Phone className="h-3 w-3" />{c.phone}</span>}
             <span className="ml-auto flex items-center gap-1">
               {!c.is_primary && <button type="button" disabled={busy} onClick={() => run(() => setPrimaryContactAction(r.id, c.id))} className="min-h-8 rounded-md px-2 text-xs text-brand-700 hover:bg-white">{t("makePrimary")}</button>}
-              <button type="button" disabled={busy} aria-label={t("removeContact")} onClick={() => { if (window.confirm(`${t("removeContact")}?`)) run(() => removeSupplierContactAction(c.id)); }} className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-white hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+              <button type="button" disabled={busy} aria-label={t("removeContact")} onClick={async () => { if (await confirmAsk(`${t("removeContact")}?`)) run(() => removeSupplierContactAction(c.id)); }} className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-white hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
             </span>
           </li>)}
         </ul>

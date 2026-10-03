@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -76,6 +77,6 @@ export default function RequestDetail({ request: r, projectId, canReview, canCan
         <button type="button" disabled={busy || ((suppliers.length === 0 || supplierId === "other") && !vendorName.trim())} onClick={async () => { setBusy(true); setError(null); const res = await buyNowAction(r.id, supplierId === "other" || suppliers.length === 0 ? null : supplierId, vendorName, amount.trim() === "" ? null : Number(amount.replace(",", "."))).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string; id?: string })); setBusy(false); if (res.errorCode) { setError(t(res.errorCode as keyof Dictionary)); return; } router.push(`/pos/${res.id}`); router.refresh(); }} className="min-h-11 w-full rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40">{t("buyCreate")}</button>
       </div>}
     </section>}
-    {pending && canCancel && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmCancelRequest"))) run(() => cancelRequestAction(r.id)); }} className="mt-3 min-h-11 w-full rounded-xl border border-red-100 bg-red-50 px-4 text-sm font-medium text-red-600 disabled:opacity-40">{t("cancelRequest")}</button>}
+    {pending && canCancel && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmCancelRequest"))) run(() => cancelRequestAction(r.id)); }} className="mt-3 min-h-11 w-full rounded-xl border border-red-100 bg-red-50 px-4 text-sm font-medium text-red-600 disabled:opacity-40">{t("cancelRequest")}</button>}
   </div>;
 }

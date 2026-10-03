@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle, DollarSign, Download } from "lucide-react";
 import { useState } from "react";
@@ -62,7 +63,7 @@ export default function InvoiceDetailClient({ invoice: i, displayStatus, canMana
     <div className="mb-4 flex flex-wrap gap-2">
       <a href={`/api/invoices/${i.id}/pdf?lang=${locale}`} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold"><Download className="h-4 w-4" />PDF</a>
       {canManage && i.status === "draft" && <Button disabled={busy} onClick={() => run(() => setInvoiceStatusAction(i.id, "sent"))}>{t("invMarkSent")}</Button>}
-      {canManage && (i.status === "draft" || i.status === "sent") && Number(i.amount_paid) === 0 && <Button disabled={busy} variant="outline" onClick={() => { if (window.confirm(t("invConfirmCancel"))) run(() => setInvoiceStatusAction(i.id, "cancelled")); }}>{t("invCancel")}</Button>}
+      {canManage && (i.status === "draft" || i.status === "sent") && Number(i.amount_paid) === 0 && <Button disabled={busy} variant="outline" onClick={async () => { if (await confirmAsk(t("invConfirmCancel"))) run(() => setInvoiceStatusAction(i.id, "cancelled")); }}>{t("invCancel")}</Button>}
     </div>
 
     {!cancelled && balance > 0 && <div className="rounded-xl border border-slate-200 bg-white p-5">

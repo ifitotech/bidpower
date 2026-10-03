@@ -1088,6 +1088,7 @@ const pt: Dictionary = {
   errInvoiceNumberTaken: "Já existe uma fatura com esse número. Use outro.",
   errProposalNegative: "O total da proposta não pode ser negativo.",
   errPaymentAmount: "O pagamento deve ser um valor positivo.",
+  custPrintSave: "Imprimir ou salvar como PDF",
 };
 
 export default pt;

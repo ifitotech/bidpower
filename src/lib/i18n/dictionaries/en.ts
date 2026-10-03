@@ -1087,6 +1087,7 @@ const en: Dictionary = {
   errInvoiceNumberTaken: "An invoice with that number already exists. Use another.",
   errProposalNegative: "The proposal total cannot be negative.",
   errPaymentAmount: "The payment must be a positive amount.",
+  custPrintSave: "Print or save as PDF",
 };
 
 export default en;

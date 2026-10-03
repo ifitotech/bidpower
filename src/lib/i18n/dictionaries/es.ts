@@ -1101,6 +1101,7 @@ const es = {
   errInvoiceNumberTaken: "Ya existe una factura con ese número. Usa otro.",
   errProposalNegative: "El total de la propuesta no puede ser negativo.",
   errPaymentAmount: "El pago debe ser un monto positivo.",
+  custPrintSave: "Imprimir o guardar como PDF",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

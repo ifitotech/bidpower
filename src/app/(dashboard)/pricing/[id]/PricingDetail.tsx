@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -108,8 +109,8 @@ export default function PricingDetail({ request: r, suppliers, invitations = [],
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={copyText} className={`${btn} flex items-center gap-2 border border-slate-200`}><Copy className="h-4 w-4" />{copied ? t("prCopied") : t("prCopyText")}</button>
         {r.status === "draft" && <button type="button" disabled={busy} onClick={() => run(() => markSentAction(r.id))} className={`${btn} bg-brand-600 text-white`}>{t("prMarkSent")}</button>}
-        <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("prConfirmClose"))) run(() => closeRequestAction(r.id)); }} className={`${btn} border border-slate-200`}>{t("prClose")}</button>
-        <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmCancelRequest"))) run(() => cancelPricingAction(r.id)); }} className={`${btn} border border-red-100 bg-red-50 text-red-600`}>{t("prCancel")}</button>
+        <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("prConfirmClose"))) run(() => closeRequestAction(r.id)); }} className={`${btn} border border-slate-200`}>{t("prClose")}</button>
+        <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmCancelRequest"))) run(() => cancelPricingAction(r.id)); }} className={`${btn} border border-red-100 bg-red-50 text-red-600`}>{t("prCancel")}</button>
       </div>
     </div>}
 
@@ -133,7 +134,7 @@ export default function PricingDetail({ request: r, suppliers, invitations = [],
             if (po) return <Link href={`/pos/${po.id}`} className="mt-3 flex min-h-11 items-center justify-center rounded-xl border border-brand-500 bg-brand-50 px-4 text-sm font-semibold text-brand-700">{t("poViewExisting", { number: po.number })}</Link>;
             if (!permissions.can_create_po || !["submitted", "accepted"].includes(resp.status) || !r.project_id || ["closed", "cancelled"].includes(r.status)) return null;
             return <button type="button" disabled={busy} onClick={async () => { setBusy(true); setError(null); const res = await createPOFromResponseAction(r.id, resp.id).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string; id?: string })); setBusy(false); if (res.errorCode) { setError(t(res.errorCode as keyof Dictionary)); return; } router.push(`/pos/${res.id}`); router.refresh(); }} className={`${btn} mt-3 w-full border border-brand-500 bg-brand-50 text-brand-700`}>{t("poCreateFromResponse")}</button>; })()}
-          {canManage && isOpen && resp.status === "submitted" && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmAward"))) run(() => awardResponseAction(r.id, resp.id)); }} className={`${btn} mt-3 w-full bg-brand-600 text-white`}>{t("awardResponse")}</button>}
+          {canManage && isOpen && resp.status === "submitted" && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmAward"))) run(() => awardResponseAction(r.id, resp.id)); }} className={`${btn} mt-3 w-full bg-brand-600 text-white`}>{t("awardResponse")}</button>}
         </div>)}
       </div>}
     </section>
@@ -278,7 +279,7 @@ function SupplierLinks({ request: r, suppliers, invitations, questions, isOpen, 
     <ul className="space-y-2">{invitations.map((i) => { const qs = questions.filter((q) => q.invitation_id === i.id); const live = !i.revoked_at && new Date(i.expires_at) > new Date();
       return <li key={i.id} className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
         <div className="flex items-center gap-2"><span className="min-w-0 flex-1 truncate font-medium">{i.supplier_name}{i.supply_company_id ? <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">{t("supplyAccountBadge")}</span> : null}</span><span className="text-xs text-slate-400">{status(i)}</span>
-          {live && isOpen && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmRevokeLink"))) act(() => revokeSupplierLinkAction(r.id, i.id)); }} className="min-h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold">{t("revokeLink")}</button>}</div>
+          {live && isOpen && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmRevokeLink"))) act(() => revokeSupplierLinkAction(r.id, i.id)); }} className="min-h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold">{t("revokeLink")}</button>}</div>
         {qs.length > 0 && <div className="mt-2 space-y-1.5"><p className="text-xs font-semibold text-slate-500">{t("supplierQuestions")}</p>{qs.map((q) => <p key={q.id} className={`whitespace-pre-wrap rounded-lg p-2 text-xs ${q.author === "supplier" ? "bg-amber-50" : "bg-brand-50"}`}><span className="font-semibold">{q.author === "supplier" ? i.supplier_name : t("youLabel")}: </span>{q.body}</p>)}</div>}
         {live && isOpen && qs.length > 0 && <div className="mt-2 flex gap-2"><input value={replies[i.id] ?? ""} maxLength={2000} aria-label={t("answerQuestion")} placeholder={t("answerQuestion")} onChange={(e) => setReplies((p) => ({ ...p, [i.id]: e.target.value }))} className={input} /><button type="button" disabled={busy || !(replies[i.id] ?? "").trim()} onClick={() => act(async () => { const res = await answerQuestionAction(r.id, i.id, replies[i.id] ?? ""); if (!res.errorCode) setReplies((p) => ({ ...p, [i.id]: "" })); return res; })} className="min-h-10 shrink-0 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white disabled:opacity-40">{t("answerQuestion")}</button></div>}
       </li>; })}</ul>

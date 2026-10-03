@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -116,11 +117,11 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
       <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{shown.map((i) => <li key={i.id} className="flex items-center gap-2 px-3 py-2">
         <button type="button" disabled={busy} aria-label={t("favorite")} aria-pressed={i.is_favorite} onClick={() => run(() => toggleFavoriteAction(i.id, !i.is_favorite))} className="flex h-10 w-10 shrink-0 items-center justify-center"><Star className={`h-4 w-4 ${i.is_favorite ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} /></button>
         <button type="button" onClick={() => edit(i)} className="min-w-0 flex-1 py-1 text-left"><p className="truncate text-sm font-medium">{i.description}</p><p className="truncate text-xs text-slate-400">{i.catalog_number ? `${t("partNumberShort")} ${i.catalog_number} · ` : ""}{i.unit}{i.aliases.length ? ` · ${i.aliases.join(", ")}` : ""}</p></button>
-        <button type="button" disabled={busy} aria-label={t("archiveItem")} onClick={() => { if (window.confirm(t("confirmArchiveItem"))) run(() => archiveMaterialAction(i.id)); }} className="flex h-10 w-10 shrink-0 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+        <button type="button" disabled={busy} aria-label={t("archiveItem")} onClick={async () => { if (await confirmAsk(t("confirmArchiveItem"))) run(() => archiveMaterialAction(i.id)); }} className="flex h-10 w-10 shrink-0 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
       </li>)}</ul>}
 
     {lists.length > 0 && <section className="mt-6"><h2 className="mb-2 font-semibold">{t("savedLists")}</h2>
       <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{lists.map((l) => <li key={l.id} className="flex items-center gap-2 px-4 py-2 text-sm"><span className="min-w-0 flex-1 truncate font-medium">{l.name}</span><span className="text-xs text-slate-400">{t("itemsCount", { count: String(l.items.length) })}</span>
-        <button type="button" disabled={busy} aria-label={t("delete")} onClick={() => { if (window.confirm(t("delete") + "?")) run(() => deleteListAction(l.id)); }} className="flex h-10 w-10 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></li>)}</ul></section>}
+        <button type="button" disabled={busy} aria-label={t("delete")} onClick={async () => { if (await confirmAsk(t("delete") + "?")) run(() => deleteListAction(l.id)); }} className="flex h-10 w-10 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></li>)}</ul></section>}
   </div>;
 }

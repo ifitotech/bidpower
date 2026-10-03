@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -55,7 +56,7 @@ export default function ProposalPanel({ quote, extras, canManage }: { quote: Quo
     </div>;
   }
 
-  const linkList = (links: LinkView[]) => links.length > 0 && <ul className="mt-2 space-y-1.5">{links.map((l) => <li key={l.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"><span className="min-w-0 flex-1 truncate font-medium">{l.recipient_name || "—"}</span><span className="text-slate-400">{l.revoked_at ? t("linkRevoked") : l.last_used_at ? t("linkOpened", { date: formatDate(l.last_used_at) }) : t("linkNotOpened")}</span>{live(l) && canManage && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmRevokeLink"))) run(() => revokeCustomerLinkAction(quote.id, l.id)); }} className="min-h-9 rounded-lg border border-slate-200 px-2 font-semibold">{t("revokeLink")}</button>}</li>)}</ul>;
+  const linkList = (links: LinkView[]) => links.length > 0 && <ul className="mt-2 space-y-1.5">{links.map((l) => <li key={l.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"><span className="min-w-0 flex-1 truncate font-medium">{l.recipient_name || "—"}</span><span className="text-slate-400">{l.revoked_at ? t("linkRevoked") : l.last_used_at ? t("linkOpened", { date: formatDate(l.last_used_at) }) : t("linkNotOpened")}</span>{live(l) && canManage && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmRevokeLink"))) run(() => revokeCustomerLinkAction(quote.id, l.id)); }} className="min-h-9 rounded-lg border border-slate-200 px-2 font-semibold">{t("revokeLink")}</button>}</li>)}</ul>;
 
   const activity = (list: ActionView[]) => list.length > 0 && <ul className="mt-2 space-y-1 text-xs text-slate-500">{list.map((a) => <li key={a.id}><span className="font-medium text-slate-700">{t(ACT_KEYS[a.action])}</span>{a.customer_name ? ` · ${a.customer_name}` : ""} · {formatDate(a.created_at)}{a.ip && a.action !== "viewed" ? ` · ${t("actIp", { ip: a.ip })}` : ""}{a.message ? ` — ${a.message}` : ""}</li>)}</ul>;
 
@@ -79,12 +80,12 @@ export default function ProposalPanel({ quote, extras, canManage }: { quote: Quo
       {linkable && <LinkForm objectType="proposal" objectId={quote.id} label={t("customerLink")} />}
       {linkList(extras.links)}
       <div className="mt-3 flex flex-wrap gap-2">
-        {versionable && <button type="button" disabled={busy} onClick={async () => { if (!window.confirm(t("confirmNewVersion"))) return; const res = await run(() => newProposalVersionAction(quote.id)); if (res?.id) router.push(`/quotes/${res.id}`); }} className={`${btn} border border-slate-200`}>{t("newProposalVersion")}</button>}
+        {versionable && <button type="button" disabled={busy} onClick={async () => { if (!(await confirmAsk(t("confirmNewVersion")))) return; const res = await run(() => newProposalVersionAction(quote.id)); if (res?.id) router.push(`/quotes/${res.id}`); }} className={`${btn} border border-slate-200`}>{t("newProposalVersion")}</button>}
       </div>
       {["sent", "pending"].includes(quote.status) && <details className="mt-3 text-sm"><summary className="cursor-pointer text-slate-500">{t("manualDecision")}</summary>
         <div className="mt-2 flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmManual"))) run(() => manualDecisionAction(quote.id, "approved")); }} className={`${btn} border border-slate-200`}>{t("manualApprove")}</button>
-          <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmManual"))) run(() => manualDecisionAction(quote.id, "rejected")); }} className={`${btn} border border-slate-200`}>{t("manualReject")}</button>
+          <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmManual"))) run(() => manualDecisionAction(quote.id, "approved")); }} className={`${btn} border border-slate-200`}>{t("manualApprove")}</button>
+          <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmManual"))) run(() => manualDecisionAction(quote.id, "rejected")); }} className={`${btn} border border-slate-200`}>{t("manualReject")}</button>
         </div></details>}
     </section>}
 
@@ -125,7 +126,7 @@ export default function ProposalPanel({ quote, extras, canManage }: { quote: Quo
         {co.approved_by_name && <p className="mt-1 text-xs text-green-700">{t("custApprovedBy", { name: co.approved_by_name, date: co.approved_at ? formatDate(co.approved_at) : "" })}</p>}
         {canManage && ["draft", "sent"].includes(co.status) && <div className="mt-2 space-y-2">
           <LinkForm objectType="change_order" objectId={co.id} label={`${t("customerLink")} ${co.number}`} />
-          <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmCancelRequest"))) run(() => cancelChangeOrderAction(quote.id, co.id)); }} className={`${btn} border border-red-100 bg-red-50 text-red-600`}>{t("coCancel")}</button>
+          <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmCancelRequest"))) run(() => cancelChangeOrderAction(quote.id, co.id)); }} className={`${btn} border border-red-100 bg-red-50 text-red-600`}>{t("coCancel")}</button>
         </div>}
         {linkList(co.links)}
         {activity(co.actions ?? [])}

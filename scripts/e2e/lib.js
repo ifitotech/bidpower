@@ -9,7 +9,12 @@ let failed = 0;
 exports.ok = (name, cond, extra) => { console.log((cond ? "PASS " : "FAIL ") + name + (!cond && extra ? "  -> " + extra : "")); if (!cond) failed++; };
 exports.failures = () => failed;
 exports.launch = () => chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
-exports.page = async (browser, w = 1280, h = 900, locale = "es-ES") => (await browser.newContext({ viewport: { width: w, height: h }, locale })).newPage();
+exports.page = async (browser, w = 1280, h = 900, locale = "es-ES") => {
+  const p = await (await browser.newContext({ viewport: { width: w, height: h }, locale })).newPage();
+  // The app asks "are you sure?" with its own dialog; a person would press Confirm, so the harness does too.
+  await p.addLocatorHandler(p.locator('[role="alertdialog"] button[data-confirm]'), (b) => b.click());
+  return p;
+};
 const B = exports.BASE;
 
 exports.register = async (page, name, email, company) => {

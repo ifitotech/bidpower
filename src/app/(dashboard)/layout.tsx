@@ -4,6 +4,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { ToastContainer } from "@/components/ui/Toast";
 import { FloatingCreateButton } from "@/components/layout/FloatingCreateButton";
 import { getCurrentMember, getCurrentProfile, getMyPermissions, getSession } from "@/lib/auth";
+import { DocumentTitle } from "@/components/shared/DocumentTitle";
 import { PermissionsProvider } from "@/lib/permissions-context";
 import { NO_PERMISSIONS, type Permissions } from "@/lib/permissions";
 
@@ -47,6 +48,7 @@ export default async function DashboardLayout({
       <BottomNav />
       <FloatingCreateButton />
       <ToastContainer />
+      <DocumentTitle />
     </div>
     </PermissionsProvider>
   );

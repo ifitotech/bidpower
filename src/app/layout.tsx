@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { I18nProvider } from "@/lib/i18n/provider";
 import { ThemeProvider } from "@/lib/theme/provider";
 import { defaultLocale, locales, type Locale } from "@/lib/i18n";
+import { ConfirmHost } from "@/components/ui/ConfirmHost";
 import { ServiceWorkerRegister } from "@/components/shared/ServiceWorkerRegister";
 import "./globals.css";
 
@@ -59,7 +60,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body>
-        <ThemeProvider><I18nProvider initialLocale={locale}>{children}</I18nProvider></ThemeProvider>
+        <ThemeProvider><I18nProvider initialLocale={locale}>{children}<ConfirmHost /></I18nProvider></ThemeProvider>
         <ServiceWorkerRegister />
       </body>
     </html>

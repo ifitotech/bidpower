@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy } from "lucide-react";
@@ -55,7 +56,7 @@ export default function ContractorsView({ rows, error = false }: { rows: Contrac
       {rows.map((r) => <li key={r.connection_id} className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex items-center gap-2"><span className="min-w-0 flex-1 truncate font-semibold">{r.contractor_name}</span><Badge variant={r.status === "active" ? "success" : "default"}>{r.status === "active" ? t("supplyActive") : t("linkRevoked")}</Badge></div>
         <p className="mt-1 text-xs text-slate-500">{t("supplyCounters", { requests: String(r.requests_received), quotes: String(r.quotes_sent), awarded: String(r.quotes_awarded) })} · {t("supplyConnectedOn", { date: formatDate(r.connected_at) })}</p>
-        {r.status === "active" && <button type="button" disabled={busy} onClick={async () => { if (!window.confirm(t("supplyConfirmRevoke"))) return; setBusy(true); await revokeConnectionAction(r.connection_id); setBusy(false); router.refresh(); }} className="mt-2 min-h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold">{t("revokeLink")}</button>}
+        {r.status === "active" && <button type="button" disabled={busy} onClick={async () => { if (!(await confirmAsk(t("supplyConfirmRevoke")))) return; setBusy(true); await revokeConnectionAction(r.connection_id); setBusy(false); router.refresh(); }} className="mt-2 min-h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold">{t("revokeLink")}</button>}
       </li>)}
       {rows.length === 0 && !error && <li className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-400">{t("supplyNoContractors")}</li>}
     </ul>
