@@ -117,8 +117,9 @@ if (bMember) attacks.push(["deactivate a member of another company", `set_member
 const slipped = [];
 for (const [name, call] of attacks) {
   const r = asUser(A.user, `select ${call};`);
-  const failedAsExpected = /ERROR/.test(r.err) || r.out.trim() === "" || /^0$/.test(r.out.trim());
-  if (!failedAsExpected) slipped.push(`${name} -> ${r.out.slice(0, 40)}`);
+  const result = r.out.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("{")).pop() || "";
+  const failedAsExpected = /ERROR/.test(r.err) || result === "" || /^0$/.test(result);
+  if (!failedAsExpected) slipped.push(`${name} -> ${result.slice(0, 40)}`);
 }
 ok("functions refuse another company's ids (invitations, supply, numbers, proposals, purchase orders, members)", slipped.length === 0, slipped.join(" | "));
 const stillActive = one(`select is_active from company_members where id='${bMember}'`);

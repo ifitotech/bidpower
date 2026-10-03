@@ -15,14 +15,14 @@ import { searchLibrary, splitQuantity, type LibraryItem } from "@/lib/materials"
 const QUOTE_UNIT: Record<string, string> = { EA: "each", FT: "ft", BOX: "box", ROLL: "roll", LOT: "lot" };
 
 /** Description field that suggests items from the company library while typing; picking one fills part number and unit. */
-function DescriptionField({ value, library, onText, onPick }: { value: string; library: LibraryItem[]; onText: (v: string) => void; onPick: (item: LibraryItem) => void }) {
+function DescriptionField({ label, value, library, onText, onPick }: { label: string; value: string; library: LibraryItem[]; onText: (v: string) => void; onPick: (item: LibraryItem) => void }) {
   const [focus, setFocus] = useState(false);
   const [active, setActive] = useState(0);
   const query = splitQuantity(value).text;
   const results = query.trim().length >= 2 ? searchLibrary(library, query, 6) : [];
   const open = focus && results.length > 0;
   return <div className="relative">
-    <input type="text" value={value} autoComplete="off" required onFocus={() => setFocus(true)} onBlur={() => setTimeout(() => setFocus(false), 120)}
+    <input type="text" aria-label={label} value={value} autoComplete="off" required onFocus={() => setFocus(true)} onBlur={() => setTimeout(() => setFocus(false), 120)}
       onChange={(e) => { onText(e.target.value); setActive(0); }}
       onKeyDown={(e) => {
         if (!open) return;
@@ -160,7 +160,7 @@ export default function NewQuoteForm({ library = [], clients, projects, defaultP
                       {t("description")}
                     </label>
                   )}
-                  <DescriptionField value={item.description} library={library} onText={(v) => updateItem(item.id, "description", v)}
+                  <DescriptionField label={t("description")} value={item.description} library={library} onText={(v) => updateItem(item.id, "description", v)}
                     onPick={(m) => setItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, description: m.description, part_number: m.catalog_number ?? x.part_number, unit: QUOTE_UNIT[m.unit] ?? "each" } : x)))} />
                   <input
                     type="text"
@@ -176,7 +176,7 @@ export default function NewQuoteForm({ library = [], clients, projects, defaultP
                 </div>
                 <div className="col-span-6 sm:col-span-2">
                   {idx === 0 && <label className="text-[10px] text-slate-400 uppercase">{t("unitLabel")}</label>}
-                  <select value={item.unit} onChange={(e) => updateItem(item.id, "unit", e.target.value)} className="w-full border border-slate-200 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  <select aria-label={t("unitLabel")} value={item.unit} onChange={(e) => updateItem(item.id, "unit", e.target.value)} className="w-full border border-slate-200 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
                     <option value="each">{t("unitEach")}</option><option value="ft">{t("unitFt")}</option><option value="box">{t("unitBox")}</option><option value="roll">{t("unitRoll")}</option><option value="hour">{t("unitHour")}</option><option value="lot">{t("unitLot")}</option>
                   </select>
                 </div>
@@ -187,7 +187,7 @@ export default function NewQuoteForm({ library = [], clients, projects, defaultP
                     </label>
                   )}
                   <input
-                    type="number"
+                    type="number" aria-label={t("quantity")}
                     min="0"
                     step="0.01"
                     value={item.quantity}
@@ -202,7 +202,7 @@ export default function NewQuoteForm({ library = [], clients, projects, defaultP
                     </label>
                   )}
                   <input
-                    type="number"
+                    type="number" aria-label={t("unitPrice")}
                     min="0"
                     step="0.01"
                     value={item.unit_price}
@@ -238,10 +238,11 @@ export default function NewQuoteForm({ library = [], clients, projects, defaultP
         <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
           <Input name="terms" label={`${t("terms")} (${t("optional")})`} />
           <div>
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">
+            <label htmlFor="quote-notes" className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">
               {t("notes")}
             </label>
             <textarea
+              id="quote-notes"
               rows={2}
               name="notes"
               className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"

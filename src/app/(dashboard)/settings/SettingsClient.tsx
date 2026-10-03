@@ -45,11 +45,11 @@ export default function SettingsClient({ isOwner, company, profile }: { isOwner:
           <form onSubmit={saveProfile} className="space-y-3 max-w-lg">
             <div>
               <label className="text-xs text-slate-500">{t("fullName")}</label>
-              <input name="fullName" defaultValue={profile?.full_name ?? ""} className={field} />
+              <input aria-label={t("fullName")} name="fullName" defaultValue={profile?.full_name ?? ""} className={field} />
             </div>
             <div>
               <label className="text-xs text-slate-500">{t("phone")}</label>
-              <input name="profilePhone" type="tel" defaultValue={profile?.phone ?? ""} className={field} />
+              <input aria-label={t("phone")} name="profilePhone" type="tel" defaultValue={profile?.phone ?? ""} className={field} />
             </div>
             {profileMessage && <p role="status" className="text-sm text-slate-600">{profileMessage}</p>}
             <Button type="submit" size="sm">{t("save")}</Button>
@@ -77,16 +77,16 @@ export default function SettingsClient({ isOwner, company, profile }: { isOwner:
             <fieldset disabled={!isOwner} className="space-y-3">
               <div>
                 <label className="text-xs text-slate-500">{t("companyName")}</label>
-                <input name="name" type="text" required defaultValue={company?.name ?? ""} className={`${field} focus:outline-none focus:ring-2 focus:ring-brand-500`} />
+                <input aria-label={t("companyName")} name="name" type="text" required defaultValue={company?.name ?? ""} className={`${field} focus:outline-none focus:ring-2 focus:ring-brand-500`} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-500">{t("phone")}</label>
-                  <input name="phone" type="text" defaultValue={company?.phone ?? ""} className={field} />
+                  <input aria-label={t("phone")} name="phone" type="text" defaultValue={company?.phone ?? ""} className={field} />
                 </div>
                 <div>
                   <label className="text-xs text-slate-500">{t("currency")}</label>
-                  <select name="currency" defaultValue={company?.currency ?? "USD"} className={field}>
+                  <select aria-label={t("currency")} name="currency" defaultValue={company?.currency ?? "USD"} className={field}>
                     <option>USD</option>
                     <option>EUR</option>
                     <option>MXN</option>
@@ -95,20 +95,20 @@ export default function SettingsClient({ isOwner, company, profile }: { isOwner:
               </div>
               <div>
                 <label className="text-xs text-slate-500">{t("email")}</label>
-                <input name="email" type="email" defaultValue={company?.email ?? ""} className={field} />
+                <input aria-label={t("email")} name="email" type="email" defaultValue={company?.email ?? ""} className={field} />
               </div>
               <div>
                 <label className="text-xs text-slate-500">{t("address")}</label>
-                <input name="address" defaultValue={company?.address ?? ""} className={field} />
+                <input aria-label={t("address")} name="address" defaultValue={company?.address ?? ""} className={field} />
               </div>
               <div>
                 <label className="text-xs text-slate-500">{t("companyLogo")}</label>
-                <input name="logo" type="file" accept="image/png,image/jpeg,image/webp" className="w-full mt-1 text-sm" />
+                <input aria-label={t("companyLogo")} name="logo" type="file" accept="image/png,image/jpeg,image/webp" className="w-full mt-1 text-sm" />
                 <p className="text-xs text-slate-400 mt-1">{t("logoHint")}</p>
               </div>
               <div>
                 <label className="text-xs text-slate-500">{t("timezone")}</label>
-                <select name="timezone" defaultValue={company?.timezone ?? "America/New_York"} className={field}>
+                <select aria-label={t("timezone")} name="timezone" defaultValue={company?.timezone ?? "America/New_York"} className={field}>
                   <option value="America/New_York">{t("tzEastern")}</option>
                   <option value="America/Chicago">{t("tzCentral")}</option>
                   <option value="America/Denver">{t("tzMountain")}</option>
