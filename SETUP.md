@@ -313,3 +313,15 @@ The detail of a quote request shows a strip with four steps (what you ask, to wh
 - Supabase through the assistant: `DROP ...` statements wait for a human confirmation and time out, so policies are changed with `ALTER POLICY` and the old ones are left in place when identical.
 - Receipt and attachment inputs list the accepted image types explicitly (not `image/*`): iPhones then convert HEIC photos to JPEG on their own instead of sending a format the app refuses.
 - Migration `20260821000031_storage_limits.sql`: the file store itself accepts only PDF/JPEG/PNG/WEBP up to 10 MB (SVG is excluded because it can carry scripts).
+
+## 38. Páginas legales y centro de ayuda
+
+Páginas públicas reales (sin cuenta), en ES/EN/PT: `/terms`, `/privacy`, `/help`. El contenido vive en `src/lib/site-content/{es,en,pt}.ts` (no en los diccionarios) y lo escribe según lo que la app realmente hace (no procesa pagos, la aprobación del cliente no es firma certificada, sin analítica ni publicidad, límites del plan Free tomados de `src/lib/plans.ts`).
+Enlaces desde: login, registro (con aviso de aceptación), invitación, enlaces públicos de cliente y supplier, menú "Más" y barra lateral.
+
+Variables de entorno opcionales (Vercel → Settings → Environment Variables; se muestran solo si existen):
+- `NEXT_PUBLIC_LEGAL_NAME`: razón social o nombre del responsable del servicio.
+- `NEXT_PUBLIC_LEGAL_ADDRESS`: dirección del responsable.
+- `NEXT_PUBLIC_SUPPORT_EMAIL`: correo de soporte público.
+
+Importante: son textos base redactados por el equipo de desarrollo; un abogado debe revisarlos para tu país/estado antes del lanzamiento comercial. Si cambias el producto (por ejemplo, empiezas a cobrar con Stripe o a enviar correos), actualiza los textos y `LEGAL_UPDATED` en `src/lib/site-content/types.ts`.
