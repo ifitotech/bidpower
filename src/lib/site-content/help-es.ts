@@ -95,7 +95,7 @@ export const helpEs: HelpTopic[] = [
   { id: "materiales", title: "Materiales", blurb: "Biblioteca, listas de material y pedidos del equipo.", articles: [
     { id: "biblioteca", q: "¿Para qué sirve la biblioteca de materiales?", keywords: "biblioteca ítems apodos favoritos", a: [
       "Es tu catálogo propio de artículos que pides seguido. Cada ítem tiene descripción, número de parte, fabricante, unidad, categoría, notas y apodos de campo (por ejemplo “romex” o “mud ring”) para encontrarlo como lo dices en la obra. Puedes marcar favoritos. Se aprende sola: lo que agregas a una lista como texto libre puede guardarse en la biblioteca.",
-      "Para agregar uno: Más → Material → Biblioteca → Agregar ítem. Archivar un ítem no cambia los pedidos anteriores.",
+      "Para empezar rápido, en Más → Material → Biblioteca toca “Cargar biblioteca estándar”: copia más de 1000 materiales eléctricos comunes (cable THHN, romex, EMT, PVC, cajas, breakers, paneles, luminarias…) sin precios ni marcas, para que los edites y completes. La búsqueda entiende abreviaturas y nombres pegados: “thhn8blk” encuentra “THHN 8 AWG stranded black”. Para agregar uno: Más → Material → Biblioteca → Agregar ítem. Archivar un ítem no cambia los pedidos anteriores.",
     ] },
     { id: "historial-precios", q: "¿Veo el historial de precios de un material?", keywords: "precio histórico más bajo", a: [
       "Sí. Al abrir un ítem ves lo que pagaste (órdenes de compra) y lo que te cotizaron, con el precio más bajo reciente y el proveedor. Solo lo ven quienes tienen permiso de ver costos.",

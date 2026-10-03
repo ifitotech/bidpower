@@ -95,7 +95,7 @@ export const helpEn: HelpTopic[] = [
   { id: "materials", title: "Materials", blurb: "Library, material lists and team requests.", articles: [
     { id: "library", q: "What is the material library for?", keywords: "library items nicknames favorites", a: [
       "It is your own catalog of items you order often. Each item has description, part number, manufacturer, unit, category, notes and field nicknames (for example “romex” or “mud ring”) so you find it the way you say it on site. You can mark favorites. It learns on its own: what you add to a list as free text can be saved to the library.",
-      "To add one: More → Material → Library → Add item. Archiving an item does not change earlier requests.",
+      "To get going fast, in More → Material → Library tap “Load standard library”: it copies more than 1000 common electrical materials (THHN wire, Romex, EMT, PVC, boxes, breakers, panels, lighting…) with no prices or brands, for you to edit and complete. Search understands shorthand and run-together names: “thhn8blk” finds “THHN 8 AWG stranded black”. To add one: More → Material → Library → Add item. Archiving an item does not change earlier requests.",
     ] },
     { id: "price-history", q: "Can I see a material's price history?", keywords: "price history lowest", a: [
       "Yes. Open an item to see what you paid (purchase orders) and what you were quoted, with the recent lowest price and the vendor. Only people allowed to view costs see it.",

@@ -1113,6 +1113,12 @@ const pt: Dictionary = {
   importAlsoList: "Salvar também como lista (com as quantidades)",
   importListNamePh: "Nome da lista",
   importListSaved: "Lista “{name}” salva com {count} itens",
+  starterTitle: "Comece com a biblioteca padrão",
+  starterHint: "Mais de 1000 materiais elétricos comuns (fio THHN, Romex, EMT, PVC, caixas, disjuntores, painéis, luminárias, dispositivos…) com os nomes que você usa na obra. Sem preços nem marcas: você adiciona os seus. Eles são copiados para sua biblioteca e você pode editá-los.",
+  starterLoad: "Carregar biblioteca padrão",
+  starterDone: "Biblioteca padrão carregada: {created} novos, {skipped} você já tinha.",
+  starterLoading: "Carregando…",
+  starterBuilderHint: "Sua biblioteca está vazia. Carregue a biblioteca padrão para buscar fio, conduíte, disjuntores e mais.",
 };
 
 export default pt;

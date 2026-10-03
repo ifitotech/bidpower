@@ -223,7 +223,7 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
         {group(t("favorites"), favorites)}
         {group(t("mbFrequent"), frequent)}
         {group(t("recentItems"), results.filter((i) => !favorites.includes(i) && !frequent.includes(i)))}
-        {items.length === 0 && <p className="px-4 py-3 text-sm text-slate-400">{t("noItemsYet")}</p>}
+        {items.length === 0 && <p className="px-4 py-3 text-sm text-slate-500">{canLibrary ? <>{t("starterBuilderHint")} <a href="/materials" className="font-semibold text-brand-700 underline">{t("starterLoad")}</a></> : t("noItemsYet")}</p>}
       </>}
     </div>
 

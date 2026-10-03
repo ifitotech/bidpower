@@ -12,7 +12,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import type { PricePoint } from "@/lib/services/materials";
 import { IMPORT_TEMPLATE, MAX_IMPORT_ROWS, parseMaterialImport } from "@/lib/material-import";
 import { readSheetText } from "@/lib/read-sheet";
-import { importMaterialsAction, getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
+import { loadStarterLibraryAction, importMaterialsAction, getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
 
 type Item = LibraryItem & { notes?: string | null; allow_substitution?: boolean };
 type SavedList = { id: string; name: string; items: { materialId: string; quantity: number }[] };
@@ -73,6 +73,7 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
       <button type="button" onClick={() => setDraft({ ...EMPTY })} className="flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white"><Plus className="h-4 w-4" />{t("addItem")}</button>
       <button type="button" onClick={() => setImporting((v) => !v)} className="flex min-h-11 items-center gap-2 rounded-xl border border-brand-500 px-4 text-sm font-semibold text-brand-700"><Upload className="h-4 w-4" />{t("importCsv")}</button>
     </div>
+    {items.length < 20 && !importing && !draft && <section className="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4"><h2 className="font-semibold text-brand-900">{t("starterTitle")}</h2><p className="mt-1 text-sm text-slate-700">{t("starterHint")}</p><button type="button" disabled={busy} onClick={() => run(async () => { const r = await loadStarterLibraryAction(); if (r.success) setNotice(t("starterDone", { created: String(r.created ?? 0), skipped: String(r.skipped ?? 0) })); return r; })} className="mt-3 min-h-11 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40">{busy ? t("starterLoading") : t("starterLoad")}</button></section>}
     {notice && <div role="status" className="mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">{notice}</div>}
     {(error || msg) && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error ? t("errLoadMaterials") : msg}</div>}
     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("search")} aria-label={t("search")} className={`${input} mb-3`} />

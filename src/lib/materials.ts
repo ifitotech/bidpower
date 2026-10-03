@@ -63,6 +63,8 @@ const WORD_SYNONYMS: Record<string, string> = {
 /** Punctuation becomes spaces ("THHN-10-STR-BLK", "#8") and shorthand words are unified. Expects normalizeText output. */
 function canonical(text: string): string {
   return text
+    .replace(/([a-z]{2,})(\d)/g, "$1 $2") // "thhn8blk" -> "thhn 8blk"
+    .replace(/(\d)([a-z]{2,})/g, "$1 $2") // "8blk" -> "8 blk"; "20a" stays together
     .replace(/#/g, " ")
     .replace(/[-_,()]+/g, " ")
     .split(" ")
