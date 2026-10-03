@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { getSiteContent } from "@/lib/site-content";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -10,6 +11,8 @@ import {
   FileText,
   UserCog,
   Settings,
+  LifeBuoy,
+  ShieldCheck,
   Receipt,
   BarChart3,
   MessageSquare,
@@ -28,7 +31,8 @@ const roleLabel: Record<string, "owner" | "manager" | "employee"> = { owner: "ow
 
 export function Sidebar({ companyName = "", userName = "", role = "" }: { companyName?: string; userName?: string; role?: string }) {
   const pathname = usePathname();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const site = getSiteContent(locale).ui;
   const { permissions, isManagerOrAbove } = usePermissions();
 
   const isEmployee = role === "employee";
@@ -62,6 +66,9 @@ export function Sidebar({ companyName = "", userName = "", role = "" }: { compan
     { label: t("areaCompany"), items: [
       ...(role === "owner" ? [{ href: "/settings", label: t("navSettings"), icon: Settings }] : []),
       { href: "/feedback", label: t("navHelp"), icon: MessageSquare },
+      { href: "/help", label: site.helpTitle, icon: LifeBuoy },
+      { href: "/terms", label: site.terms, icon: FileText },
+      { href: "/privacy", label: site.privacy, icon: ShieldCheck },
     ] },
   ].filter((sec) => sec.items.length > 0);
 

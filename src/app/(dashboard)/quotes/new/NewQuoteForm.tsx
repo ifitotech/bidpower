@@ -219,6 +219,7 @@ export default function NewQuoteForm({ library = [], clients, projects, defaultP
                   <button
                     type="button"
                     onClick={() => removeItem(item.id)}
+                    aria-label={t("removeLine")}
                     className="text-slate-400 hover:text-red-500 p-1"
                     disabled={items.length <= 1}
                   >

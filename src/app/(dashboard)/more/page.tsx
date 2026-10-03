@@ -1,14 +1,16 @@
 "use client";
 import Link from "next/link";
-import { BarChart3, Package, Send, ShoppingCart, Building2, ChevronRight, LogOut, Settings, UserCog, FileSpreadsheet, Users, CalendarDays, MessageSquare, Receipt } from "lucide-react";
+import { BarChart3, Package, Send, ShoppingCart, Building2, ChevronRight, LogOut, Settings, UserCog, FileSpreadsheet, Users, CalendarDays, MessageSquare, Receipt, LifeBuoy, FileText, ShieldCheck } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
 import { usePermissions } from "@/lib/permissions-context";
+import { getSiteContent } from "@/lib/site-content";
 import { InstallHint } from "@/components/shared/InstallHint";
 import { logoutAction } from "@/app/(auth)/actions";
 
 // Everything that is not in the bottom bar, grouped like the desktop menu.
 export default function MorePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const site = getSiteContent(locale).ui;
   const { permissions, isManagerOrAbove, isOwner, role } = usePermissions();
   const isEmployee = role === "employee";
   const canCosts = isOwner || (role === "manager" && permissions.can_view_costs);
@@ -33,6 +35,9 @@ export default function MorePage() {
     { title: t("areaCompany"), items: [
       ...(isOwner ? [{ href: "/settings", label: t("navSettings"), icon: Settings }] : []),
       { href: "/feedback", label: t("navHelp"), icon: MessageSquare },
+      { href: "/help", label: site.helpTitle, icon: LifeBuoy },
+      { href: "/terms", label: site.terms, icon: FileText },
+      { href: "/privacy", label: site.privacy, icon: ShieldCheck },
     ] },
   ].filter((g) => g.items.length > 0);
   return <div className="p-4 md:p-8 max-w-lg mx-auto"><h1 className="text-xl font-bold mb-2">{t("navMore")}</h1><p className="text-sm text-slate-500 mb-6">{t("moreHint")}</p>

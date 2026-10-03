@@ -861,7 +861,7 @@ async function phaseCrawl(browser) {
   const publicErrors = [];
   anon.on("pageerror", (e) => publicErrors.push(String(e.message).slice(0, 100)));
   const tokenPaths = (state.publicLinks || []).map((u) => u.replace(B, ""));
-  for (const path of ["/", "/login", "/register", "/forgot-password", "/reset-password", "/this-page-does-not-exist", ...tokenPaths]) {
+  for (const path of ["/", "/login", "/register", "/forgot-password", "/reset-password", "/terms", "/privacy", "/help", "/this-page-does-not-exist", ...tokenPaths]) {
     for (const [w, h, name] of VIEWPORTS) {
       await anon.setViewportSize({ width: w, height: h });
       publicErrors.length = 0;
@@ -873,6 +873,36 @@ async function phaseCrawl(browser) {
       else if (overflow > 1) publicBad.push(`${name} ${path} scrolls sideways by ${overflow}px`);
       if (publicErrors.length) publicBad.push(`${name} ${path} error: ${publicErrors[0]}`);
     }
+  }
+  // Legal and help pages are real pages: public, in each language (never mixed), with working search and links from the entry screens.
+  {
+    const words = { es: ["Términos y condiciones", "Política de privacidad", "Centro de ayuda"], en: ["Terms & conditions", "Privacy policy", "Help center"], pt: ["Termos e condições", "Política de privacidade", "Central de ajuda"] };
+    const problems = [];
+    for (const lang of ["es", "en", "pt"]) {
+      await anon.context().addCookies([{ name: "bidpower-locale", value: lang, url: B }]);
+      await anon.addInitScript((l) => { try { localStorage.setItem("bidpower-locale", l); } catch {} }, lang);
+      for (const [i, path] of ["/terms", "/privacy", "/help"].entries()) {
+        await anon.goto(B + path, { waitUntil: "networkidle" });
+        await anon.evaluate((l) => localStorage.setItem("bidpower-locale", l), lang).catch(() => {});
+        const h1 = await anon.locator("h1").first().innerText().catch(() => "");
+        if (!h1.includes(words[lang][i])) problems.push(`${path} in ${lang}: heading "${h1}"`);
+        const others = Object.keys(words).filter((l) => l !== lang).map((l) => words[l][i]).filter((w) => w !== words[lang][i]);
+        const body = await anon.locator("main").innerText();
+        if (others.some((w) => body.includes(w))) problems.push(`${path} in ${lang}: another language mixed in`);
+      }
+    }
+    await anon.context().addCookies([{ name: "bidpower-locale", value: "en", url: B }]);
+    await anon.goto(B + "/help", { waitUntil: "networkidle" });
+    await anon.getByRole("searchbox").fill("invoice");
+    const hits = await anon.locator("details").count();
+    if (hits < 1 || hits > 6) problems.push(`help search "invoice" shows ${hits} answers`);
+    await anon.getByRole("searchbox").fill("zzzzqqq");
+    if (!(await anon.getByRole("status").innerText().catch(() => "")).trim()) problems.push("help search has no empty message");
+    await anon.goto(B + "/register", { waitUntil: "networkidle" });
+    for (const href of ["/terms", "/privacy", "/help"]) if (!(await anon.locator(`a[href="${href}"]`).count())) problems.push(`register has no link to ${href}`);
+    await anon.goto(B + "/login", { waitUntil: "networkidle" });
+    for (const href of ["/terms", "/privacy"]) if (!(await anon.locator(`a[href="${href}"]`).count())) problems.push(`login has no link to ${href}`);
+    ok("legal: terms, privacy and help are public real pages in each language, help search works, and the sign-in screens link to them", problems.length === 0, problems.slice(0, 6).join(" | "));
   }
   ok("crawl: the public pages (home, login, register, password, not found, supplier and customer links) answer on phone, tablet and desktop without errors or sideways scroll", publicBad.length === 0, publicBad.slice(0, 8).join(" | "));
   // Offline: the installed app shows its own page instead of the browser error

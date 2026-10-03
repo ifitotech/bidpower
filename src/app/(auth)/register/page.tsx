@@ -8,6 +8,7 @@ import { registerAction } from "../actions";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n/provider";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
+import { LegalLinks } from "@/components/site/LegalLinks";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 
 export default function RegisterPage() {
@@ -214,8 +215,9 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      <div className="pb-8 text-center text-brand-300 text-xs">
-        {t("freeTrialNote")}
+      <div className="px-6 pb-8 text-center text-brand-300 text-xs space-y-2">
+        <div>{t("freeTrialNote")}</div>
+        <LegalLinks tone="dark" accept />
       </div>
     </div>
   );

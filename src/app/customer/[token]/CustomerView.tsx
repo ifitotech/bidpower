@@ -1,5 +1,6 @@
 "use client";
 
+import { LegalLinks } from "@/components/site/LegalLinks";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n/provider";
 import { Logo } from "@/components/shared/Logo";
@@ -93,5 +94,6 @@ function Body({ token, data }: { token: string; data: CustomerData }) {
     </section>}
 
     <p className="mt-8 text-xs text-slate-400">{t("custContact")}: {data.company.name}{data.company.phone ? ` · ${data.company.phone}` : ""}{data.company.email ? ` · ${data.company.email}` : ""}</p>
+    <LegalLinks className="mt-2" />
   </>;
 }
