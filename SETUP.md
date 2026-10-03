@@ -337,5 +337,5 @@ Actualización: el centro de ayuda (`/help`) documenta cada función de la app e
 - **Nota técnica**: NO agregar `loading.tsx` en `(dashboard)`: en Next 15.5 hace que `router.refresh()` deje la pantalla con datos viejos tras una acción del servidor (lo detectó el e2e: el favorito no se marcaba).
 - El enlace público del cliente permite "Imprimir o guardar como PDF".
 
-- **Biblioteca estándar** (`src/lib/starter-library.ts`): ~1050 materiales eléctricos genéricos generados por código (cable THHN por calibre y color, NM-B/UF/MC, EMT/RMC/PVC/flex con sus fittings por tamaño, cajas, devices y placas, breakers, paneles, luminarias, gear, consumibles). Sin marcas, números de parte ni precios (no se inventan datos). Botón "Cargar biblioteca estándar" en Material → Biblioteca; copia a la biblioteca de cada empresa (idempotente: lo existente se omite). La búsqueda separa letras y números ("thhn8blk" = "thhn 8 blk").
+- **Biblioteca estándar**: pendiente de cargar con el CSV que prepara el usuario (el listado generado por código se descartó). Seguirán disponibles crear ítems y importar Excel/CSV.
 - **Importar con cantidades**: el Excel/CSV puede traer una columna cantidad; se puede importar directo a la lista del pedido o guardar el archivo como lista reutilizable.

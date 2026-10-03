@@ -1126,12 +1126,6 @@ const es = {
   importAlsoList: "Guardar también como lista (con las cantidades)",
   importListNamePh: "Nombre de la lista",
   importListSaved: "Lista “{name}” guardada con {count} ítems",
-  starterTitle: "Empieza con la biblioteca estándar",
-  starterHint: "Más de 1000 materiales eléctricos comunes (cable THHN, romex, EMT, PVC, cajas, breakers, paneles, luminarias, devices…) con los nombres que usas en obra. Sin precios ni marcas: tú agregas los tuyos. Se copian a tu biblioteca y puedes editarlos.",
-  starterLoad: "Cargar biblioteca estándar",
-  starterDone: "Biblioteca estándar cargada: {created} nuevos, {skipped} ya los tenías.",
-  starterLoading: "Cargando…",
-  starterBuilderHint: "Tu biblioteca está vacía. Carga la biblioteca estándar para buscar cable, conduit, breakers y más.",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

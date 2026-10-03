@@ -36,19 +36,6 @@ async function phase3(browser) {
   ok("request: created with a number MR-", (await o.locator("h1").innerText()).startsWith("MR-"));
   ok("request: total quantity of the library item is 11", (await o.getByText(/11 FT/).count()) > 0);
 
-  // standard library: one tap fills a new company's library; search tolerates "thhn8blk"
-  {
-    const fresh = await page(browser);
-    await register(fresh, "Std Owner", `std-${RUN}@bidpower-smoke.test`, "Std Electric");
-    await fresh.goto(`${B}/materials`);
-    await fresh.getByRole("button", { name: /Cargar biblioteca estándar|Load standard library/ }).click();
-    await fresh.getByText(/Biblioteca estándar cargada|Standard library loaded/).waitFor({ timeout: 90000 });
-    await fresh.getByPlaceholder(/^Buscar|^Search/).first().fill("thhn8blk");
-    ok("starter library: loaded, and 'thhn8blk' finds THHN 8 AWG stranded black", (await fresh.getByText("THHN 8 AWG stranded black").count()) > 0);
-    await fresh.getByRole("button", { name: /Cargar biblioteca estándar|Load standard library/ }).count();
-    await fresh.context().close();
-  }
-
   // faster material lists: repeat a previous request, save the list, reuse it, Enter adds
   await o.goto(`${B}/projects/${state.projectId}/materials/new`);
   ok("request: previous requests can be repeated in one tap", (await o.getByRole("button", { name: /MR-[\d-]+ · \d+ (ítems|items)/ }).count()) > 0);

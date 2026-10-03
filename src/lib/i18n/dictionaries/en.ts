@@ -1112,12 +1112,6 @@ const en: Dictionary = {
   importAlsoList: "Also save as a list (with the quantities)",
   importListNamePh: "List name",
   importListSaved: "List “{name}” saved with {count} items",
-  starterTitle: "Start with the standard library",
-  starterHint: "More than 1000 common electrical materials (THHN wire, Romex, EMT, PVC, boxes, breakers, panels, lighting, devices…) with the names you use on site. No prices or brands: you add your own. They are copied to your library and you can edit them.",
-  starterLoad: "Load standard library",
-  starterDone: "Standard library loaded: {created} new, {skipped} you already had.",
-  starterLoading: "Loading…",
-  starterBuilderHint: "Your library is empty. Load the standard library to search wire, conduit, breakers and more.",
 };
 
 export default en;

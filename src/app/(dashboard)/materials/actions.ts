@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
 import { parseMaterialImport } from "@/lib/material-import";
-import { starterLibrary } from "@/lib/starter-library";
 import { CATEGORY_CODES, normalizeText, normalizeUnit, type RequestLineInput } from "@/lib/materials";
 import {
   getMaterials, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
@@ -216,17 +215,5 @@ export async function saveListAction(payload: { name: string; lines: { materialI
     revalidatePath("/materials");
     revalidatePath("/projects");
     return { success: true, id: saved.id, replaced: saved.replaced };
-  } catch (e) { return fail(e); }
-}
-
-/** Copies the standard electrical items into this company's own library. Safe to run again: what is already there is skipped. */
-export async function loadStarterLibraryAction(): Promise<MaterialResult & { created?: number; skipped?: number }> {
-  const c = await ctx();
-  if (!c) return { errorCode: "errGeneric" };
-  if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
-  try {
-    const r = await importMaterials(c.companyId, c.userId, starterLibrary());
-    revalidatePath("/materials");
-    return { success: true, ...r };
   } catch (e) { return fail(e); }
 }
