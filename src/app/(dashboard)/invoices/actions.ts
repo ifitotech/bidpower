@@ -12,7 +12,7 @@ export async function createInvoiceAction(formData: FormData) {
     if (role !== "owner" && role !== "manager") return { errorCode: "errForbidden" };
     const description = String(formData.get("description") || "").trim();
     const amount = Number(formData.get("amount") || 0);
-    if (!description || !(amount > 0)) return { errorCode: "errInvoiceRequired" };
+    if (!description || description.length > 300 || !(amount > 0) || amount > 100_000_000) return { errorCode: "errInvoiceRequired" };
     const quoteId = String(formData.get("quoteId") || "");
     let clientId = String(formData.get("clientId") || "") || undefined;
     let projectId: string | undefined;
@@ -34,12 +34,32 @@ export async function createInvoiceAction(formData: FormData) {
     if (quoteId) revalidatePath(`/quotes/${quoteId}`);
     redirect(quoteId ? `/quotes/${quoteId}` : "/invoices");
   } catch (err) {
+    const raw = err instanceof Error ? err.message : (err as { message?: string })?.message ?? "";
+    // The company already has an invoice with that number (typed by hand): say so instead of a generic error.
+    if (raw.includes("NEXT_REDIRECT")) throw err;
+    if ((err as { code?: string })?.code === "23505" || /duplicate key/i.test(raw)) return { errorCode: "errInvoiceNumberTaken" };
     return { errorCode: errCodeOf(err) };
   }
 }
 
 export async function recordInvoicePaymentAction(formData: FormData) {
-  try { const { companyId } = await getContext(); await recordInvoicePayment(String(formData.get("invoiceId") || ""), companyId, Number(formData.get("amount") || 0)); revalidatePath("/invoices"); revalidatePath(`/invoices/${String(formData.get("invoiceId") || "")}`); return { success: true }; } catch (err) { return { errorCode: errCodeOf(err) }; }
+  try {
+    const { companyId, role } = await getContext();
+    if (role !== "owner" && role !== "manager") return { errorCode: "errForbidden" };
+    const invoiceId = String(formData.get("invoiceId") || "");
+    const amount = Number(formData.get("amount") || 0);
+    // A payment is a positive, sensible amount: a negative one would quietly undo money already collected.
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 100_000_000) return { errorCode: "errPaymentAmount" };
+    await recordInvoicePayment(invoiceId, companyId, Math.round(amount * 100) / 100);
+    revalidatePath("/invoices");
+    revalidatePath(`/invoices/${invoiceId}`);
+    return { success: true };
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : (err as { message?: string })?.message ?? "";
+    if (raw.includes("invoice_transition_invalid")) return { errorCode: "errInvoiceTransition" };
+    if (raw.includes("invalid_amount")) return { errorCode: "errPaymentAmount" };
+    return { errorCode: errCodeOf(err) };
+  }
 }
 
 export async function setInvoiceStatusAction(invoiceId: string, status: string) {

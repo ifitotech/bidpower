@@ -24,15 +24,21 @@ export async function createQuoteAction(formData: FormData): Promise<{ errorCode
       return { errorCode: "errProposalLines" };
     }
     if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) return { errorCode: "errGeneric" };
+    // Sizes that make no sense are refused here, with a clear message, instead of failing later in the database.
+    if (items.length > 300 || items.some((i) => String(i.description).length > 300 || Number(i.quantity) > 10_000_000 || Math.abs(Number(i.unit_price)) > 100_000_000)) return { errorCode: "errProposalLines" };
+    const subtotal = items.reduce((sum, i) => sum + Number(i.quantity) * Number(i.unit_price), 0);
+    if (subtotal < 0) return { errorCode: "errProposalNegative" };
+    const QUOTE_TYPES = ["service", "materials", "plan_estimate", "complete"];
+    const rawType = String(formData.get("quoteType") || "complete");
 
     const quote = await createQuote(companyId, userId, plan, monthlyQuoteCount, {
       client_id: clientId,
-      quote_type: String(formData.get("quoteType") || "complete") as "service" | "materials" | "plan_estimate" | "complete",
+      quote_type: (QUOTE_TYPES.includes(rawType) ? rawType : "complete") as "service" | "materials" | "plan_estimate" | "complete",
       project_id: projectId || undefined,
       items: items.map((i) => ({ ...i, description: String(i.description).trim(), quantity: Number(i.quantity), unit_price: Number(i.unit_price) })),
       tax_rate: taxRate,
-      terms: (formData.get("terms") as string) || undefined,
-      notes: (formData.get("notes") as string) || undefined,
+      terms: ((formData.get("terms") as string) || "").slice(0, 5000) || undefined,
+      notes: ((formData.get("notes") as string) || "").slice(0, 5000) || undefined,
     });
 
     await logActivity({ companyId, userId, action: "create", entityType: "quote", entityId: quote.id, newValues: { number: quote.number } });

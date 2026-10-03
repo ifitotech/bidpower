@@ -3,6 +3,7 @@ import { getPurchaseOrders } from "@/lib/services/purchase-orders";
 import { readProjectFilter } from "@/lib/project-filter";
 import { ProjectFilter } from "@/components/shared/ProjectFilter";
 import POsClient from "./POsClient";
+import { logError } from "@/lib/log";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,6 @@ export default async function POsPage({ searchParams }: { searchParams: Promise<
         <POsClient orders={(rows ?? []).map((r) => ({ ...r, project: one(r.project as { name?: string } | { name?: string }[] | null) })) as never} />
       </>;
     }
-  } catch {}
+  } catch (error) { logError("/pos", error); }
   return <POsClient demo />;
 }

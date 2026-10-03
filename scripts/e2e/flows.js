@@ -812,6 +812,32 @@ async function phaseCrawl(browser) {
         else if (overflow > 1) bad.push(`${who} ${name} ${key} scrolls sideways by ${overflow}px`);
         if (errors.length) bad.push(`${who} ${name} ${key} error: ${errors[0]}`);
         if (name === "phone" && status < 400) {
+          // Every control must have a name a screen reader can say, and every picture an alt text.
+          const unnamed = await pg.evaluate(() => {
+            const visible = (el) => { const r = el.getBoundingClientRect(); const st = getComputedStyle(el); return r.width > 0 && r.height > 0 && st.visibility !== "hidden" && st.display !== "none"; };
+            const nameOf = (el) => {
+              if (el.getAttribute("aria-label")) return true;
+              if (el.getAttribute("aria-labelledby")) return true;
+              if ((el.textContent || "").trim()) return true;
+              if (el.getAttribute("title")) return true;
+              if (el.querySelector("img[alt]:not([alt=''])")) return true;
+              if (el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)) return true;
+              if (el.closest("label")) return true;
+              return false;
+            };
+            const out = [];
+            for (const el of document.querySelectorAll("button, a[href], input:not([type=hidden]), select, textarea")) {
+              if (!visible(el) || el.closest("next-route-announcer")) continue;
+              const tag = el.tagName.toLowerCase();
+              const ok = tag === "input" && ["submit", "button"].includes(el.type) ? Boolean(el.value) : nameOf(el) || (["input", "textarea"].includes(tag) && Boolean(el.getAttribute("placeholder")));
+              if (!ok) out.push(`${tag}${el.className ? "." + String(el.className).split(" ")[0] : ""}`);
+            }
+            for (const img of document.querySelectorAll("img")) if (visible(img) && !img.hasAttribute("alt")) out.push("img without alt");
+            return out.slice(0, 3);
+          }).catch(() => []);
+          if (unnamed.length) bad.push(`${who} ${key} has controls without a name: ${unnamed.join(", ")}`);
+        }
+        if (name === "phone" && status < 400) {
           const hrefs = await pg.$$eval("a[href^='/']", (as) => as.map((a) => a.getAttribute("href")));
           for (const href of hrefs) if (href && !seen.has(href.split("#")[0]) && !queue.includes(href)) queue.push(href);
         }

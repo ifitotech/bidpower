@@ -1098,6 +1098,9 @@ const es = {
   searchEverything: "Buscar proyectos, clientes, compras, materiales…",
   searchHint: "Escribe al menos 2 letras para buscar en toda la app.",
   searchNothing: "No encontré nada para \"{query}\".",
+  errInvoiceNumberTaken: "Ya existe una factura con ese número. Usa otro.",
+  errProposalNegative: "El total de la propuesta no puede ser negativo.",
+  errPaymentAmount: "El pago debe ser un monto positivo.",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

@@ -1085,6 +1085,9 @@ const pt: Dictionary = {
   searchEverything: "Buscar projetos, clientes, compras, materiais…",
   searchHint: "Digite pelo menos 2 letras para buscar em todo o app.",
   searchNothing: "Nada encontrado para \"{query}\".",
+  errInvoiceNumberTaken: "Já existe uma fatura com esse número. Use outro.",
+  errProposalNegative: "O total da proposta não pode ser negativo.",
+  errPaymentAmount: "O pagamento deve ser um valor positivo.",
 };
 
 export default pt;

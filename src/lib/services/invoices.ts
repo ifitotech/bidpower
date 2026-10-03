@@ -27,13 +27,14 @@ export async function getInvoiceById(invoiceId: string, companyId: string) {
   return data;
 }
 
+/** Adds a payment in one database statement (so two payments at once both count). Refused on a cancelled invoice. */
 export async function recordInvoicePayment(invoiceId: string, companyId: string, amount: number) {
   const supabase = await createClient();
-  const { data: invoice, error: readError } = await supabase.from("invoices").select("total, amount_paid").eq("id", invoiceId).eq("company_id", companyId).single();
+  // The company filter keeps the check explicit; row security enforces it again inside the function.
+  const { data: own, error: readError } = await supabase.from("invoices").select("id").eq("id", invoiceId).eq("company_id", companyId).maybeSingle();
   if (readError) throw readError;
-  const paid = Math.min(Number(invoice.total), Number(invoice.amount_paid) + amount);
-  const status = paid >= Number(invoice.total) ? "paid" : paid > 0 ? "partial" : "sent";
-  const { error } = await supabase.from("invoices").update({ amount_paid: paid, status, updated_at: new Date().toISOString() }).eq("id", invoiceId).eq("company_id", companyId);
+  if (!own) throw new Error("forbidden");
+  const { error } = await supabase.rpc("record_invoice_payment", { p_invoice: invoiceId, p_amount: amount });
   if (error) throw error;
 }
 
@@ -73,17 +74,12 @@ export async function getQuoteInvoicing(companyId: string, quoteId: string): Pro
   };
 }
 
-/** Next free INV-0001 style number for the company. */
+/** Next INV-0001 style number for the company, taken atomically by the database so two people never get the same one. */
 export async function nextInvoiceNumber(companyId: string): Promise<string> {
   const supabase = await createClient();
-  const { count } = await supabase.from("invoices").select("id", { count: "exact", head: true }).eq("company_id", companyId);
-  let n = (count ?? 0) + 1;
-  for (let i = 0; i < 20; i++, n++) {
-    const candidate = `INV-${String(n).padStart(4, "0")}`;
-    const { data } = await supabase.from("invoices").select("id").eq("company_id", companyId).eq("number", candidate).maybeSingle();
-    if (!data) return candidate;
-  }
-  return `INV-${Date.now()}`;
+  const { data, error } = await supabase.rpc("next_invoice_number", { p_company: companyId });
+  if (error || !data) return `INV-${Date.now()}`;
+  return data as string;
 }
 
 /** Money billed, collected and still owed on a project (cancelled invoices do not count). */

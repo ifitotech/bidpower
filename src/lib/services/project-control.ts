@@ -1,4 +1,5 @@
 import { formatCurrency } from "@/lib/utils";
+import { getCompanyToday } from "@/lib/services/companies";
 import { createClient } from "@/lib/supabase/server";
 import { getControlFinancials } from "@/lib/finance";
 import type { Permissions } from "@/lib/permissions";
@@ -87,7 +88,6 @@ export type ProjectMoney = NonNullable<Awaited<ReturnType<typeof getProjectMoney
 
 export type AttentionItem = { id: string; titleKey: string; params: Record<string, string>; href: string; waitingOn: string; severity: "high" | "normal"; sort: number };
 
-const dayStart = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
 /**
@@ -99,7 +99,8 @@ export async function getNeedsAttention(ctx: { companyId: string; userId: string
   const reviewer = ctx.role === "owner" || ctx.role === "manager";
   const items: AttentionItem[] = [];
   const add = (i: Omit<AttentionItem, "sort"> & { sort?: number }) => items.push({ ...i, sort: i.sort ?? 0 });
-  const today = dayStart(new Date());
+  // "Today" is the company's own date, not the server's (UTC).
+  const today = new Date(`${await getCompanyToday(ctx.companyId)}T00:00:00Z`);
   const tomorrow = isoDay(new Date(today.getTime() + 86400000));
   const soon = isoDay(new Date(today.getTime() + 3 * 86400000));
 
