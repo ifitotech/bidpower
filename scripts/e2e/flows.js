@@ -68,6 +68,11 @@ async function phase3(browser) {
     await fresh.waitForTimeout(800);
     const copies = await fresh.getByText("THHN/THWN-2 Copper #8 AWG Black Stranded", { exact: true }).count();
     ok("catalog: a catalog item used twice appears once in the company library", copies >= 1 && copies <= 2, String(copies)); // one in the library list; the catalog suggestion is hidden once it is there
+    // material lists: several pending ones are cancelled in one tap
+    await fresh.goto(`${B}/projects/${pid}/materials`);
+    await fresh.getByRole("button", { name: /Cancelar todas las pendientes|Cancel all pending/ }).click();
+    await fresh.getByText(/2 listas canceladas|2 lists cancelled/).waitFor({ timeout: 20000 });
+    ok("material lists: all pending ones can be cancelled at once", true);
     // delete everything at once: the library can be emptied in one go (and starts over)
     await fresh.goto(`${B}/materials`);
     await fresh.getByPlaceholder(/^Buscar|^Search/).first().fill("");

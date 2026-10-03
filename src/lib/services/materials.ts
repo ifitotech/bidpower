@@ -215,6 +215,16 @@ export async function upsertSavedList(companyId: string, userId: string, name: s
   return { id: same.id as string, replaced: true };
 }
 
+/** Deletes the given saved lists, or every list of the company when ids is null. Returns how many were deleted. */
+export async function deleteSavedLists(companyId: string, ids: string[] | null): Promise<number> {
+  const supabase = await createClient();
+  let q = supabase.from("material_assemblies").delete().eq("company_id", companyId);
+  if (ids) q = q.in("id", ids);
+  const { data, error } = await q.select("id");
+  if (error) throw error;
+  return data?.length ?? 0;
+}
+
 export async function deleteSavedList(companyId: string, listId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase.from("material_assemblies").delete().eq("id", listId).eq("company_id", companyId).select("id");

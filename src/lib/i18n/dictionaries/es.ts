@@ -1154,6 +1154,14 @@ const es = {
   libTypeToSearch: "Escribe arriba para buscar un material",
   libCount: "Tu biblioteca tiene {count} ítems. Aparecen cuando escribes, por nombre, medida, apodo o número de parte.",
   builderTypeHint: "Escribe lo que necesitas (ej. thhn 8 rojo, emt 3/4, breaker 20a) y toca + para agregarlo.",
+  reqCancelSelected: "Cancelar seleccionadas ({count})",
+  reqCancelSelectedConfirm: "¿Cancelar {count} listas de material? Solo se cancelan las que siguen pendientes.",
+  reqCancelAll: "Cancelar todas las pendientes",
+  reqCancelAllConfirm: "¿Cancelar las {count} listas de material pendientes?",
+  reqCancelledCount: "{count} listas canceladas.",
+  listsDeleteAll: "Borrar todas las listas",
+  listsDeleteAllConfirm: "¿Borrar las {count} listas guardadas?",
+  listsDeleted: "{count} listas borradas.",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

@@ -14,7 +14,7 @@ import { IMPORT_TEMPLATE, MAX_IMPORT_ROWS, parseMaterialImport } from "@/lib/mat
 import { readSheetText } from "@/lib/read-sheet";
 import { catalogToLibrary } from "@/lib/catalog/types";
 import { useCatalogSearch } from "@/lib/catalog/use-catalog-search";
-import { archiveMaterialsAction, clearLibraryAction, addCatalogItemsAction, importMaterialsAction, getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
+import { deleteListsAction, archiveMaterialsAction, clearLibraryAction, addCatalogItemsAction, importMaterialsAction, getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
 
 type Item = LibraryItem & { notes?: string | null; allow_substitution?: boolean };
 type SavedList = { id: string; name: string; items: { materialId: string; quantity: number }[] };
@@ -145,7 +145,7 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
         <button type="button" disabled={busy} aria-label={t("archiveItem")} onClick={async () => { if (await confirmAsk(t("confirmArchiveItem"))) run(() => archiveMaterialAction(i.id)); }} className="flex h-10 w-10 shrink-0 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
       </li>)}</ul>}
 
-    {lists.length > 0 && <section className="mt-6"><h2 className="mb-2 font-semibold">{t("savedLists")}</h2>
+    {lists.length > 0 && <section className="mt-6"><div className="mb-2 flex items-center gap-2"><h2 className="flex-1 font-semibold">{t("savedLists")}</h2>{lists.length > 1 && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("listsDeleteAllConfirm", { count: String(lists.length) }))) run(async () => { const r = await deleteListsAction(null); if (r.success) setNotice(t("listsDeleted", { count: String(r.deleted ?? 0) })); return r; }); }} className="min-h-9 rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-600 disabled:opacity-40">{t("listsDeleteAll")}</button>}</div>
       <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{lists.map((l) => <li key={l.id} className="px-4 py-1 text-sm"><details className="group"><summary className="flex min-h-11 cursor-pointer list-none items-center gap-2"><span className="min-w-0 flex-1 truncate font-medium">{l.name}</span><span className="text-xs text-slate-400">{t("itemsCount", { count: String(l.items.length) })}</span>
         <button type="button" disabled={busy} aria-label={t("delete")} onClick={async (e) => { e.preventDefault(); if (await confirmAsk(t("delete") + "?")) run(() => deleteListAction(l.id)); }} className="flex h-10 w-10 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></summary>
         <ul className="mb-2 ml-1 space-y-0.5 border-l border-slate-200 pl-3 text-xs text-slate-600">{l.items.map((e, k) => { const m = items.find((x) => x.id === e.materialId); return <li key={k} className="flex gap-2"><span className="w-10 shrink-0 text-right font-semibold">{e.quantity}</span><span className="min-w-0 truncate">{m?.description ?? "—"}</span></li>; })}</ul></details></li>)}</ul></section>}

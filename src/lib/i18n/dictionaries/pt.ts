@@ -1141,6 +1141,14 @@ const pt: Dictionary = {
   libTypeToSearch: "Digite acima para buscar um material",
   libCount: "Sua biblioteca tem {count} itens. Eles aparecem quando você digita, por nome, medida, apelido ou número de peça.",
   builderTypeHint: "Digite o que você precisa (ex.: thhn 8 vermelho, emt 3/4, disjuntor 20a) e toque em + para adicionar.",
+  reqCancelSelected: "Cancelar selecionadas ({count})",
+  reqCancelSelectedConfirm: "Cancelar {count} listas de material? Só as que continuam pendentes são canceladas.",
+  reqCancelAll: "Cancelar todas as pendentes",
+  reqCancelAllConfirm: "Cancelar as {count} listas de material pendentes?",
+  reqCancelledCount: "{count} listas canceladas.",
+  listsDeleteAll: "Excluir todas as listas",
+  listsDeleteAllConfirm: "Excluir as {count} listas salvas?",
+  listsDeleted: "{count} listas excluídas.",
 };
 
 export default pt;

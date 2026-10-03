@@ -7,9 +7,9 @@ import { getCatalogItem, searchCatalog } from "@/lib/services/catalog";
 import type { CatalogItem } from "@/lib/catalog/types";
 import { CATEGORY_CODES, normalizeText, normalizeUnit, type RequestLineInput } from "@/lib/materials";
 import {
-  getMaterials, ensureMaterialFromCatalog, archiveMaterials, clearLibrary, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
+  getMaterials, ensureMaterialFromCatalog, archiveMaterials, clearLibrary, deleteSavedLists, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
 } from "@/lib/services/materials";
-import { cancelMaterialRequest, createMaterialRequest, reviewMaterialRequest } from "@/lib/services/material-requests";
+import { cancelMaterialRequest, cancelMaterialRequests, createMaterialRequest, reviewMaterialRequest } from "@/lib/services/material-requests";
 
 export async function getMaterialPricesAction(materialId: string): Promise<{ errorCode?: string; prices?: PricePoint[] }> {
   const c = await ctx();
@@ -264,4 +264,27 @@ export async function clearLibraryAction(alsoLists: boolean): Promise<MaterialRe
   if (!c) return { errorCode: "errGeneric" };
   if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
   try { const archived = await clearLibrary(c.companyId, Boolean(alsoLists)); revalidatePath("/materials"); revalidatePath("/projects"); return { success: true, archived }; } catch (e) { return fail(e); }
+}
+
+/** Cancels the chosen pending material lists in one go. */
+export async function cancelRequestsAction(ids: string[]): Promise<MaterialResult & { cancelled?: number }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000 || !ids.every((i) => typeof i === "string" && UUID.test(i))) return { errorCode: "errGeneric" };
+  try {
+    const cancelled = await cancelMaterialRequests(c.companyId, ids);
+    revalidatePath("/materials/requests");
+    revalidatePath("/projects");
+    revalidatePath("/dashboard");
+    return { success: true, cancelled };
+  } catch (e) { return fail(e); }
+}
+
+/** Deletes several saved lists (or all of them when no ids are given). */
+export async function deleteListsAction(ids: string[] | null): Promise<MaterialResult & { deleted?: number }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
+  if (ids !== null && (!Array.isArray(ids) || ids.length > 1000 || !ids.every((i) => typeof i === "string" && UUID.test(i)))) return { errorCode: "errGeneric" };
+  try { const deleted = await deleteSavedLists(c.companyId, ids); revalidatePath("/materials"); revalidatePath("/projects"); return { success: true, deleted }; } catch (e) { return fail(e); }
 }

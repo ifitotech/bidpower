@@ -1140,6 +1140,14 @@ const en: Dictionary = {
   libTypeToSearch: "Type above to search for a material",
   libCount: "Your library has {count} items. They appear as you type, by name, size, nickname or part number.",
   builderTypeHint: "Type what you need (e.g. thhn 8 red, emt 3/4, breaker 20a) and tap + to add it.",
+  reqCancelSelected: "Cancel selected ({count})",
+  reqCancelSelectedConfirm: "Cancel {count} material lists? Only the ones still pending are cancelled.",
+  reqCancelAll: "Cancel all pending",
+  reqCancelAllConfirm: "Cancel the {count} pending material lists?",
+  reqCancelledCount: "{count} lists cancelled.",
+  listsDeleteAll: "Delete all lists",
+  listsDeleteAllConfirm: "Delete the {count} saved lists?",
+  listsDeleted: "{count} lists deleted.",
 };
 
 export default en;
