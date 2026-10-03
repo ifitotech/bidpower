@@ -104,6 +104,8 @@ export default function NewQuoteForm({ library = [], clients, projects, defaultP
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <button
+          type="button"
+          aria-label={t("cancel")}
           onClick={() => router.back()}
           className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center"
         >
