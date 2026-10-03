@@ -1120,6 +1120,12 @@ const es = {
   mbRemoveOne: "Quitar uno",
   mbAddOne: "Agregar uno",
   mbCreateFromSearch: "Crear “{text}” en la biblioteca",
+  mbImportFile: "Importar Excel o CSV a esta lista",
+  mbImported: "{count} ítems agregados del archivo ({known} ya estaban en tu biblioteca)",
+  mbImportHint: "Usa las columnas descripción, número de parte, unidad y cantidad. Lo que ya está en tu biblioteca se reconoce solo.",
+  importAlsoList: "Guardar también como lista (con las cantidades)",
+  importListNamePh: "Nombre de la lista",
+  importListSaved: "Lista “{name}” guardada con {count} ítems",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

@@ -2,10 +2,12 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ClipboardPaste, History, ListChecks, Minus, Plus, Save, Search, Star, Trash2, X } from "lucide-react";
+import { Check, ClipboardPaste, FileSpreadsheet, History, ListChecks, Minus, Plus, Save, Search, Star, Trash2, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
 import { usePermissions } from "@/lib/permissions-context";
 import type { Dictionary } from "@/lib/i18n/dictionaries/es";
+import { parseMaterialImport } from "@/lib/material-import";
+import { readSheetText } from "@/lib/read-sheet";
 import { MATERIAL_UNITS, findExact, normalizeUnit, parsePastedList, searchLibrary, splitQuantity, type LibraryItem } from "@/lib/materials";
 import { createMaterialRequestAction, saveListAction } from "@/app/(dashboard)/materials/actions";
 import { confirmAsk } from "@/lib/confirm";
@@ -144,6 +146,24 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
     router.refresh();
   }
 
+  // A spreadsheet that already exists (description, part number, unit, quantity) goes straight into this list; library items are recognized.
+  async function importFile(file: File) {
+    setError(null);
+    try {
+      const parsedFile = parseMaterialImport(await readSheetText(file));
+      if (parsedFile.missingDescription || parsedFile.rows.length === 0) { setError(t("importNoDescription")); return; }
+      let known = 0;
+      for (const row of parsedFile.rows) {
+        const pn = row.catalog_number ? row.catalog_number.toLowerCase() : null;
+        const match = (pn && items.find((i) => (i.catalog_number ?? "").toLowerCase() === pn)) || findExact(items, row.description);
+        const quantity = row.quantity ?? 1;
+        if (match) { known++; addLine({ materialId: match.id, description: match.description, quantity, unit: row.unit || match.unit, category: match.category, notes: "", allowSubstitution: Boolean((match as LibItem).allow_substitution), saveToLibrary: false }); }
+        else addLine({ materialId: null, description: row.description, quantity, unit: row.unit || "EA", category: row.category, notes: "", allowSubstitution: false, saveToLibrary: canLibrary });
+      }
+      say(t("mbImported", { count: String(parsedFile.rows.length), known: String(known) }));
+    } catch (e) { setError(t(e instanceof Error && e.message === "xls" ? "importXlsOld" : "importXlsError")); }
+  }
+
   const patch = (key: string, p: Partial<Line>) => setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...p } : l)));
   const remove = (key: string) => setLines((prev) => prev.filter((l) => l.key !== key));
 
@@ -219,7 +239,11 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
     </section>}
 
     <div className="mt-3">
-      <button type="button" onClick={() => setPasteOpen((v) => !v)} className="flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium"><ClipboardPaste className="h-4 w-4" />{t("pasteList")}</button>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => setPasteOpen((v) => !v)} className="flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium"><ClipboardPaste className="h-4 w-4" />{t("pasteList")}</button>
+        <label className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium"><FileSpreadsheet className="h-4 w-4" />{t("mbImportFile")}<input type="file" accept=".xlsx,.csv,.tsv,.txt,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; e.target.value = ""; if (file) await importFile(file); }} /></label>
+      </div>
+      <p className="mt-1 text-xs text-slate-400">{t("mbImportHint")}</p>
     </div>
     {pasteOpen && <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
       <p className="mb-2 text-xs text-slate-500">{t("pasteListHint")}</p>

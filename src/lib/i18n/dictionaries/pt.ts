@@ -1107,6 +1107,12 @@ const pt: Dictionary = {
   mbRemoveOne: "Remover um",
   mbAddOne: "Adicionar um",
   mbCreateFromSearch: "Criar “{text}” na biblioteca",
+  mbImportFile: "Importar Excel ou CSV nesta lista",
+  mbImported: "{count} itens adicionados do arquivo ({known} já estavam na sua biblioteca)",
+  mbImportHint: "Use as colunas descrição, número de peça, unidade e quantidade. O que já está na sua biblioteca é reconhecido automaticamente.",
+  importAlsoList: "Salvar também como lista (com as quantidades)",
+  importListNamePh: "Nome da lista",
+  importListSaved: "Lista “{name}” salva com {count} itens",
 };
 
 export default pt;

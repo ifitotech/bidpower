@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
 import { parseMaterialImport } from "@/lib/material-import";
-import { CATEGORY_CODES, normalizeUnit, type RequestLineInput } from "@/lib/materials";
+import { CATEGORY_CODES, normalizeText, normalizeUnit, type RequestLineInput } from "@/lib/materials";
 import {
-  archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
+  getMaterials, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
 } from "@/lib/services/materials";
 import { cancelMaterialRequest, createMaterialRequest, reviewMaterialRequest } from "@/lib/services/material-requests";
 
@@ -63,7 +63,7 @@ export async function saveMaterialAction(raw: Record<string, unknown>): Promise<
   } catch (e) { return fail(e); }
 }
 
-export async function importMaterialsAction(text: string): Promise<MaterialResult & { created?: number; skipped?: number }> {
+export async function importMaterialsAction(text: string, listName?: string): Promise<MaterialResult & { created?: number; skipped?: number; listItems?: number }> {
   const c = await ctx();
   if (!c) return { errorCode: "errGeneric" };
   if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
@@ -72,8 +72,22 @@ export async function importMaterialsAction(text: string): Promise<MaterialResul
   if (parsed.rows.length === 0) return { errorCode: "errImportEmpty" };
   try {
     const r = await importMaterials(c.companyId, c.userId, parsed.rows);
+    // Optionally keep the file as a reusable list (with its quantities), linking each row to its library item, new or existing.
+    let listItems = 0;
+    if (listName?.trim()) {
+      const library = await getMaterials(c.companyId);
+      const byPn = new Map<string, string>();
+      const byName = new Map<string, string>();
+      for (const m of library) {
+        if (m.catalog_number) { const k = normalizeText(m.catalog_number); if (!byPn.has(k)) byPn.set(k, m.id); }
+        const k = normalizeText(m.description); if (!byName.has(k)) byName.set(k, m.id);
+      }
+      const entries = parsed.rows.map((row) => ({ materialId: (row.catalog_number && byPn.get(normalizeText(row.catalog_number))) || byName.get(normalizeText(row.description)), quantity: row.quantity ?? 1 }))
+        .filter((e): e is { materialId: string; quantity: number } => Boolean(e.materialId));
+      if (entries.length) { await upsertSavedList(c.companyId, c.userId, listName, entries); listItems = entries.length; }
+    }
     revalidatePath("/materials");
-    return { success: true, ...r };
+    return { success: true, ...r, listItems };
   } catch (e) { return fail(e); }
 }
 

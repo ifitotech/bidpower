@@ -11,6 +11,7 @@ import { MATERIAL_CATEGORIES, MATERIAL_UNITS, searchLibrary, type LibraryItem } 
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { PricePoint } from "@/lib/services/materials";
 import { IMPORT_TEMPLATE, MAX_IMPORT_ROWS, parseMaterialImport } from "@/lib/material-import";
+import { readSheetText } from "@/lib/read-sheet";
 import { importMaterialsAction, getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
 
 type Item = LibraryItem & { notes?: string | null; allow_substitution?: boolean };
@@ -28,6 +29,8 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
   const [notice, setNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importText, setImportText] = useState("");
+  const [alsoList, setAlsoList] = useState(false);
+  const [listName, setListName] = useState("");
   const params = useSearchParams();
   useEffect(() => {
     if (params.get("q")) setQuery(params.get("q") as string);
@@ -57,16 +60,7 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
   // Excel (.xlsx) is read in the browser and turned into the same tab-separated text the CSV path uses.
   async function loadFile(f: File) {
     setMsg(null);
-    if (/\.xls$/i.test(f.name)) { setMsg(t("importXlsOld")); return; }
-    if (/\.xlsx$/i.test(f.name)) {
-      try {
-        const { readSheet } = await import("read-excel-file/browser");
-        const rows = await readSheet(f);
-        setImportText(rows.map((r) => r.map((c) => (c == null ? "" : String(c instanceof Date ? c.toISOString().slice(0, 10) : c)).replace(/[\t\r\n]+/g, " ").trim()).join("\t")).join("\n"));
-      } catch { setMsg(t("importXlsError")); }
-      return;
-    }
-    setImportText(await f.text());
+    try { setImportText(await readSheetText(f)); if (!listName) setListName(f.name.replace(/\.[^.]+$/, "").slice(0, 120)); } catch (e) { setMsg(t(e instanceof Error && e.message === "xls" ? "importXlsOld" : "importXlsError")); }
   }
 
   const save = () => draft && run(() => saveMaterialAction({ ...draft, aliases: draft.aliases.split(",").map((a) => a.trim()).filter(Boolean) }), () => setDraft(null));
@@ -95,8 +89,12 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
       <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={4} aria-label={t("importPaste")} placeholder={t("importPaste")} className={input} />
       {preview && (preview.missingDescription
         ? <p role="alert" className="text-sm text-red-600">{t("importNoDescription")}</p>
-        : <div className="text-sm"><p className="font-medium">{t("importPreview", { count: String(preview.rows.length) })}{preview.rows.length >= MAX_IMPORT_ROWS ? ` · ${t("importTooMany")}` : ""}</p>{preview.invalid > 0 && <p className="text-xs text-amber-700">{t("importInvalid", { count: String(preview.invalid) })}</p>}<ul className="mt-1 space-y-0.5 text-xs text-slate-500">{preview.rows.slice(0, 5).map((r, k) => <li key={k} className="truncate">{r.catalog_number ? `${r.catalog_number} · ` : ""}{r.description}{r.aliases.length ? ` (${r.aliases.join(", ")})` : ""}</li>)}</ul></div>)}
-      <div className="flex gap-2"><button type="button" disabled={busy || !preview || preview.rows.length === 0} onClick={() => run(async () => { const r = await importMaterialsAction(importText); if (r.success) setNotice(t("importDone", { created: String(r.created ?? 0), skipped: String(r.skipped ?? 0) })); return r; }, () => { setImportText(""); setImporting(false); })} className="min-h-11 flex-1 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40">{t("importRun")}</button><button type="button" onClick={() => { setImporting(false); setImportText(""); }} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm">{t("cancel")}</button></div>
+        : <div className="text-sm"><p className="font-medium">{t("importPreview", { count: String(preview.rows.length) })}{preview.rows.length >= MAX_IMPORT_ROWS ? ` · ${t("importTooMany")}` : ""}</p>{preview.invalid > 0 && <p className="text-xs text-amber-700">{t("importInvalid", { count: String(preview.invalid) })}</p>}<ul className="mt-1 space-y-0.5 text-xs text-slate-500">{preview.rows.slice(0, 5).map((r, k) => <li key={k} className="truncate">{r.quantity ? `${r.quantity} × ` : ""}{r.catalog_number ? `${r.catalog_number} · ` : ""}{r.description}{r.aliases.length ? ` (${r.aliases.join(", ")})` : ""}</li>)}</ul></div>)}
+      {preview && !preview.missingDescription && preview.rows.length > 0 && <div className="rounded-lg bg-slate-50 p-3">
+        <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={alsoList} onChange={(e) => setAlsoList(e.target.checked)} />{t("importAlsoList")}</label>
+        {alsoList && <input value={listName} maxLength={120} onChange={(e) => setListName(e.target.value)} placeholder={t("importListNamePh")} aria-label={t("importListNamePh")} className={`${input} mt-2`} />}
+      </div>}
+      <div className="flex gap-2"><button type="button" disabled={busy || !preview || preview.rows.length === 0 || (alsoList && !listName.trim())} onClick={() => run(async () => { const r = await importMaterialsAction(importText, alsoList ? listName : undefined); if (r.success) setNotice(t("importDone", { created: String(r.created ?? 0), skipped: String(r.skipped ?? 0) }) + (r.listItems ? ` ${t("importListSaved", { name: listName.trim(), count: String(r.listItems) })}` : "")); return r; }, () => { setImportText(""); setImporting(false); })} className="min-h-11 flex-1 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40">{t("importRun")}</button><button type="button" onClick={() => { setImporting(false); setImportText(""); }} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm">{t("cancel")}</button></div>
     </div>}
 
     {draft && <div className="mb-4 space-y-3 rounded-xl border border-brand-500 bg-white p-4">

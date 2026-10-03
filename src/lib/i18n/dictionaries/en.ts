@@ -1106,6 +1106,12 @@ const en: Dictionary = {
   mbRemoveOne: "Remove one",
   mbAddOne: "Add one",
   mbCreateFromSearch: "Create “{text}” in the library",
+  mbImportFile: "Import Excel or CSV into this list",
+  mbImported: "{count} items added from the file ({known} were already in your library)",
+  mbImportHint: "Use the columns description, part number, unit and quantity. What is already in your library is recognized automatically.",
+  importAlsoList: "Also save as a list (with the quantities)",
+  importListNamePh: "List name",
+  importListSaved: "List “{name}” saved with {count} items",
 };
 
 export default en;
