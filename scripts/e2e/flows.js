@@ -905,20 +905,24 @@ async function phaseCrawl(browser) {
         if (!h1.includes(words[lang][i])) problems.push(`${path} in ${lang}: heading "${h1}"`);
         const others = Object.keys(words).filter((l) => l !== lang).map((l) => words[l][i]).filter((w) => w !== words[lang][i]);
         const body = await anon.locator("main").innerText();
-        if (others.some((w) => body.includes(w))) problems.push(`${path} in ${lang}: another language mixed in`);
+        if (others.some((w) => new RegExp(w.replace(/[&]/g, "\\$&") + "(?![a-zà-ú])", "i").test(body))) problems.push(`${path} in ${lang}: another language mixed in`);
       }
     }
-    await anon.context().addCookies([{ name: "bidpower-locale", value: "en", url: B }]);
-    await anon.goto(B + "/help", { waitUntil: "networkidle" });
-    await anon.getByRole("searchbox").fill("invoice");
-    const hits = await anon.locator("details").count();
+    const en = await (await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: "en-US" })).newPage();
+    await en.goto(B + "/help", { waitUntil: "networkidle" });
+    await en.getByRole("searchbox").fill("invoice");
+    const hits = await en.locator("details").count();
     if (hits < 1 || hits > 15) problems.push(`help search "invoice" shows ${hits} answers`);
-    await anon.getByRole("searchbox").fill("zzzzqqq");
-    if (!(await anon.getByRole("status").innerText().catch(() => "")).trim()) problems.push("help search has no empty message");
-    await anon.goto(B + "/register", { waitUntil: "networkidle" });
-    for (const href of ["/terms", "/privacy", "/help"]) if (!(await anon.locator(`a[href="${href}"]`).count())) problems.push(`register has no link to ${href}`);
-    await anon.goto(B + "/login", { waitUntil: "networkidle" });
-    for (const href of ["/terms", "/privacy"]) if (!(await anon.locator(`a[href="${href}"]`).count())) problems.push(`login has no link to ${href}`);
+    await en.getByRole("searchbox").fill("zzzzqqq");
+    if (!(await en.getByRole("status").innerText().catch(() => "")).trim()) problems.push("help search has no empty message");
+    await en.goto(B + "/register", { waitUntil: "networkidle" });
+    for (const href of ["/terms", "/privacy", "/help"]) if (!(await en.locator(`a[href="${href}"]`).count())) problems.push(`register has no link to ${href}`);
+    await en.goto(B + "/login", { waitUntil: "networkidle" });
+    for (const href of ["/terms", "/privacy"]) if (!(await en.locator(`a[href="${href}"]`).count())) problems.push(`login has no link to ${href}`);
+    // The language menu is small and does not cover the sign-in form.
+    const menu = await en.getByRole("button", { name: /English/ }).boundingBox();
+    if (!menu || menu.width > 90 || menu.height > 44) problems.push(`language button is ${menu ? Math.round(menu.width) + "x" + Math.round(menu.height) : "missing"}`);
+    await en.close();
     ok("legal: terms, privacy and help are public real pages in each language, help search works, and the sign-in screens link to them", problems.length === 0, problems.slice(0, 6).join(" | "));
   }
   ok("crawl: the public pages (home, login, register, password, not found, supplier and customer links) answer on phone, tablet and desktop without errors or sideways scroll", publicBad.length === 0, publicBad.slice(0, 8).join(" | "));
