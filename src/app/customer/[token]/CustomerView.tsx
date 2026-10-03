@@ -1,5 +1,6 @@
 "use client";
 
+import { LegalLinks } from "@/components/site/LegalLinks";
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n/provider";
 import { Logo } from "@/components/shared/Logo";
@@ -27,7 +28,7 @@ const btn = "min-h-12 rounded-xl px-4 font-semibold disabled:opacity-40";
 
 export default function CustomerView({ token, data }: { token: string; data: CustomerData | null }) {
   const { t } = useI18n();
-  const shell = (children: React.ReactNode) => <div className="min-h-screen bg-slate-50"><header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3"><Logo variant="mark" className="h-8 w-8" /><span className="flex-1 font-bold">{t("appName")}</span><LanguageSwitcher /></div></header><main className="mx-auto max-w-2xl p-4 pb-16">{children}</main></div>;
+  const shell = (children: React.ReactNode) => <div className="min-h-screen bg-slate-50"><header className="border-b border-slate-200 bg-white print:[&_button]:hidden"><div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3"><Logo variant="mark" className="h-8 w-8" /><span className="flex-1 font-bold">{t("appName")}</span><LanguageSwitcher /></div></header><main className="mx-auto max-w-2xl p-4 pb-16">{children}</main></div>;
   if (!data) return shell(<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{t("errCustomerLink")}</div>);
   return shell(<Body token={token} data={data} />);
 }
@@ -57,6 +58,7 @@ function Body({ token, data }: { token: string; data: CustomerData }) {
     <h1 className="text-xl font-bold">{(isProposal ? t("custPageTitle", { company: data.company.name }) : t("custCoTitle", { company: data.company.name }))}</h1>
     <p className="mt-1 text-sm text-slate-500">{d.number}{d.version && d.version > 1 ? ` · ${t("proposalVersion", { version: String(d.version) })}` : ""}{d.title ? ` · ${d.title}` : ""}{data.project?.name ? ` · ${data.project.name}` : ""}</p>
     {data.project?.address && <p className="text-sm text-slate-500">{data.project.address}</p>}
+    <button type="button" onClick={() => window.print()} className="mt-2 text-xs font-medium text-brand-700 underline print:hidden">{t("custPrintSave")}</button>
     {isProposal && d.valid_until && <p className="mt-1 text-xs text-slate-400">{t("custValidUntil", { date: formatDate(d.valid_until) })}</p>}
     {d.description && <p className="mt-4 whitespace-pre-wrap rounded-xl bg-white p-3 text-sm">{d.description}</p>}
 
@@ -76,7 +78,7 @@ function Body({ token, data }: { token: string; data: CustomerData }) {
     {done && <div role="status" className="mt-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">{done}</div>}
     {error && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
 
-    {!done && (data.open || data.can_request_change) && <section className="mt-6 space-y-3">
+    {!done && (data.open || data.can_request_change) && <section className="mt-6 space-y-3 print:hidden">
       <label className="block text-sm font-medium">{t("custYourName")}<input value={name} maxLength={120} autoComplete="name" onChange={(e) => setName(e.target.value)} className={`${field} mt-1`} /></label>
       {data.open && mode === "none" && <>
         <p className="text-xs text-slate-500">{t("custApproveHint")}</p>
@@ -93,5 +95,6 @@ function Body({ token, data }: { token: string; data: CustomerData }) {
     </section>}
 
     <p className="mt-8 text-xs text-slate-400">{t("custContact")}: {data.company.name}{data.company.phone ? ` · ${data.company.phone}` : ""}{data.company.email ? ` · ${data.company.email}` : ""}</p>
+    <LegalLinks className="mt-2" />
   </>;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -10,7 +11,10 @@ import { MATERIAL_CATEGORIES, MATERIAL_UNITS, searchLibrary, type LibraryItem } 
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { PricePoint } from "@/lib/services/materials";
 import { IMPORT_TEMPLATE, MAX_IMPORT_ROWS, parseMaterialImport } from "@/lib/material-import";
-import { importMaterialsAction, getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
+import { readSheetText } from "@/lib/read-sheet";
+import { catalogToLibrary, type CatalogItem } from "@/lib/catalog/types";
+import { loadCatalog } from "@/lib/catalog/client";
+import { addCatalogItemsAction, importMaterialsAction, getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
 
 type Item = LibraryItem & { notes?: string | null; allow_substitution?: boolean };
 type SavedList = { id: string; name: string; items: { materialId: string; quantity: number }[] };
@@ -27,8 +31,11 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
   const [notice, setNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importText, setImportText] = useState("");
+  const [alsoList, setAlsoList] = useState(false);
+  const [listName, setListName] = useState("");
   const params = useSearchParams();
   useEffect(() => {
+    if (params.get("q")) setQuery(params.get("q") as string);
     if (params.get("import")) setImporting(true);
     if (params.get("add")) setDraft({ ...EMPTY });
   }, [params]);
@@ -41,6 +48,14 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
     getMaterialPricesAction(draft.id).then((r) => { if (live) setPrices(r.prices ?? []); }).catch(() => { if (live) setPrices([]); });
     return () => { live = false; };
   }, [draft?.id, canViewCosts]);
+  // Standard-catalog suggestions for what is being searched (downloaded the first time somebody searches).
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  useEffect(() => { if (query.trim().length >= 2 && catalog.length === 0) void loadCatalog().then(setCatalog); }, [query, catalog.length]);
+  const catalogMatches = useMemo(() => {
+    if (query.trim().length < 2 || catalog.length === 0) return [];
+    const own = new Set(items.map((i) => i.description.toLowerCase()));
+    return searchLibrary(catalog.filter((c) => !own.has(c.n.toLowerCase())).map(catalogToLibrary), query, 6);
+  }, [catalog, items, query]);
   const shown = useMemo(() => searchLibrary(items, query, query ? 60 : 200), [items, query]);
   const input = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-brand-500";
 
@@ -55,16 +70,7 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
   // Excel (.xlsx) is read in the browser and turned into the same tab-separated text the CSV path uses.
   async function loadFile(f: File) {
     setMsg(null);
-    if (/\.xls$/i.test(f.name)) { setMsg(t("importXlsOld")); return; }
-    if (/\.xlsx$/i.test(f.name)) {
-      try {
-        const { readSheet } = await import("read-excel-file/browser");
-        const rows = await readSheet(f);
-        setImportText(rows.map((r) => r.map((c) => (c == null ? "" : String(c instanceof Date ? c.toISOString().slice(0, 10) : c)).replace(/[\t\r\n]+/g, " ").trim()).join("\t")).join("\n"));
-      } catch { setMsg(t("importXlsError")); }
-      return;
-    }
-    setImportText(await f.text());
+    try { setImportText(await readSheetText(f)); if (!listName) setListName(f.name.replace(/\.[^.]+$/, "").slice(0, 120)); } catch (e) { setMsg(t(e instanceof Error && e.message === "xls" ? "importXlsOld" : "importXlsError")); }
   }
 
   const save = () => draft && run(() => saveMaterialAction({ ...draft, aliases: draft.aliases.split(",").map((a) => a.trim()).filter(Boolean) }), () => setDraft(null));
@@ -81,6 +87,12 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
     {(error || msg) && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error ? t("errLoadMaterials") : msg}</div>}
     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("search")} aria-label={t("search")} className={`${input} mb-3`} />
 
+    {catalogMatches.length > 0 && !draft && <section className="mb-3 rounded-xl border border-slate-200 bg-white" aria-label={t("catalogSection")}>
+      <p className="px-4 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t("catalogSection")}</p>
+      <ul className="divide-y divide-slate-50">{catalogMatches.map((c) => <li key={c.id} className="flex min-h-12 items-center gap-2 px-4 py-1.5 text-sm"><span className="min-w-0 flex-1 truncate">{c.description}</span><button type="button" disabled={busy} onClick={() => run(async () => { const r = await addCatalogItemsAction([c.id.slice(4)]); if (r.success) setNotice(t("catalogAdded", { count: String(r.added ?? 0) })); return r; })} className="min-h-10 shrink-0 rounded-lg border border-brand-500 px-3 text-xs font-semibold text-brand-700 disabled:opacity-40">{t("catalogAddToLibrary")}</button></li>)}</ul>
+    </section>}
+    {query.trim().length >= 2 && !draft && <button type="button" onClick={() => setDraft({ ...EMPTY, description: query.trim() })} className="mb-3 flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed border-brand-500 px-4 text-left text-sm font-medium text-brand-700 hover:bg-brand-50"><Plus className="h-4 w-4" />{t("mbCreateFromSearch", { text: query.trim() })}</button>}
+
     {importing && <div className="mb-4 space-y-3 rounded-xl border border-brand-500 bg-white p-4">
       <h2 className="font-semibold">{t("importCsv")}</h2>
       <p className="text-sm text-slate-500">{t("importHint")}</p>
@@ -91,8 +103,12 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
       <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={4} aria-label={t("importPaste")} placeholder={t("importPaste")} className={input} />
       {preview && (preview.missingDescription
         ? <p role="alert" className="text-sm text-red-600">{t("importNoDescription")}</p>
-        : <div className="text-sm"><p className="font-medium">{t("importPreview", { count: String(preview.rows.length) })}{preview.rows.length >= MAX_IMPORT_ROWS ? ` · ${t("importTooMany")}` : ""}</p>{preview.invalid > 0 && <p className="text-xs text-amber-700">{t("importInvalid", { count: String(preview.invalid) })}</p>}<ul className="mt-1 space-y-0.5 text-xs text-slate-500">{preview.rows.slice(0, 5).map((r, k) => <li key={k} className="truncate">{r.catalog_number ? `${r.catalog_number} · ` : ""}{r.description}{r.aliases.length ? ` (${r.aliases.join(", ")})` : ""}</li>)}</ul></div>)}
-      <div className="flex gap-2"><button type="button" disabled={busy || !preview || preview.rows.length === 0} onClick={() => run(async () => { const r = await importMaterialsAction(importText); if (r.success) setNotice(t("importDone", { created: String(r.created ?? 0), skipped: String(r.skipped ?? 0) })); return r; }, () => { setImportText(""); setImporting(false); })} className="min-h-11 flex-1 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40">{t("importRun")}</button><button type="button" onClick={() => { setImporting(false); setImportText(""); }} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm">{t("cancel")}</button></div>
+        : <div className="text-sm"><p className="font-medium">{t("importPreview", { count: String(preview.rows.length) })}{preview.rows.length >= MAX_IMPORT_ROWS ? ` · ${t("importTooMany")}` : ""}</p>{preview.invalid > 0 && <p className="text-xs text-amber-700">{t("importInvalid", { count: String(preview.invalid) })}</p>}<ul className="mt-1 space-y-0.5 text-xs text-slate-500">{preview.rows.slice(0, 5).map((r, k) => <li key={k} className="truncate">{r.quantity ? `${r.quantity} × ` : ""}{r.catalog_number ? `${r.catalog_number} · ` : ""}{r.description}{r.aliases.length ? ` (${r.aliases.join(", ")})` : ""}</li>)}</ul></div>)}
+      {preview && !preview.missingDescription && preview.rows.length > 0 && <div className="rounded-lg bg-slate-50 p-3">
+        <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={alsoList} onChange={(e) => setAlsoList(e.target.checked)} />{t("importAlsoList")}</label>
+        {alsoList && <input value={listName} maxLength={120} onChange={(e) => setListName(e.target.value)} placeholder={t("importListNamePh")} aria-label={t("importListNamePh")} className={`${input} mt-2`} />}
+      </div>}
+      <div className="flex gap-2"><button type="button" disabled={busy || !preview || preview.rows.length === 0 || (alsoList && !listName.trim())} onClick={() => run(async () => { const r = await importMaterialsAction(importText, alsoList ? listName : undefined); if (r.success) setNotice(t("importDone", { created: String(r.created ?? 0), skipped: String(r.skipped ?? 0) }) + (r.listItems ? ` ${t("importListSaved", { name: listName.trim(), count: String(r.listItems) })}` : "")); return r; }, () => { setImportText(""); setImporting(false); })} className="min-h-11 flex-1 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-40">{t("importRun")}</button><button type="button" onClick={() => { setImporting(false); setImportText(""); }} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm">{t("cancel")}</button></div>
     </div>}
 
     {draft && <div className="mb-4 space-y-3 rounded-xl border border-brand-500 bg-white p-4">
@@ -115,11 +131,12 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
       <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{shown.map((i) => <li key={i.id} className="flex items-center gap-2 px-3 py-2">
         <button type="button" disabled={busy} aria-label={t("favorite")} aria-pressed={i.is_favorite} onClick={() => run(() => toggleFavoriteAction(i.id, !i.is_favorite))} className="flex h-10 w-10 shrink-0 items-center justify-center"><Star className={`h-4 w-4 ${i.is_favorite ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} /></button>
         <button type="button" onClick={() => edit(i)} className="min-w-0 flex-1 py-1 text-left"><p className="truncate text-sm font-medium">{i.description}</p><p className="truncate text-xs text-slate-400">{i.catalog_number ? `${t("partNumberShort")} ${i.catalog_number} · ` : ""}{i.unit}{i.aliases.length ? ` · ${i.aliases.join(", ")}` : ""}</p></button>
-        <button type="button" disabled={busy} aria-label={t("archiveItem")} onClick={() => { if (window.confirm(t("confirmArchiveItem"))) run(() => archiveMaterialAction(i.id)); }} className="flex h-10 w-10 shrink-0 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+        <button type="button" disabled={busy} aria-label={t("archiveItem")} onClick={async () => { if (await confirmAsk(t("confirmArchiveItem"))) run(() => archiveMaterialAction(i.id)); }} className="flex h-10 w-10 shrink-0 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
       </li>)}</ul>}
 
     {lists.length > 0 && <section className="mt-6"><h2 className="mb-2 font-semibold">{t("savedLists")}</h2>
-      <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{lists.map((l) => <li key={l.id} className="flex items-center gap-2 px-4 py-2 text-sm"><span className="min-w-0 flex-1 truncate font-medium">{l.name}</span><span className="text-xs text-slate-400">{t("itemsCount", { count: String(l.items.length) })}</span>
-        <button type="button" disabled={busy} aria-label={t("delete")} onClick={() => { if (window.confirm(t("delete") + "?")) run(() => deleteListAction(l.id)); }} className="flex h-10 w-10 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></li>)}</ul></section>}
+      <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{lists.map((l) => <li key={l.id} className="px-4 py-1 text-sm"><details className="group"><summary className="flex min-h-11 cursor-pointer list-none items-center gap-2"><span className="min-w-0 flex-1 truncate font-medium">{l.name}</span><span className="text-xs text-slate-400">{t("itemsCount", { count: String(l.items.length) })}</span>
+        <button type="button" disabled={busy} aria-label={t("delete")} onClick={async (e) => { e.preventDefault(); if (await confirmAsk(t("delete") + "?")) run(() => deleteListAction(l.id)); }} className="flex h-10 w-10 items-center justify-center text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></summary>
+        <ul className="mb-2 ml-1 space-y-0.5 border-l border-slate-200 pl-3 text-xs text-slate-600">{l.items.map((e, k) => { const m = items.find((x) => x.id === e.materialId); return <li key={k} className="flex gap-2"><span className="w-10 shrink-0 text-right font-semibold">{e.quantity}</span><span className="min-w-0 truncate">{m?.description ?? "—"}</span></li>; })}</ul></details></li>)}</ul></section>}
   </div>;
 }

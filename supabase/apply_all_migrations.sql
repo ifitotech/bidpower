@@ -4131,3 +4131,317 @@ REVOKE ALL ON FUNCTION trg_po_block_pending_receipts() FROM PUBLIC, anon, authen
 
 DROP TRIGGER IF EXISTS po_block_pending_receipts ON purchase_orders;
 CREATE TRIGGER po_block_pending_receipts BEFORE INSERT ON purchase_orders FOR EACH ROW EXECUTE FUNCTION trg_po_block_pending_receipts();
+
+-- ===== supabase/migrations/20260817000027_proposal_approved_sets_contract.sql =====
+-- BidPower — An approved proposal moves its project forward.
+-- The customer's link already does this. This trigger makes the same happen when the proposal is approved by hand:
+-- a project without a contract value takes the proposal's total, and a lead/quoted project becomes approved.
+-- A contract value someone already set is never overwritten.
+
+CREATE OR REPLACE FUNCTION trg_quote_approved_updates_project()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.project_id IS NULL OR NEW.status IS DISTINCT FROM 'approved' OR OLD.status IS NOT DISTINCT FROM 'approved' THEN
+    RETURN NEW;
+  END IF;
+  UPDATE projects
+     SET contract_value = CASE WHEN COALESCE(contract_value, 0) = 0 THEN NEW.total ELSE contract_value END,
+         status = CASE WHEN status IN ('lead', 'quoted') THEN 'approved' ELSE status END,
+         updated_at = NOW()
+   WHERE id = NEW.project_id AND company_id = NEW.company_id;
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION trg_quote_approved_updates_project() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS quote_approved_updates_project ON quotes;
+CREATE TRIGGER quote_approved_updates_project AFTER UPDATE OF status ON quotes
+  FOR EACH ROW EXECUTE FUNCTION trg_quote_approved_updates_project();
+
+-- ===== supabase/migrations/20260818000028_po_no_exception_states.sql =====
+-- BidPower — The receipt is mandatory, so the "exception" way around it is closed.
+-- The three exception statuses stay in the status list (existing rows, if any, keep working) but no purchase order can
+-- enter them any more. A small trigger is used instead of rewriting the whole transition rules.
+
+CREATE OR REPLACE FUNCTION trg_po_no_exception_states()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.status IN ('exception_requested', 'exception_approved', 'exception_rejected')
+     AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+    RAISE EXCEPTION 'po_exception_removed';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS po_no_exception_states ON purchase_orders;
+CREATE TRIGGER po_no_exception_states BEFORE INSERT OR UPDATE OF status ON purchase_orders
+  FOR EACH ROW EXECUTE FUNCTION trg_po_no_exception_states();
+
+-- ===== supabase/migrations/20260819000029_atomic_document_numbers.sql =====
+-- BidPower — Document numbers that cannot repeat.
+-- Until now each "next number" was computed as MAX+1 inside its own short transaction and used later by another request,
+-- so two people creating a document at the same moment could get the same number (the unique rule then made one fail).
+-- A counter row per company, kind and year is raised atomically instead: two callers can never receive the same value.
+
+CREATE TABLE IF NOT EXISTS number_counters (
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  year INTEGER NOT NULL DEFAULT 0,
+  last_value INTEGER NOT NULL,
+  PRIMARY KEY (company_id, kind, year)
+);
+ALTER TABLE number_counters ENABLE ROW LEVEL SECURITY;  -- no policies: only the functions below touch it
+
+-- p_floor is the highest number already used by existing rows, so the counter never falls behind them.
+CREATE OR REPLACE FUNCTION bump_number(p_company UUID, p_kind TEXT, p_year INTEGER, p_floor INTEGER)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_value INTEGER;
+BEGIN
+  INSERT INTO number_counters AS n (company_id, kind, year, last_value)
+  VALUES (p_company, p_kind, p_year, p_floor + 1)
+  ON CONFLICT (company_id, kind, year) DO UPDATE SET last_value = GREATEST(n.last_value, p_floor) + 1
+  RETURNING n.last_value INTO v_value;
+  RETURN v_value;
+END;
+$$;
+REVOKE ALL ON FUNCTION bump_number(UUID, TEXT, INTEGER, INTEGER) FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION next_purchase_order_number(p_company UUID) RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_year TEXT := to_char(NOW(), 'YYYY'); v_max INTEGER;
+BEGIN
+  IF p_company IS NULL OR p_company NOT IN (SELECT get_user_company_ids()) THEN RAISE EXCEPTION 'forbidden'; END IF;
+  SELECT COALESCE(MAX(NULLIF(regexp_replace(number, '^PO-' || v_year || '-', ''), number)::INTEGER), 0) INTO v_max FROM purchase_orders WHERE company_id = p_company AND number LIKE 'PO-' || v_year || '-%';
+  RETURN 'PO-' || v_year || '-' || lpad(bump_number(p_company, 'po', v_year::INTEGER, v_max)::text, 5, '0');
+END; $$;
+
+CREATE OR REPLACE FUNCTION next_material_request_number(p_company UUID) RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_year TEXT := to_char(NOW(), 'YYYY'); v_max INTEGER;
+BEGIN
+  IF p_company IS NULL OR p_company NOT IN (SELECT get_user_company_ids()) THEN RAISE EXCEPTION 'forbidden'; END IF;
+  SELECT COALESCE(MAX(NULLIF(regexp_replace(number, '^MR-' || v_year || '-', ''), number)::INTEGER), 0) INTO v_max FROM material_requests WHERE company_id = p_company AND number LIKE 'MR-' || v_year || '-%';
+  RETURN 'MR-' || v_year || '-' || lpad(bump_number(p_company, 'mr', v_year::INTEGER, v_max)::text, 5, '0');
+END; $$;
+
+CREATE OR REPLACE FUNCTION next_pricing_request_number(p_company UUID) RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_year TEXT := to_char(NOW(), 'YYYY'); v_max INTEGER;
+BEGIN
+  IF p_company IS NULL OR p_company NOT IN (SELECT get_user_company_ids()) THEN RAISE EXCEPTION 'forbidden'; END IF;
+  SELECT COALESCE(MAX(NULLIF(regexp_replace(number, '^PR-' || v_year || '-', ''), number)::INTEGER), 0) INTO v_max FROM supply_quote_requests WHERE company_id = p_company AND number LIKE 'PR-' || v_year || '-%';
+  RETURN 'PR-' || v_year || '-' || lpad(bump_number(p_company, 'pr', v_year::INTEGER, v_max)::text, 5, '0');
+END; $$;
+
+CREATE OR REPLACE FUNCTION next_quote_number(p_company UUID) RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_year TEXT := to_char(NOW(), 'YYYY'); v_max INTEGER;
+BEGIN
+  IF p_company IS NULL OR p_company NOT IN (SELECT get_user_company_ids()) THEN RAISE EXCEPTION 'forbidden'; END IF;
+  SELECT COALESCE(MAX(NULLIF(regexp_replace(number, '^QT-' || v_year || '-', ''), number)::INTEGER), 0) INTO v_max FROM quotes WHERE company_id = p_company AND number LIKE 'QT-' || v_year || '-%';
+  RETURN 'QT-' || v_year || '-' || lpad(bump_number(p_company, 'qt', v_year::INTEGER, v_max)::text, 4, '0');
+END; $$;
+
+CREATE OR REPLACE FUNCTION next_invoice_number(p_company UUID) RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_max INTEGER;
+BEGIN
+  IF p_company IS NULL OR p_company NOT IN (SELECT get_user_company_ids()) THEN RAISE EXCEPTION 'forbidden'; END IF;
+  SELECT COALESCE(MAX(substring(number from '^INV-(\d{1,9})$')::INTEGER), 0) INTO v_max FROM invoices WHERE company_id = p_company AND number ~ '^INV-\d{1,9}$';
+  RETURN 'INV-' || lpad(bump_number(p_company, 'inv', 0, v_max)::text, 4, '0');
+END; $$;
+REVOKE ALL ON FUNCTION next_invoice_number(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION next_invoice_number(UUID) TO authenticated;
+
+-- A payment is added to the invoice in one statement, so two payments at the same moment both count.
+-- It runs with the caller's own rights (row security still decides who may touch the invoice).
+CREATE OR REPLACE FUNCTION record_invoice_payment(p_invoice UUID, p_amount NUMERIC)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
+AS $$
+BEGIN
+  IF p_amount IS NULL OR p_amount <= 0 OR p_amount > 100000000 THEN RAISE EXCEPTION 'invalid_amount'; END IF;
+  UPDATE invoices
+     SET amount_paid = LEAST(total, amount_paid + p_amount),
+         status = CASE WHEN LEAST(total, amount_paid + p_amount) >= total THEN 'paid' ELSE 'partial' END,
+         updated_at = NOW()
+   WHERE id = p_invoice AND status <> 'cancelled';
+  IF NOT FOUND THEN RAISE EXCEPTION 'invoice_transition_invalid'; END IF;
+END;
+$$;
+REVOKE ALL ON FUNCTION record_invoice_payment(UUID, NUMERIC) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION record_invoice_payment(UUID, NUMERIC) TO authenticated;
+
+-- ===== supabase/migrations/20260820000030_clients_visibility.sql =====
+-- BidPower — Customers are not for every member.
+-- Until now any member of the company (including field employees) could read the whole customer list through the API.
+-- Owners and managers keep seeing every client. Anyone else sees only the clients of the projects they can already see
+-- (their assigned projects), which is what they need on the job site.
+
+DROP POLICY IF EXISTS "Members can view clients" ON clients;
+DROP POLICY IF EXISTS "Members can view company data" ON clients;
+DROP POLICY IF EXISTS "Clients visible by role or project" ON clients;
+
+CREATE POLICY "Clients visible by role or project"
+  ON clients FOR SELECT
+  USING (
+    company_id IN (SELECT get_user_company_ids())
+    AND (
+      get_user_role(company_id) IN ('owner', 'manager')
+      OR id IN (SELECT client_id FROM projects)  -- projects already limits employees to their assignments
+    )
+  );
+
+
+-- ===== supabase/migrations/20260821000031_storage_limits.sql =====
+-- BidPower — The file store enforces what the app already checks, so nobody can bypass the screens.
+-- Receipts, plans, logos and attachments are images or PDFs of at most 10 MB. (SVG is left out on purpose: it can carry scripts.)
+UPDATE storage.buckets
+   SET file_size_limit = 10485760,
+       allowed_mime_types = ARRAY['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+ WHERE id = 'documents';
+
+
+-- ===== supabase/migrations/20260822000032_faster_policies_and_fk_indexes.sql =====
+-- BidPower — Faster row security.
+-- Policies that call auth.uid() directly re-evaluate it for every row. Wrapped in a sub-select it is evaluated once per query.
+-- Only the way the same condition is written changes; who can see or change what stays exactly the same.
+
+ALTER POLICY "Exporters log their own exports" ON public.accounting_export_log WITH CHECK ((can_export_accounting(company_id) AND (exported_by = ( SELECT auth.uid() AS uid))));
+ALTER POLICY "Create expenses with upload permission" ON public.expenses WITH CHECK (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (created_by = ( SELECT auth.uid() AS uid)) AND has_permission(company_id, 'can_upload_documents'::text) AND ((project_id IS NULL) OR (project_id IN ( SELECT projects.id FROM projects)))));
+ALTER POLICY "Creators edit own pending expenses" ON public.expenses USING (((created_by = ( SELECT auth.uid() AS uid)) AND (status = 'pending_review'::text))) WITH CHECK (((created_by = ( SELECT auth.uid() AS uid)) AND (status = ANY (ARRAY['pending_review'::text, 'cancelled'::text]))));
+ALTER POLICY "View expenses by permission" ON public.expenses USING (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND ((get_user_role(company_id) = ANY (ARRAY['owner'::text, 'manager'::text])) OR (created_by = ( SELECT auth.uid() AS uid)) OR (has_permission(company_id, 'can_view_costs'::text) AND (project_id IN ( SELECT projects.id FROM projects))))));
+ALTER POLICY "Members leave feedback" ON public.feedback WITH CHECK (((user_id = ( SELECT auth.uid() AS uid)) AND (company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids))));
+ALTER POLICY "People read their own feedback" ON public.feedback USING ((user_id = ( SELECT auth.uid() AS uid)));
+ALTER POLICY "Add items to own pending request" ON public.material_request_items WITH CHECK (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (request_id IN ( SELECT material_requests.id FROM material_requests WHERE ((material_requests.company_id = material_request_items.company_id) AND ((get_user_role(material_requests.company_id) = ANY (ARRAY['owner'::text, 'manager'::text])) OR ((material_requests.requested_by = ( SELECT auth.uid() AS uid)) AND (material_requests.status = 'requested'::text))))))));
+ALTER POLICY "Create material requests with permission" ON public.material_requests WITH CHECK (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (requested_by = ( SELECT auth.uid() AS uid)) AND (status = 'requested'::text) AND has_permission(company_id, 'can_request_material'::text) AND (project_id IN ( SELECT projects.id FROM projects))));
+ALTER POLICY "Requester cancels own pending request" ON public.material_requests USING (((requested_by = ( SELECT auth.uid() AS uid)) AND (status = 'requested'::text))) WITH CHECK (((requested_by = ( SELECT auth.uid() AS uid)) AND (status = ANY (ARRAY['requested'::text, 'cancelled'::text]))));
+ALTER POLICY "View material requests" ON public.material_requests USING (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND ((get_user_role(company_id) = ANY (ARRAY['owner'::text, 'manager'::text])) OR ((requested_by = ( SELECT auth.uid() AS uid)) AND (project_id IN ( SELECT projects.id FROM projects))))));
+ALTER POLICY "Members read own permissions, owners read all" ON public.member_permissions USING (((member_id IN ( SELECT company_members.id FROM company_members WHERE (company_members.user_id = ( SELECT auth.uid() AS uid)))) OR (get_user_role(company_id) = 'owner'::text)));
+ALTER POLICY "Users can update own notifications" ON public.notifications USING ((user_id = ( SELECT auth.uid() AS uid)));
+ALTER POLICY "Users can view own notifications" ON public.notifications USING ((user_id = ( SELECT auth.uid() AS uid)));
+ALTER POLICY "Users can insert own profile" ON public.profiles WITH CHECK ((id = ( SELECT auth.uid() AS uid)));
+ALTER POLICY "Users can update own profile" ON public.profiles USING ((id = ( SELECT auth.uid() AS uid)));
+ALTER POLICY "Users can view own profile" ON public.profiles USING ((id = ( SELECT auth.uid() AS uid)));
+ALTER POLICY "View project assignments" ON public.project_members USING (((user_id = ( SELECT auth.uid() AS uid)) OR is_project_manager(project_id)));
+ALTER POLICY "Add items to own or managed open PO" ON public.purchase_order_items WITH CHECK (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (purchase_order_id IN ( SELECT p.id FROM purchase_orders p WHERE ((p.company_id = purchase_order_items.company_id) AND (p.status = ANY (ARRAY['pending_approval'::text, 'approved'::text, 'pending_document'::text, 'open'::text])) AND ((p.created_by = ( SELECT auth.uid() AS uid)) OR (get_user_role(p.company_id) = ANY (ARRAY['owner'::text, 'manager'::text]))))))));
+ALTER POLICY "Add PO history as yourself" ON public.purchase_order_status_history WITH CHECK (((changed_by = ( SELECT auth.uid() AS uid)) AND (purchase_order_id IN ( SELECT purchase_orders.id FROM purchase_orders))));
+ALTER POLICY "Create POs within permission and limit" ON public.purchase_orders WITH CHECK (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (created_by = ( SELECT auth.uid() AS uid)) AND (project_id IN ( SELECT projects.id FROM projects)) AND has_permission(company_id, 'can_create_po'::text) AND ((po_within_limit(company_id, estimated_amount) AND (status = ANY (ARRAY['open'::text, 'pending_document'::text, 'approved'::text]))) OR (status = 'pending_approval'::text))));
+ALTER POLICY "Members can update own or managers all POs" ON public.purchase_orders USING (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND ((created_by = ( SELECT auth.uid() AS uid)) OR (get_user_role(company_id) = ANY (ARRAY['owner'::text, 'manager'::text])))));
+ALTER POLICY "View POs by permission" ON public.purchase_orders USING (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND ((get_user_role(company_id) = ANY (ARRAY['owner'::text, 'manager'::text])) OR (created_by = ( SELECT auth.uid() AS uid)) OR (has_permission(company_id, 'can_view_costs'::text) AND (project_id IN ( SELECT projects.id FROM projects))))));
+ALTER POLICY "Add quote history as yourself" ON public.quote_status_history WITH CHECK (((changed_by = ( SELECT auth.uid() AS uid)) AND (quote_id IN ( SELECT quotes.id FROM quotes))));
+ALTER POLICY "Create suppliers with pricing permission" ON public.suppliers WITH CHECK (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (created_by = ( SELECT auth.uid() AS uid)) AND has_permission(company_id, 'can_create_pricing_request'::text)));
+ALTER POLICY "Edit lines of own draft pricing requests" ON public.supply_quote_request_items USING (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (request_id IN ( SELECT supply_quote_requests.id FROM supply_quote_requests WHERE ((supply_quote_requests.created_by = ( SELECT auth.uid() AS uid)) AND (supply_quote_requests.status = 'draft'::text)))) AND has_permission(company_id, 'can_create_pricing_request'::text))) WITH CHECK (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (request_id IN ( SELECT supply_quote_requests.id FROM supply_quote_requests WHERE ((supply_quote_requests.created_by = ( SELECT auth.uid() AS uid)) AND (supply_quote_requests.status = 'draft'::text) AND (supply_quote_requests.company_id = supply_quote_request_items.company_id)))) AND has_permission(company_id, 'can_create_pricing_request'::text)));
+ALTER POLICY "Create pricing requests with permission" ON public.supply_quote_requests WITH CHECK (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (created_by = ( SELECT auth.uid() AS uid)) AND (status = 'draft'::text) AND has_permission(company_id, 'can_create_pricing_request'::text) AND ((project_id IS NULL) OR (project_id IN ( SELECT projects.id FROM projects)))));
+ALTER POLICY "Edit own draft pricing requests" ON public.supply_quote_requests USING (((created_by = ( SELECT auth.uid() AS uid)) AND (status = 'draft'::text) AND has_permission(company_id, 'can_create_pricing_request'::text))) WITH CHECK (((created_by = ( SELECT auth.uid() AS uid)) AND (status = ANY (ARRAY['draft'::text, 'cancelled'::text])) AND has_permission(company_id, 'can_create_pricing_request'::text)));
+ALTER POLICY "Employees can manage own time entries" ON public.time_entries USING (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (user_id = ( SELECT auth.uid() AS uid)))) WITH CHECK (((company_id IN ( SELECT get_user_company_ids() AS get_user_company_ids)) AND (user_id = ( SELECT auth.uid() AS uid))));
+
+-- Foreign keys without an index make joins and deletes scan the whole table. Indexes only speed things up.
+CREATE INDEX IF NOT EXISTS idx_fk_accounting_export_log_exported_by ON public.accounting_export_log(exported_by);
+CREATE INDEX IF NOT EXISTS idx_fk_accounting_export_log_project_id ON public.accounting_export_log(project_id);
+CREATE INDEX IF NOT EXISTS idx_fk_activity_logs_user_id ON public.activity_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_assembly_items_assembly_id ON public.assembly_items(assembly_id);
+CREATE INDEX IF NOT EXISTS idx_fk_assembly_items_company_id ON public.assembly_items(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_assembly_items_material_id ON public.assembly_items(material_id);
+CREATE INDEX IF NOT EXISTS idx_fk_calendar_events_assigned_to ON public.calendar_events(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_fk_calendar_events_created_by ON public.calendar_events(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_calendar_events_project_id ON public.calendar_events(project_id);
+CREATE INDEX IF NOT EXISTS idx_fk_change_order_items_company_id ON public.change_order_items(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_change_orders_change_request_id ON public.change_orders(change_request_id);
+CREATE INDEX IF NOT EXISTS idx_fk_change_orders_created_by ON public.change_orders(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_change_requests_link_id ON public.change_requests(link_id);
+CREATE INDEX IF NOT EXISTS idx_fk_change_requests_project_id ON public.change_requests(project_id);
+CREATE INDEX IF NOT EXISTS idx_fk_client_contacts_company_id ON public.client_contacts(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_company_materials_created_by ON public.company_materials(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_company_members_user_id ON public.company_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_customer_actions_company_id ON public.customer_actions(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_customer_actions_link_id ON public.customer_actions(link_id);
+CREATE INDEX IF NOT EXISTS idx_fk_customer_links_company_id ON public.customer_links(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_customer_links_created_by ON public.customer_links(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_customer_links_project_id ON public.customer_links(project_id);
+CREATE INDEX IF NOT EXISTS idx_fk_documents_company_id ON public.documents(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_documents_uploaded_by ON public.documents(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_fk_expense_categories_company_id ON public.expense_categories(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_expenses_category_id ON public.expenses(category_id);
+CREATE INDEX IF NOT EXISTS idx_fk_expenses_created_by ON public.expenses(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_feedback_user_id ON public.feedback(user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_invoices_client_id ON public.invoices(client_id);
+CREATE INDEX IF NOT EXISTS idx_fk_invoices_created_by ON public.invoices(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_invoices_project_id ON public.invoices(project_id);
+CREATE INDEX IF NOT EXISTS idx_fk_invoices_quote_id ON public.invoices(quote_id);
+CREATE INDEX IF NOT EXISTS idx_fk_material_assemblies_created_by ON public.material_assemblies(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_material_request_items_company_id ON public.material_request_items(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_material_request_items_material_id ON public.material_request_items(material_id);
+CREATE INDEX IF NOT EXISTS idx_fk_material_requests_requested_by ON public.material_requests(requested_by);
+CREATE INDEX IF NOT EXISTS idx_fk_material_requests_reviewed_by ON public.material_requests(reviewed_by);
+CREATE INDEX IF NOT EXISTS idx_fk_member_invitations_accepted_by ON public.member_invitations(accepted_by);
+CREATE INDEX IF NOT EXISTS idx_fk_member_invitations_invited_by ON public.member_invitations(invited_by);
+CREATE INDEX IF NOT EXISTS idx_fk_member_permissions_updated_by ON public.member_permissions(updated_by);
+CREATE INDEX IF NOT EXISTS idx_fk_notifications_company_id ON public.notifications(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_permission_audit_changed_by ON public.permission_audit(changed_by);
+CREATE INDEX IF NOT EXISTS idx_fk_permission_audit_company_id ON public.permission_audit(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_pricing_request_questions_company_id ON public.pricing_request_questions(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_project_activity_company_id ON public.project_activity(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_project_activity_user_id ON public.project_activity(user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_project_members_user_id ON public.project_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_purchase_order_items_company_id ON public.purchase_order_items(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_purchase_order_items_material_id ON public.purchase_order_items(material_id);
+CREATE INDEX IF NOT EXISTS idx_fk_purchase_order_items_request_item_id ON public.purchase_order_items(request_item_id);
+CREATE INDEX IF NOT EXISTS idx_fk_purchase_order_status_history_changed_by ON public.purchase_order_status_history(changed_by);
+CREATE INDEX IF NOT EXISTS idx_fk_purchase_order_status_history_purchase_order_id ON public.purchase_order_status_history(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_fk_purchase_orders_approved_by ON public.purchase_orders(approved_by);
+CREATE INDEX IF NOT EXISTS idx_fk_purchase_orders_created_by ON public.purchase_orders(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_purchase_orders_supplier_id ON public.purchase_orders(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_fk_quote_activity_log_actor_id ON public.quote_activity_log(actor_id);
+CREATE INDEX IF NOT EXISTS idx_fk_quote_activity_log_company_id ON public.quote_activity_log(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_quote_items_quote_id ON public.quote_items(quote_id);
+CREATE INDEX IF NOT EXISTS idx_fk_quote_status_history_changed_by ON public.quote_status_history(changed_by);
+CREATE INDEX IF NOT EXISTS idx_fk_quote_status_history_quote_id ON public.quote_status_history(quote_id);
+CREATE INDEX IF NOT EXISTS idx_fk_quotes_client_id ON public.quotes(client_id);
+CREATE INDEX IF NOT EXISTS idx_fk_quotes_created_by ON public.quotes(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_quotes_project_id ON public.quotes(project_id);
+CREATE INDEX IF NOT EXISTS idx_fk_subscriptions_plan_id ON public.subscriptions(plan_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_contacts_company_id ON public.supplier_contacts(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_contacts_created_by ON public.supplier_contacts(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_attachments_company_id ON public.supplier_quote_attachments(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_attachments_request_id ON public.supplier_quote_attachments(request_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_attachments_response_id ON public.supplier_quote_attachments(response_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_attachments_uploaded_by ON public.supplier_quote_attachments(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_invitations_company_id ON public.supplier_quote_invitations(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_invitations_created_by ON public.supplier_quote_invitations(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_invitations_supplier_id ON public.supplier_quote_invitations(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_response_items_company_id ON public.supplier_quote_response_items(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_response_items_request_item_id ON public.supplier_quote_response_items(request_item_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_responses_company_id ON public.supplier_quote_responses(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_responses_entered_by ON public.supplier_quote_responses(entered_by);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_responses_invitation_id ON public.supplier_quote_responses(invitation_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_quote_responses_supplier_id ON public.supplier_quote_responses(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_fk_suppliers_created_by ON public.suppliers(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_supply_connect_codes_created_by ON public.supply_connect_codes(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_supply_connect_codes_supply_company_id ON public.supply_connect_codes(supply_company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supply_connect_codes_used_by_company_id ON public.supply_connect_codes(used_by_company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supply_connections_supplier_id ON public.supply_connections(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supply_quote_request_items_company_id ON public.supply_quote_request_items(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supply_quote_request_items_material_id ON public.supply_quote_request_items(material_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supply_quote_requests_created_by ON public.supply_quote_requests(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_supply_quote_requests_material_request_id ON public.supply_quote_requests(material_request_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supply_quote_requests_supplier_contact_id ON public.supply_quote_requests(supplier_contact_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supply_quote_requests_supplier_id ON public.supply_quote_requests(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_fk_takeoff_circuits_company_id ON public.takeoff_circuits(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_takeoff_counts_company_id ON public.takeoff_counts(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_takeoff_feeders_company_id ON public.takeoff_feeders(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_takeoff_panels_company_id ON public.takeoff_panels(company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_takeoffs_created_by ON public.takeoffs(created_by);
+CREATE INDEX IF NOT EXISTS idx_fk_takeoffs_material_request_id ON public.takeoffs(material_request_id);
+CREATE INDEX IF NOT EXISTS idx_fk_takeoffs_verified_by ON public.takeoffs(verified_by);
+CREATE INDEX IF NOT EXISTS idx_fk_time_entries_project_id ON public.time_entries(project_id);
+CREATE INDEX IF NOT EXISTS idx_fk_time_entries_user_id ON public.time_entries(user_id);

@@ -157,3 +157,32 @@ export async function getProjectBasic(projectId: string, companyId: string) {
   if (error) throw error;
   return data as { id: string; name: string } | null;
 }
+
+export type RepeatableRequest = {
+  id: string; number: string; createdAt: string; projectName: string | null; sameProject: boolean;
+  lines: { materialId: string | null; description: string; quantity: number; unit: string; category: string | null; allowSubstitution: boolean }[];
+};
+
+/** Recent requests the person can see, newest first with this project's own on top, so "order the same again" is one tap. */
+export async function getRepeatableRequests(projectId: string, companyId: string): Promise<RepeatableRequest[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("material_requests")
+    .select("id, number, status, created_at, project_id, project:projects(name), items:material_request_items(material_id, description, quantity, unit, category, allow_substitution, sort_order)")
+    .eq("company_id", companyId)
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: false })
+    .limit(15);
+  if (error) throw error;
+  type Row = { id: string; number: string; created_at: string; project_id: string; project: { name?: string } | { name?: string }[] | null; items: { material_id: string | null; description: string; quantity: number; unit: string; category: string | null; allow_substitution: boolean; sort_order: number }[] | null };
+  const rows = ((data ?? []) as unknown as Row[]).filter((r) => (r.items ?? []).length > 0).map((r) => {
+    const p = Array.isArray(r.project) ? r.project[0] : r.project;
+    return {
+      id: r.id, number: r.number, createdAt: r.created_at, projectName: p?.name ?? null, sameProject: r.project_id === projectId,
+      lines: [...(r.items ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((i) => ({
+        materialId: i.material_id, description: i.description, quantity: Number(i.quantity), unit: i.unit, category: i.category, allowSubstitution: i.allow_substitution,
+      })),
+    };
+  });
+  return [...rows.filter((r) => r.sameProject), ...rows.filter((r) => !r.sameProject)].slice(0, 6);
+}

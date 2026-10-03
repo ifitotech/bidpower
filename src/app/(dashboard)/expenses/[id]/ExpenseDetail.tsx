@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -59,6 +60,6 @@ export default function ExpenseDetail({ expense: e, isReviewer, canCancel, recei
     </div>
     {pending && isReviewer && <div className="mb-3 flex gap-2"><button type="button" disabled={busy} onClick={() => run(() => reviewExpenseAction(e.id, "approved"))} className={`${btn} flex-1 bg-brand-600 text-white`}>{t("poApprove")}</button><button type="button" disabled={busy} onClick={() => run(() => reviewExpenseAction(e.id, "rejected"))} className={`${btn} flex-1 border border-slate-200`}>{t("poReject")}</button></div>}
     {pending && !isReviewer && <p className="mb-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">{t("expenseNeedsReviewNote")}</p>}
-    {pending && canCancel && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmCancelRequest"))) run(() => cancelExpenseAction(e.id)); }} className={`${btn} w-full border border-red-100 bg-red-50 text-red-600`}>{t("cancel")}</button>}
+    {pending && canCancel && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmCancelRequest"))) run(() => cancelExpenseAction(e.id)); }} className={`${btn} w-full border border-red-100 bg-red-50 text-red-600`}>{t("cancel")}</button>}
   </div>;
 }

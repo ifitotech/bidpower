@@ -15,6 +15,21 @@ const toItem = (m: MaterialRow): LibraryItem & { notes: string | null; allow_sub
   aliases: (m.aliases ?? []).map((a) => a.alias),
 });
 
+/**
+ * Brings a standard-catalog item into the company's own library (so it gets history, favorites and prices) and returns its id.
+ * If the company already has an item with the same name it is reused, never duplicated.
+ */
+export async function ensureMaterialFromCatalog(companyId: string, userId: string, c: { n: string; u: string; c: string; a: string[]; m?: string }): Promise<string> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("company_materials").select("id").eq("company_id", companyId).eq("description", c.n).limit(1);
+  if (error) throw error;
+  if (data && data.length) {
+    await supabase.from("company_materials").update({ is_active: true }).eq("id", data[0].id).eq("company_id", companyId).eq("is_active", false);
+    return data[0].id as string;
+  }
+  return createMaterial(companyId, userId, { description: c.n, unit: c.u, category: c.c, manufacturer: c.m ?? null, aliases: c.a });
+}
+
 /** Active library items of the company (RLS also limits the rows). */
 export async function getMaterials(companyId: string) {
   const supabase = await createClient();
@@ -153,6 +168,26 @@ export async function createSavedList(companyId: string, userId: string, name: s
     throw ins.error;
   }
   return data.id as string;
+}
+
+/** Saves a list under a name; a list with the same name (any capitalization) is replaced, so a list is edited by saving it again. */
+export async function upsertSavedList(companyId: string, userId: string, name: string, items: { materialId: string; quantity: number }[]) {
+  const supabase = await createClient();
+  const cleanName = name.trim().slice(0, 120);
+  if (!cleanName) throw new Error("list_name_required");
+  if (items.length === 0) throw new Error("list_empty");
+  const merged = new Map<string, number>();
+  for (const i of items) merged.set(i.materialId, Math.round(((merged.get(i.materialId) ?? 0) + i.quantity) * 100) / 100);
+  const rows = [...merged].map(([materialId, quantity]) => ({ materialId, quantity }));
+  const { data: existing, error } = await supabase.from("material_assemblies").select("id, name").eq("company_id", companyId);
+  if (error) throw error;
+  const same = (existing ?? []).find((l) => (l.name as string).toLowerCase() === cleanName.toLowerCase());
+  if (!same) return { id: await createSavedList(companyId, userId, cleanName, rows), replaced: false };
+  const del = await supabase.from("assembly_items").delete().eq("assembly_id", same.id).eq("company_id", companyId);
+  if (del.error) throw del.error;
+  const ins = await supabase.from("assembly_items").insert(rows.map((i, idx) => ({ company_id: companyId, assembly_id: same.id, material_id: i.materialId, quantity: i.quantity, sort_order: idx })));
+  if (ins.error) throw ins.error;
+  return { id: same.id as string, replaced: true };
 }
 
 export async function deleteSavedList(companyId: string, listId: string) {

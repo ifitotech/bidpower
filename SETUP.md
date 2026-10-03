@@ -264,3 +264,79 @@ The PNG icons in `public/icons` were corrupt, so the installed app had no logo. 
 ## 30. Suggestions while typing a proposal line
 
 In a new Proposal, the line "Description" suggests items from the company library while you type (same search as the material list: shorthand, colours, part numbers). Picking one fills the description, the part number and the unit. Arrow keys + Enter also work.
+
+## 31. One Material place and a simpler "Request quotes"
+
+- The menu has one Material entry (Purchasing: Material, Quotes, Purchase orders). The material lists and the library hang from the Material page ("More about material"), no longer from the menu. Quotes has its own icon.
+- "Request quotes": choose the material list (the latest is preselected) or "Another list: type or paste lines", then "Reply by", delivery (delivery to site by default) and notes. Title, type and links are under "More options".
+
+## 32. Restructuring R1 + R2
+
+- Actions are split by domain (`src/app/(dashboard)/<domain>/actions.ts`); shared helpers in `src/lib/action-helpers.ts`.
+- There is no free-form purchase order: `/pos/new` redirects to Material. A purchase always starts from a material list ("Buy now") or from a supplier's answer. A quote request always starts from a material list (`errPricingNeedsList`).
+- The employee has one door: "Ask for or buy material".
+- Lists of expenses, purchase orders, proposals and invoices accept `?projectId=` (the project's tools use it) and show a chip to clear the filter.
+- Removed: notifications page and service, time clock, unused document upload, PO exception flow, 124 unused texts.
+- e2e helpers: `createList` and `buyOne` in `scripts/e2e/lib.js`.
+
+## 33. R4: proposal -> project -> invoice, with margin
+
+- Migration `20260817000027_proposal_approved_sets_contract.sql`: approving a proposal by hand (like the customer's link already did) gives a project without a contract value the proposal's total and moves a lead/quoted project to approved. A contract value that was already set is never overwritten.
+- An approved proposal shows "Billing": billed vs total, its invoices, and "Create invoice". The invoice form suggests the number (INV-0001...), offers 30%, 50% and "the rest", and refuses more than what is left (`errInvoiceTooMuch`). Only an approved proposal can be billed (`errInvoiceQuoteNotApproved`); client and project come from the proposal. Invoices are Owner/Manager work.
+- With cost permission the proposal also shows the project's margin (contract vs actual + committed cost; profit only with "view profit").
+
+## 34. R3: quote request in four steps
+
+The detail of a quote request shows a strip with four steps (what you ask, to whom, answers, decide), marks the current one and numbers the sections. The status "Sent" reads "Waiting for the supplier", which is true for a link and for a connected supply account.
+
+## 35. Supply connect link, login that remembers, closed PO exceptions
+
+- A supply house generating a connection code also gets a shareable link (`/suppliers?code=...`, with copy and WhatsApp). The contractor opens it, signs in and lands on Suppliers with the code typed.
+- Any link opened while signed out goes to the login with `?next=` and comes back there after signing in (only internal paths are accepted).
+- Migration `20260818000028_po_no_exception_states.sql`: no purchase order can enter the three exception statuses any more (trigger); existing rows, if any, are untouched.
+
+## 36. Money follow-through, a real calendar and one search box
+
+- **Invoice:** printable page (`/api/invoices/[id]/pdf?lang=`), "Mark as sent", "Cancel" only while nothing is paid, a link back to its proposal, and a computed **Overdue** status (not stored: sent or partly paid, past its due date, with a balance). Payments are not offered on a cancelled invoice.
+- **Needs Attention** (owner/manager) now also lists approved proposals with something left to bill and invoices past their due date with what is owed.
+- **Project** shows billed, collected and still owed; **client** shows their invoices and what they owe.
+- **Calendar** shows real dates besides project starts: purchase order deliveries, invoices to collect, quote answers due, proposals about to expire and estimated project ends, with a "This month" list. Employees only see their own purchases arriving.
+- **Search** (`/search?q=`, the box on the home screen): projects, clients, proposals, invoices, purchase orders, material lists, quote requests, library items and suppliers. Row security decides what each person finds; money documents only for owners and managers.
+
+## 37. Audit pass 1 (security and consistency)
+
+- `scripts/e2e/rls.js` attacks the database directly with each kind of person (owner of another company, employee, visitor, supply). It found that **any member could read the whole customer list**; migration `20260820000030_clients_visibility.sql` limits employees to the customers of their own projects.
+- `scripts/e2e/concurrency.js` creates documents at the same moment: it showed that 16 simultaneous calls all received the **same number**. Migration `20260819000029_atomic_document_numbers.sql` hands out PO, material list, quote request, proposal and invoice numbers from an atomic counter, and adds `record_invoice_payment` so simultaneous payments all count.
+- Pages that survive a failure now log it (`src/lib/log.ts`) instead of turning it into "not found" or an empty list.
+- "Today" for reminders and the overdue status uses the company's time zone.
+- Known and accepted: the price list (`plans`, `plan_limits`) is public on purpose; every member can read the team roster and the material library; a project's money columns (contract value, budgets) are readable through the API by employees assigned to that project even though the screens hide them. Fixing the last one means moving those columns to their own table, a data change that needs approval.
+- Supabase through the assistant: `DROP ...` statements wait for a human confirmation and time out, so policies are changed with `ALTER POLICY` and the old ones are left in place when identical.
+- Receipt and attachment inputs list the accepted image types explicitly (not `image/*`): iPhones then convert HEIC photos to JPEG on their own instead of sending a format the app refuses.
+- Migration `20260821000031_storage_limits.sql`: the file store itself accepts only PDF/JPEG/PNG/WEBP up to 10 MB (SVG is excluded because it can carry scripts).
+
+## 38. Páginas legales y centro de ayuda
+
+Páginas públicas reales (sin cuenta), en ES/EN/PT: `/terms`, `/privacy`, `/help`. El contenido vive en `src/lib/site-content/{es,en,pt}.ts` (no en los diccionarios) y lo escribe según lo que la app realmente hace (no procesa pagos, la aprobación del cliente no es firma certificada, sin analítica ni publicidad, límites del plan Free tomados de `src/lib/plans.ts`).
+Enlaces desde: login, registro (con aviso de aceptación), invitación, enlaces públicos de cliente y supplier, menú "Más" y barra lateral.
+
+Variables de entorno opcionales (Vercel → Settings → Environment Variables; se muestran solo si existen):
+- `NEXT_PUBLIC_LEGAL_NAME`: razón social o nombre del responsable del servicio.
+- `NEXT_PUBLIC_LEGAL_ADDRESS`: dirección del responsable.
+- `NEXT_PUBLIC_SUPPORT_EMAIL`: correo de soporte público.
+
+Importante: son textos base redactados por el equipo de desarrollo; un abogado debe revisarlos para tu país/estado antes del lanzamiento comercial. Si cambias el producto (por ejemplo, empiezas a cobrar con Stripe o a enviar correos), actualiza los textos y `LEGAL_UPDATED` en `src/lib/site-content/types.ts`.
+
+Actualización: el centro de ayuda (`/help`) documenta cada función de la app en 17 temas y 73 respuestas (ES/EN/PT; el contenido está en `src/lib/site-content/help-{es,en,pt}.ts`, mismo orden en los tres). Enlaces profundos: `/help#id-del-tema` o `/help#id-de-la-respuesta` abren y desplazan a esa respuesta. Dentro de la app, la barra lateral y el botón + muestran "Ayuda sobre esta pantalla", que lleva al tema de la pantalla actual (`helpTopicIndexForPath`). Si cambias o agregas una función, actualiza los tres idiomas. El selector de idioma ahora es un botón compacto (ES/EN/PT) con menú, para no tapar contenido.
+
+## 39. Pulido: listas de material rápidas y detalles de experiencia
+
+- **Constructor de lista de material** (`projects/[id]/materials/new`): funciona como un carrito. Tocar el nombre o el `+` agrega 1; en la fila aparece un stepper (− cantidad +) editable; Enter agrega el primer resultado con la cantidad escrita ("thhn 8 rojo x 500") y deja el cursor para el siguiente. Sin búsqueda se muestran Favoritos, "Los que más pides" (por `use_count`) y Recientes. Las listas guardadas son tarjetas de un toque; "Repetir un pedido anterior" trae las líneas de pedidos previos (primero los del mismo proyecto). "Guardar como lista" guarda en el momento (sin enviar pedido); si el nombre ya existe se reemplaza tras confirmar, y las líneas de texto libre pasan a la biblioteca. La sustitución permitida se hereda del ítem de la biblioteca.
+- **Biblioteca**: al buscar algo que no existe aparece "Crear “texto” en la biblioteca" con el nombre ya puesto; las listas guardadas se despliegan para ver su contenido.
+- **Confirmaciones** propias (`src/lib/confirm.ts` + `ConfirmHost`) en lugar de `window.confirm`; el e2e las responde con un evento de prueba.
+- **Navegación**: barra fina de progreso al tocar un enlace (`NavProgress`), títulos de pestaña por pantalla (`DocumentTitle`), error por segmento dentro del menú (`(dashboard)/error.tsx`) y `robots.txt` que solo permite `/terms`, `/privacy`, `/help`.
+- **Nota técnica**: NO agregar `loading.tsx` en `(dashboard)`: en Next 15.5 hace que `router.refresh()` deje la pantalla con datos viejos tras una acción del servidor (lo detectó el e2e: el favorito no se marcaba).
+- El enlace público del cliente permite "Imprimir o guardar como PDF".
+
+- **Catálogo estándar** (2641 ítems, del CSV del usuario `data/bidpower_materials.csv`): se compacta con `python3 scripts/build-catalog.py` a `src/lib/catalog/materials.json` (~560 KB; se descarga en un chunk aparte la primera vez que alguien busca). No se copia a cada empresa: aparece en la búsqueda del constructor de listas (etiqueta "Catálogo", detrás de lo propio) y en la biblioteca ("Agregar a mi biblioteca"). Al usarlo en un pedido, un owner/manager lo trae a su biblioteca (si ya hay uno con el mismo nombre, lo reutiliza; sin permiso de biblioteca queda como línea de texto con su nombre). Mapeo: 14 categorías del CSV → las 10 de la app, RL→ROLL, BX→BOX, marca (Square D/Eaton/Siemens) → fabricante, palabras clave → apodos (más español por subcategoría). Para actualizarlo: reemplazar el CSV y volver a correr el script.
+- El listado generado antes por código (~1050 ítems) quedó **oculto** en `src/lib/catalog/generated-starter.ts` (sin usar) para decidir cómo aprovecharlo (por ejemplo, cubrir lo que le falta al catálogo: transformadores, ventiladores, focos, EV, herramientas).
+- **Importar con cantidades**: el Excel/CSV puede traer una columna cantidad; se puede importar directo a la lista del pedido o guardar el archivo como lista reutilizable.

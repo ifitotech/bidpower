@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -79,7 +80,15 @@ export default function PricingDetail({ request: r, suppliers, invitations = [],
       </div>
     </div>
     {error && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
+    {(() => {
+      // Four steps, always in this order. The current one is the first that is not done yet.
+      const done = [true, invitations.length > 0 || r.status !== "draft", r.responses.length > 0, r.status === "converted_to_po" || r.status === "awarded" || r.responses.some((x) => x.status === "accepted")];
+      const current = done.findIndex((d) => !d);
+      const labels = [t("prStep1"), t("prStep2"), t("prStep3"), t("prStep4")];
+      return <ol className="mb-5 grid grid-cols-4 gap-1.5" aria-label={t("prSteps")}>{labels.map((label, i) => <li key={i} aria-current={i === current ? "step" : undefined} className={`rounded-lg px-2 py-2 text-center text-[11px] font-semibold leading-tight ${done[i] ? "bg-green-100 text-green-800" : i === current ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-500"}`}><span className="block text-sm">{done[i] ? "✓" : i + 1}</span>{label}</li>)}</ol>;
+    })()}
     {r.notes && <p className="mb-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-sm">{r.notes}</p>}
+    <h2 className="mb-2 font-semibold">{t("prStep1Title")}</h2>
 
     <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">{r.items.map((i) => <li key={i.id} className="flex items-start gap-3 px-4 py-3 text-sm">
       <div className="min-w-0 flex-1"><p className="break-words font-medium">{i.description}</p>{i.allow_substitution && <p className="text-xs text-slate-400">{t("substitutionOk")}</p>}</div>
@@ -100,15 +109,15 @@ export default function PricingDetail({ request: r, suppliers, invitations = [],
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={copyText} className={`${btn} flex items-center gap-2 border border-slate-200`}><Copy className="h-4 w-4" />{copied ? t("prCopied") : t("prCopyText")}</button>
         {r.status === "draft" && <button type="button" disabled={busy} onClick={() => run(() => markSentAction(r.id))} className={`${btn} bg-brand-600 text-white`}>{t("prMarkSent")}</button>}
-        <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("prConfirmClose"))) run(() => closeRequestAction(r.id)); }} className={`${btn} border border-slate-200`}>{t("prClose")}</button>
-        <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmCancelRequest"))) run(() => cancelPricingAction(r.id)); }} className={`${btn} border border-red-100 bg-red-50 text-red-600`}>{t("prCancel")}</button>
+        <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("prConfirmClose"))) run(() => closeRequestAction(r.id)); }} className={`${btn} border border-slate-200`}>{t("prClose")}</button>
+        <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmCancelRequest"))) run(() => cancelPricingAction(r.id)); }} className={`${btn} border border-red-100 bg-red-50 text-red-600`}>{t("prCancel")}</button>
       </div>
     </div>}
 
     {canManage && <SupplierLinks request={r} suppliers={suppliers} invitations={invitations} questions={questions} isOpen={isOpen} onChange={() => router.refresh()} />}
 
     <section className="mt-8">
-      <div className="mb-2 flex items-center gap-2"><h2 className="flex-1 font-semibold">{t("supplierResponses")}</h2>
+      <div className="mb-2 flex items-center gap-2"><h2 className="flex-1 font-semibold">{t("prStep3Title")}</h2>
         {canManage && isOpen && <button type="button" onClick={() => setShowForm((v) => !v)} className="min-h-10 rounded-lg border border-brand-500 bg-brand-50 px-3 text-sm font-semibold text-brand-700">{t("recordResponse")}</button>}</div>
       {!pricesVisible && <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">{t("pricesHidden")}</p>}
       {canManage && showForm && <ResponseForm request={r} suppliers={suppliers} onDone={() => { setShowForm(false); router.refresh(); }} />}
@@ -125,7 +134,7 @@ export default function PricingDetail({ request: r, suppliers, invitations = [],
             if (po) return <Link href={`/pos/${po.id}`} className="mt-3 flex min-h-11 items-center justify-center rounded-xl border border-brand-500 bg-brand-50 px-4 text-sm font-semibold text-brand-700">{t("poViewExisting", { number: po.number })}</Link>;
             if (!permissions.can_create_po || !["submitted", "accepted"].includes(resp.status) || !r.project_id || ["closed", "cancelled"].includes(r.status)) return null;
             return <button type="button" disabled={busy} onClick={async () => { setBusy(true); setError(null); const res = await createPOFromResponseAction(r.id, resp.id).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string; id?: string })); setBusy(false); if (res.errorCode) { setError(t(res.errorCode as keyof Dictionary)); return; } router.push(`/pos/${res.id}`); router.refresh(); }} className={`${btn} mt-3 w-full border border-brand-500 bg-brand-50 text-brand-700`}>{t("poCreateFromResponse")}</button>; })()}
-          {canManage && isOpen && resp.status === "submitted" && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmAward"))) run(() => awardResponseAction(r.id, resp.id)); }} className={`${btn} mt-3 w-full bg-brand-600 text-white`}>{t("awardResponse")}</button>}
+          {canManage && isOpen && resp.status === "submitted" && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmAward"))) run(() => awardResponseAction(r.id, resp.id)); }} className={`${btn} mt-3 w-full bg-brand-600 text-white`}>{t("awardResponse")}</button>}
         </div>)}
       </div>}
     </section>
@@ -249,7 +258,7 @@ function SupplierLinks({ request: r, suppliers, invitations, questions, isOpen, 
   const status = (i: InvitationView) => i.revoked_at ? t("linkRevoked") : new Date(i.expires_at) < new Date() ? t("linkExpires", { date: formatDate(i.expires_at) }) : i.first_opened_at ? t("linkOpened", { date: formatDate(i.first_opened_at) }) : t("linkNotOpened");
 
   return <section className="mt-8">
-    <h2 className="mb-2 font-semibold">{t("supplierLinks")}</h2>
+    <h2 className="mb-2 font-semibold">{t("prStep2Title")}</h2>
     {error && <div role="alert" className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
     {sentInApp && <div role="status" className="mb-3 rounded-xl border border-green-300 bg-green-50 p-3 text-sm">{t("sentToSupplyAccount", { name: sentInApp })}</div>}
     {fresh && <div className="mb-3 rounded-xl border border-green-300 bg-green-50 p-3">
@@ -270,7 +279,7 @@ function SupplierLinks({ request: r, suppliers, invitations, questions, isOpen, 
     <ul className="space-y-2">{invitations.map((i) => { const qs = questions.filter((q) => q.invitation_id === i.id); const live = !i.revoked_at && new Date(i.expires_at) > new Date();
       return <li key={i.id} className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
         <div className="flex items-center gap-2"><span className="min-w-0 flex-1 truncate font-medium">{i.supplier_name}{i.supply_company_id ? <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">{t("supplyAccountBadge")}</span> : null}</span><span className="text-xs text-slate-400">{status(i)}</span>
-          {live && isOpen && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("confirmRevokeLink"))) act(() => revokeSupplierLinkAction(r.id, i.id)); }} className="min-h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold">{t("revokeLink")}</button>}</div>
+          {live && isOpen && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmRevokeLink"))) act(() => revokeSupplierLinkAction(r.id, i.id)); }} className="min-h-9 rounded-lg border border-slate-200 px-2 text-xs font-semibold">{t("revokeLink")}</button>}</div>
         {qs.length > 0 && <div className="mt-2 space-y-1.5"><p className="text-xs font-semibold text-slate-500">{t("supplierQuestions")}</p>{qs.map((q) => <p key={q.id} className={`whitespace-pre-wrap rounded-lg p-2 text-xs ${q.author === "supplier" ? "bg-amber-50" : "bg-brand-50"}`}><span className="font-semibold">{q.author === "supplier" ? i.supplier_name : t("youLabel")}: </span>{q.body}</p>)}</div>}
         {live && isOpen && qs.length > 0 && <div className="mt-2 flex gap-2"><input value={replies[i.id] ?? ""} maxLength={2000} aria-label={t("answerQuestion")} placeholder={t("answerQuestion")} onChange={(e) => setReplies((p) => ({ ...p, [i.id]: e.target.value }))} className={input} /><button type="button" disabled={busy || !(replies[i.id] ?? "").trim()} onClick={() => act(async () => { const res = await answerQuestionAction(r.id, i.id, replies[i.id] ?? ""); if (!res.errorCode) setReplies((p) => ({ ...p, [i.id]: "" })); return res; })} className="min-h-10 shrink-0 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white disabled:opacity-40">{t("answerQuestion")}</button></div>}
       </li>; })}</ul>

@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useI18n } from "@/lib/i18n/provider";
-import { createClientAction } from "../../actions";
+import { createClientAction } from "../actions";
 import { toast } from "@/components/ui/Toast";
 
 export default function NewClientPage() {
@@ -37,6 +37,8 @@ export default function NewClientPage() {
     <div className="p-4 md:p-8 max-w-lg mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <button
+          type="button"
+          aria-label={t("cancel")}
           onClick={() => router.back()}
           className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center"
         >
@@ -55,10 +57,11 @@ export default function NewClientPage() {
         <Input name="phone" label={t("phone")} type="tel" placeholder="(305) 555-0101" />
         <Input name="address" label={t("address")} placeholder="123 Main St, Miami FL" />
         <div>
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">
+          <label htmlFor="client-notes" className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">
             {t("notes")}
           </label>
           <textarea
+            id="client-notes"
             name="notes"
             rows={2}
             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"

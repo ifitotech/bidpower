@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { Logo } from "@/components/shared/Logo";
 import { Button } from "@/components/ui/Button";
+import { LegalLinks } from "@/components/site/LegalLinks";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n/provider";
-import { acceptInvitationAction } from "@/app/(dashboard)/actions";
+import { acceptInvitationAction } from "@/app/(dashboard)/employees/actions";
 import { logoutAction } from "@/app/(auth)/actions";
 
 type Info = { company: string; email: string; role: string };
@@ -17,7 +18,7 @@ export default function InviteView({ state, token, info, failed = false }: { sta
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-[#0B2A5C] to-[#07152B] text-white">
-      <div className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-10"><LanguageSwitcher /></div>
+      <div className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-10"><LanguageSwitcher tone="dark" /></div>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-12">
         <div className="mb-8 text-center">
           <Logo variant="symbol" tone="dark" className="mx-auto mb-4 h-14" />
@@ -43,6 +44,7 @@ export default function InviteView({ state, token, info, failed = false }: { sta
           {failed && <div role="alert" className="rounded-xl border border-red-400/30 bg-red-500/20 px-4 py-3 text-sm text-red-100">{t("inviteInvalid")}</div>}
           <Button type="submit" size="lg" className="w-full bg-slate-900 text-slate-200 hover:bg-slate-800">{t("acceptInvitation")}</Button>
         </form>}
+        <LegalLinks tone="dark" accept className="mt-6 text-center" />
       </div>
     </div>
   );

@@ -24,6 +24,7 @@ const config: Config = {
           950: "#172554",
         },
       },
+      keyframes: { navbar: { "0%": { transform: "translateX(-100%)" }, "100%": { transform: "translateX(300%)" } } },
       borderRadius: {
         lg: "0.75rem",
         md: "0.5rem",

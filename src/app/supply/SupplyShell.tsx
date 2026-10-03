@@ -6,6 +6,7 @@ import { Inbox, LogOut, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
 import { Logo } from "@/components/shared/Logo";
+import { DocumentTitle } from "@/components/shared/DocumentTitle";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { logoutAction } from "@/app/(auth)/actions";
 
@@ -16,6 +17,7 @@ export default function SupplyShell({ companyName, userName, role, children }: {
   const items = [{ href: "/supply", label: t("supplyInbox"), icon: Inbox, exact: true }, { href: "/supply/contractors", label: t("supplyContractors"), icon: Users, exact: false }];
   const active = (href: string, exact: boolean) => (exact ? pathname === href || pathname.startsWith("/supply/requests") : pathname.startsWith(href));
   return <div className="app-shell min-h-screen bg-slate-50">
+    <DocumentTitle />
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3">
         <Logo variant="mark" className="h-8 w-8 shrink-0" />

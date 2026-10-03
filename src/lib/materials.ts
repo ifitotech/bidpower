@@ -57,12 +57,15 @@ export type LibraryItem = {
 const WORD_SYNONYMS: Record<string, string> = {
   blk: "black", negro: "black", wht: "white", wh: "white", blanco: "white", grn: "green", gn: "green", verde: "green",
   blu: "blue", azul: "blue", org: "orange", naranja: "orange", yel: "yellow", ylw: "yellow", amarillo: "yellow",
-  gry: "gray", grey: "gray", gris: "gray", brn: "brown", cafe: "brown", rd: "red", rojo: "red", vermelho: "red", preto: "black", branco: "white", amarelo: "yellow", cinza: "gray", str: "stranded", sol: "solid",
+  gry: "gray", grey: "gray", gris: "gray", brn: "brown", cafe: "brown", rd: "red", rojo: "red", roja: "red", blanca: "white", negra: "black", amarilla: "yellow", morado: "purple", morada: "purple", violeta: "purple", marron: "brown", marfil: "ivory", almendra: "almond", plateado: "silver", vermelho: "red", preto: "black", branco: "white", amarelo: "yellow", cinza: "gray", str: "stranded", sol: "solid",
 };
 
 /** Punctuation becomes spaces ("THHN-10-STR-BLK", "#8") and shorthand words are unified. Expects normalizeText output. */
 function canonical(text: string): string {
   return text
+    .replace(/(\d+)[ -](\d+\/\d+)/g, "$1~$2") // "1-1/2" and "1 1/2" are one size, so "1/2" never matches inside them
+    .replace(/([a-z]{2,})(\d)/g, "$1 $2") // "thhn8blk" -> "thhn 8blk"
+    .replace(/(\d)([a-z]{2,})/g, "$1 $2") // "8blk" -> "8 blk"; "20a" stays together
     .replace(/#/g, " ")
     .replace(/[-_,()]+/g, " ")
     .split(" ")
@@ -74,6 +77,7 @@ function canonical(text: string): string {
 /** A plain number must match a whole number ("8" must not match "18" or "80"); other words match as text. */
 function tokenMatches(haystack: string, token: string): boolean {
   if (/^\d+$/.test(token)) return new RegExp(`(^|[^0-9.])${token}(?![0-9])`).test(haystack);
+  if (/^\d+\/\d+$/.test(token)) return new RegExp(`(^|[^0-9/~])${token}(?![0-9/])`).test(haystack);
   return haystack.includes(token);
 }
 
@@ -93,6 +97,20 @@ export function splitQuantity(text: string): { text: string; quantity: number | 
  * Search the library while typing. Empty query = favorites first, then recent, then most used.
  * A typed query matches the name, aliases (field slang like "romex" or "mud ring") and catalog number.
  */
+// Normalizing every name and alias on every keystroke is wasted work for a few thousand items: do it once per item.
+const prepared = new WeakMap<LibraryItem, { name: string; aliases: string[]; haystack: string }>();
+function prepare(item: LibraryItem) {
+  let p = prepared.get(item);
+  if (!p) {
+    const name = canonical(normalizeText(item.description));
+    const aliases = item.aliases.map((a) => canonical(normalizeText(a)));
+    const catalog = canonical(normalizeText(item.catalog_number ?? ""));
+    p = { name, aliases, haystack: [name, ...aliases, catalog].join(" | ") };
+    prepared.set(item, p);
+  }
+  return p;
+}
+
 export function searchLibrary(items: LibraryItem[], query: string, limit = 12): LibraryItem[] {
   const q = normalizeText(query);
   const byUse = (a: LibraryItem, b: LibraryItem) =>
@@ -106,10 +124,7 @@ export function searchLibrary(items: LibraryItem[], query: string, limit = 12): 
   const tokens = canonical(q).split(" ");
   const scored: { item: LibraryItem; score: number }[] = [];
   for (const item of items) {
-    const name = canonical(normalizeText(item.description));
-    const aliases = item.aliases.map((a) => canonical(normalizeText(a)));
-    const catalog = canonical(normalizeText(item.catalog_number ?? ""));
-    const haystack = [name, ...aliases, catalog].join(" | ");
+    const { name, aliases, haystack } = prepare(item);
     if (!tokens.every((t) => tokenMatches(haystack, t))) continue;
     const cq = tokens.join(" ");
     let score = 1;

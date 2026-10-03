@@ -9,7 +9,15 @@ let failed = 0;
 exports.ok = (name, cond, extra) => { console.log((cond ? "PASS " : "FAIL ") + name + (!cond && extra ? "  -> " + extra : "")); if (!cond) failed++; };
 exports.failures = () => failed;
 exports.launch = () => chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
-exports.page = async (browser, w = 1280, h = 900, locale = "es-ES") => (await browser.newContext({ viewport: { width: w, height: h }, locale })).newPage();
+exports.page = async (browser, w = 1280, h = 900, locale = "es-ES") => {
+  const p = await (await browser.newContext({ viewport: { width: w, height: h }, locale })).newPage();
+  // The app asks "are you sure?" with its own dialog; a person would press Confirm, so the harness answers yes (test-side only).
+  await p.addInitScript(() => window.addEventListener("bp:confirm", (e) => { e.stopImmediatePropagation(); e.detail.resolve(true); }, true));
+  // Pages stream in behind a loading skeleton and some redirect after load: wait for the network to settle before checking.
+  const goto = p.goto.bind(p);
+  p.goto = (url, opts = {}) => goto(url, { waitUntil: "networkidle", ...opts });
+  return p;
+};
 const B = exports.BASE;
 
 exports.register = async (page, name, email, company) => {
@@ -62,4 +70,33 @@ exports.inviteEmployee = async (browser, owner, name, email, template, projectId
     await owner.waitForTimeout(1500);
   }
   return emp;
+};
+
+/** A material list from pasted lines ("20 x EMT" per line). Returns the list URL. */
+exports.createList = async (page, projectId, pasted, count) => {
+  await page.goto(`${B}/projects/${projectId}/materials/new`);
+  await page.getByRole("button", { name: /Pegar lista|Paste list/ }).click();
+  await page.locator("textarea").first().fill(pasted);
+  await page.getByRole("button", { name: new RegExp(`Agregar ${count} líneas|Add ${count} lines`) }).click();
+  await page.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
+  await page.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  return page.url();
+};
+
+/** Buy now from a one-line list: the only way to make a purchase order. Resolves when the PO page opens, or returns false if refused. */
+exports.buyOne = async (page, projectId, vendor, amount) => {
+  await exports.createList(page, projectId, `1 x ${vendor} item`, 1).catch(async () => {
+    await page.goto(`${B}/projects/${projectId}/materials/new`);
+    await page.getByPlaceholder(/Busca un ítem|Search an item/).fill(`${vendor} item x 1`);
+    await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: /Enviar pedido|Send request/ }).click();
+    await page.waitForURL(/materials\/[0-9a-f-]{36}$/, { timeout: 30000 });
+  });
+  await page.getByRole("button", { name: /Comprar ya|Buy now/ }).click();
+  const sel = page.locator("select").filter({ has: page.locator("option", { hasText: /Otro|Other/ }) });
+  if (await sel.count()) await sel.first().selectOption("other");
+  await page.getByLabel(/^Supplier$|^Fornecedor$/).fill(vendor);
+  await page.getByLabel(/Monto estimado|Estimated amount/).fill(String(amount));
+  await page.getByRole("button", { name: /Crear orden de compra|Create purchase order/ }).click();
+  try { await page.waitForURL(/\/pos\/[0-9a-f-]{36}$/, { timeout: 15000 }); return page.url(); } catch { return false; }
 };

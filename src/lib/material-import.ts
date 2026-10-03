@@ -1,7 +1,7 @@
 // Bulk import of ready-made materials (with part numbers) from a CSV/TSV/pasted spreadsheet. Pure functions: no I/O.
 import { CATEGORY_CODES, normalizeText, normalizeUnit } from "@/lib/materials";
 
-export type ImportRow = { description: string; catalog_number: string | null; manufacturer: string | null; unit: string; category: string | null; aliases: string[] };
+export type ImportRow = { quantity: number | null; description: string; catalog_number: string | null; manufacturer: string | null; unit: string; category: string | null; aliases: string[] };
 export type ParsedImport = { rows: ImportRow[]; invalid: number; unknownColumns: string[]; missingDescription: boolean };
 
 export const MAX_IMPORT_ROWS = 2000;
@@ -39,6 +39,7 @@ const HEADERS: Record<string, string[]> = {
   manufacturer: ["manufacturer", "mfr", "brand", "marca", "fabricante"],
   unit: ["unit", "uom", "unidad", "unidade", "um"],
   category: ["category", "categoria"],
+  quantity: ["quantity", "qty", "cantidad", "cant", "cant.", "qtd", "quantidade", "count"],
   aliases: ["aliases", "alias", "also called", "tambien conocido como", "apodos"],
 };
 
@@ -69,7 +70,7 @@ export function parseMaterialImport(text: string): ParsedImport {
   if (index.description === undefined) return { rows: [], invalid: 0, unknownColumns, missingDescription: true };
   const rows: ImportRow[] = [];
   let invalid = 0;
-  const seen = new Set<string>();
+  const seen = new Map<string, ImportRow>();
   for (const r of table.slice(1)) {
     const get = (f: string) => (index[f] === undefined ? "" : (r[index[f]] ?? "").trim());
     const description = get("description").slice(0, 300);
@@ -77,12 +78,15 @@ export function parseMaterialImport(text: string): ParsedImport {
     const catalog = get("catalog_number").slice(0, 80) || null;
     const manufacturer = get("manufacturer").slice(0, 80) || null;
     const key = catalog ? `pn:${normalizeText(catalog)}|${normalizeText(manufacturer ?? "")}` : `d:${normalizeText(description)}`;
-    if (seen.has(key)) continue; // repeated inside the same file
-    seen.add(key);
-    rows.push({
-      description, catalog_number: catalog, manufacturer, unit: normalizeUnit(get("unit")), category: pickCategory(get("category")),
+    const qtyRaw = Number(get("quantity").replace(",", "."));
+    const quantity = Number.isFinite(qtyRaw) && qtyRaw > 0 && qtyRaw <= 1_000_000 ? Math.round(qtyRaw * 100) / 100 : null;
+    const again = seen.get(key);
+    if (again) { if (quantity) again.quantity = Math.round(((again.quantity ?? 0) + quantity) * 100) / 100; continue; } // repeated inside the same file: quantities add up
+    const row: ImportRow = {
+      quantity, description, catalog_number: catalog, manufacturer, unit: normalizeUnit(get("unit")), category: pickCategory(get("category")),
       aliases: get("aliases") ? get("aliases").split(/[|,]/).map((a) => a.trim()).filter(Boolean).slice(0, 12) : [],
-    });
+    };
+    seen.set(key, row); rows.push(row);
     if (rows.length >= MAX_IMPORT_ROWS) break;
   }
   return { rows, invalid, unknownColumns, missingDescription: false };
@@ -114,4 +118,4 @@ export function materialKey(m: { description: string; catalog_number?: string | 
   return m.catalog_number ? `pn:${normalizeText(m.catalog_number)}|${normalizeText(m.manufacturer ?? "")}` : `d:${normalizeText(m.description)}`;
 }
 
-export const IMPORT_TEMPLATE = "﻿description,part number,manufacturer,unit,category,aliases\r\nTHHN 10 AWG stranded black,THHN-10-STR-BLK,Southwire,FT,wire,\"cable 10 negro, #10 black\"\r\n20A single-pole breaker,BR120,Eaton,EA,breakers,\r\n";
+export const IMPORT_TEMPLATE = "﻿description,part number,manufacturer,unit,category,aliases,quantity\r\nTHHN 10 AWG stranded black,THHN-10-STR-BLK,Southwire,FT,wire,\"cable 10 negro, #10 black\",500\r\n20A single-pole breaker,BR120,Eaton,EA,breakers,,12\r\n";

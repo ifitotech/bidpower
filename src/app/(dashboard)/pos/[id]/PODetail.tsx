@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmAsk } from "@/lib/confirm";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -120,7 +121,7 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
         <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className={`${btn} flex w-full items-center justify-center gap-2 border border-dashed border-slate-300`}><Upload className="h-4 w-4" />{t("uploadDocument")}</button>
         <p className="text-xs text-slate-400">PDF, JPG, PNG, WEBP · 10 MB</p>
       </div> : <div className="space-y-2">
-        <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => uploadPhoto(e.target.files?.[0])} />
+        <input ref={cameraRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={(e) => uploadPhoto(e.target.files?.[0])} />
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => uploadPhoto(e.target.files?.[0])} />
         <button type="button" disabled={busy} onClick={() => cameraRef.current?.click()} className={`${btn} flex w-full items-center justify-center gap-2 bg-brand-600 text-white`}><Camera className="h-5 w-5" />{t("takeReceiptPhoto")}</button>
         <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className={`${btn} flex w-full items-center justify-center gap-2 border border-slate-200`}><Upload className="h-4 w-4" />{t("chooseReceiptPhoto")}</button>
@@ -135,7 +136,7 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
       <button type="button" disabled={busy || num(finalAmount) == null} onClick={() => run(() => completePOAction(po.id, num(finalAmount) ?? 0, num(tax)))} className={`${btn} w-full bg-brand-600 text-white`}>{t("completePO")}</button>
     </section>}
 
-    {!isTerminal(status) && (isReviewer || isCreator) && <button type="button" disabled={busy} onClick={() => { if (window.confirm(t("poConfirmCancel"))) run(() => cancelPOAction(po.id)); }} className={`${btn} w-full border border-red-100 bg-red-50 text-red-600`}>{t("poCancel")}</button>}
+    {!isTerminal(status) && (isReviewer || isCreator) && <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("poConfirmCancel"))) run(() => cancelPOAction(po.id)); }} className={`${btn} w-full border border-red-100 bg-red-50 text-red-600`}>{t("poCancel")}</button>}
 
     {po.history.length > 0 && <section className="mt-8"><h2 className="mb-2 text-sm font-semibold text-slate-500">{t("poHistory")}</h2>
       <ul className="space-y-1 text-xs text-slate-500">{po.history.map((h) => <li key={h.id}>{formatDate(h.created_at)} · {t(PO_STATUS_KEYS[h.to_status as POStatus] as keyof Dictionary)}{h.changer?.full_name ? ` · ${h.changer.full_name}` : ""}{h.notes ? ` — ${h.notes}` : ""}</li>)}</ul></section>}
