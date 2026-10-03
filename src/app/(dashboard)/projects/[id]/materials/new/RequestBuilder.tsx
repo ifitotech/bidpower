@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ClipboardPaste, FileSpreadsheet, History, ListChecks, Minus, Plus, Save, Search, Star, Trash2, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
@@ -11,8 +11,8 @@ import { readSheetText } from "@/lib/read-sheet";
 import { MATERIAL_UNITS, findExact, normalizeUnit, parsePastedList, searchLibrary, splitQuantity, type LibraryItem } from "@/lib/materials";
 import { createMaterialRequestAction, saveListAction } from "@/app/(dashboard)/materials/actions";
 import { confirmAsk } from "@/lib/confirm";
-import { CATALOG_PREFIX, catalogToLibrary, type CatalogItem } from "@/lib/catalog/types";
-import { loadCatalog } from "@/lib/catalog/client";
+import { CATALOG_PREFIX, catalogToLibrary } from "@/lib/catalog/types";
+import { useCatalogSearch } from "@/lib/catalog/use-catalog-search";
 import type { RepeatableRequest } from "@/lib/services/material-requests";
 
 type Line = { key: string; catalogId?: string | null; materialId: string | null; description: string; quantity: number; unit: string; category: string | null; notes: string; allowSubstitution: boolean; saveToLibrary: boolean };
@@ -42,14 +42,13 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
   const [pasteText, setPasteText] = useState("");
   const [saving, setSaving] = useState<string | null>(null); // list name being typed; null = closed
   const [flash, setFlash] = useState("");
-  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const typed = useMemo(() => splitQuantity(query), [query]);
-  // The standard catalog downloads the first time somebody types; the company's own items always rank first.
-  useEffect(() => { if (query.trim().length >= 2 && catalog.length === 0) void loadCatalog().then(setCatalog); }, [query, catalog.length]);
+  // The shared catalog is searched on the server while typing (nothing is listed until then); the company's own items always rank first.
+  const { items: catalog, loading: catalogLoading } = useCatalogSearch(typed.text);
   const catalogItems = useMemo(() => {
     const own = new Set(items.map((i) => i.description.toLowerCase()));
     return catalog.filter((c) => !own.has(c.n.toLowerCase())).map(catalogToLibrary);
@@ -58,7 +57,7 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
   const results = useMemo(() => searchLibrary(typed.text ? everything : items, typed.text, typed.text ? 8 : 5), [everything, items, typed.text]);
   const byId = useMemo(() => new Map(everything.map((i) => [i.id, i])), [everything]);
   const frequent = useMemo(() => (typed.text ? [] : [...items].filter((i) => i.use_count > 1 && !i.is_favorite).sort((a, b) => b.use_count - a.use_count).slice(0, 5)), [items, typed.text]);
-  const favorites = useMemo(() => (typed.text ? [] : items.filter((i) => i.is_favorite).slice(0, 8)), [items, typed.text]);
+  const favorites = useMemo(() => (typed.text ? [] : items.filter((i) => i.is_favorite).slice(0, 5)), [items, typed.text]);
   const qtyIn = useMemo(() => {
     const m = new Map<string, number>();
     for (const l of lines) { const r = refOf(l); if (r) m.set(r, round2((m.get(r) ?? 0) + l.quantity)); }
@@ -235,11 +234,12 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
     <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white pb-1">
       {typed.text ? <>
         {results.map((i) => row(i))}
+        {catalogLoading && results.length === 0 && <p className="px-4 py-3 text-sm text-slate-400" role="status">{t("catalogSearching")}</p>}
         <button type="button" onClick={() => { addFree(typed.text, typed.quantity ?? 1); say(t("mbAdded", { name: typed.text })); setQuery(""); searchRef.current?.focus(); }} className="flex min-h-12 w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-brand-700 hover:bg-brand-50"><Plus className="h-4 w-4" />{t("addAsFreeText", { text: typed.text })}</button>
       </> : <>
         {group(t("favorites"), favorites)}
         {group(t("mbFrequent"), frequent)}
-        {group(t("recentItems"), results.filter((i) => !favorites.includes(i) && !frequent.includes(i)))}
+        {favorites.length === 0 && frequent.length === 0 && items.length > 0 && <p className="px-4 py-4 text-sm text-slate-500">{t("builderTypeHint")}</p>}
         {items.length === 0 && <p className="px-4 py-3 text-sm text-slate-400">{t("noItemsYet")}</p>}
       </>}
     </div>

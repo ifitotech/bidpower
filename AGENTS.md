@@ -10,3 +10,5 @@ Work phase by phase; do not start the next phase until the user confirms the pre
 - Do not fabricate AI analysis, payments, signatures, invoices or business metrics.
 - Keep mobile-first behavior, including iPhone safe areas and iPad layouts.
 - Run `npm run typecheck` and `npm run build` after meaningful changes.
+
+- Contexto completo para continuar el trabajo (arquitectura, decisiones, pruebas, trampas y pendientes): `docs/HANDOFF.md`.

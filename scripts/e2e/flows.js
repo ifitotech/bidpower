@@ -15,6 +15,8 @@ async function phase3(browser) {
   await o.getByLabel(/Unidad|Unit/).selectOption("FT");
   await o.getByRole("button", { name: /^Guardar$|^Save$/ }).click();
   await o.waitForTimeout(1500);
+  ok("library: with nothing typed it shows no product list, only a prompt to search", (await o.getByText("3/4 in EMT conduit").count()) === 0 && (await o.getByText(/Escribe arriba para buscar|Type above to search/).count()) > 0);
+  await o.getByPlaceholder(/^Buscar|^Search/).first().fill("emt");
   ok("library: item saved and listed", (await o.getByText("3/4 in EMT conduit").count()) > 0);
   await o.getByRole("button", { name: /Favorito|Favorite/ }).first().click();
   await o.waitForFunction(() => document.querySelector("button[aria-pressed]")?.getAttribute("aria-pressed") === "true", null, { timeout: 15000 }).catch(() => {});
@@ -40,6 +42,16 @@ async function phase3(browser) {
   {
     const fresh = await page(browser);
     await register(fresh, "Cat Owner", `cat-${RUN}@bidpower-smoke.test`, "Cat Electric");
+    // The catalog lives on the server: a platform admin loads the CSV from the app, everybody else only searches it.
+    const denied = await o.goto(`${B}/admin/catalog`);
+    ok("catalog admin: a normal owner cannot open the admin screen", denied && denied.status() === 404, String(denied && denied.status()));
+    require("child_process").execSync(`su postgres -c "psql -q -d e2e -c \\"insert into platform_admins select id from auth.users where email='cat-${RUN}@bidpower-smoke.test'\\""`);
+    await fresh.goto(`${B}/admin/catalog`);
+    await fresh.locator("input[type=file]").setInputFiles(require("path").join(__dirname, "../../data/bidpower_materials.csv"));
+    await fresh.getByText(/6585 ítems listos|6585 items ready/).waitFor({ timeout: 60000 });
+    await fresh.getByRole("button", { name: /^Cargar catálogo$|^Load catalog$/ }).click();
+    await fresh.getByText(/Catálogo cargado: 6585|Catalog loaded: 6585/).waitFor({ timeout: 180000 });
+    ok("catalog admin: the CSV (6585 items) loads from the app", true);
     const pid = await createProject(fresh, "Catalog job", "Cat Client");
     const box = () => fresh.getByPlaceholder(/Busca un ítem|Search an item/);
     for (let round = 1; round <= 2; round++) {
@@ -56,6 +68,17 @@ async function phase3(browser) {
     await fresh.waitForTimeout(800);
     const copies = await fresh.getByText("THHN/THWN-2 Copper #8 AWG Black Stranded", { exact: true }).count();
     ok("catalog: a catalog item used twice appears once in the company library", copies >= 1 && copies <= 2, String(copies)); // one in the library list; the catalog suggestion is hidden once it is there
+    // material lists: several pending ones are cancelled in one tap
+    await fresh.goto(`${B}/projects/${pid}/materials`);
+    await fresh.getByRole("button", { name: /Cancelar todas las pendientes|Cancel all pending/ }).click();
+    await fresh.getByText(/2 listas canceladas|2 lists cancelled/).waitFor({ timeout: 20000 });
+    ok("material lists: all pending ones can be cancelled at once", true);
+    // delete everything at once: the library can be emptied in one go (and starts over)
+    await fresh.goto(`${B}/materials`);
+    await fresh.getByPlaceholder(/^Buscar|^Search/).first().fill("");
+    await fresh.getByRole("button", { name: /Vaciar biblioteca|Empty library/ }).click();
+    await fresh.getByText(/Biblioteca vaciada|Library emptied/).waitFor({ timeout: 20000 });
+    ok("library: everything can be deleted in one tap", (await fresh.getByText(/Aún no hay ítems en la biblioteca|No items in your library yet|Ainda não há itens/).count()) > 0 || (await fresh.getByRole("button", { name: /Vaciar biblioteca|Empty library/ }).count()) === 0);
     await fresh.context().close();
   }
 
@@ -669,6 +692,7 @@ async function phaseLang(browser) {
   ok("import: an Excel (.xlsx) file is read and imported", (await o.getByText(/Importados: 2|Imported: 2/).count()) > 0);
   // price history comes only from real POs and quotes; an empty history says so
   await o.goto(B + "/materials");
+  await o.getByPlaceholder(/^Buscar|^Search/).first().fill("emt");
   if (await o.locator("ul li button.flex-1").count()) {
     await o.locator("ul li button.flex-1").first().click();
     await o.waitForTimeout(1500);

@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
 import { parseMaterialImport } from "@/lib/material-import";
-import { getCatalogItem } from "@/lib/catalog/server";
+import { getCatalogItem, searchCatalog } from "@/lib/services/catalog";
+import type { CatalogItem } from "@/lib/catalog/types";
 import { CATEGORY_CODES, normalizeText, normalizeUnit, type RequestLineInput } from "@/lib/materials";
 import {
-  getMaterials, ensureMaterialFromCatalog, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
+  getMaterials, ensureMaterialFromCatalog, archiveMaterials, clearLibrary, deleteSavedLists, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
 } from "@/lib/services/materials";
-import { cancelMaterialRequest, createMaterialRequest, reviewMaterialRequest } from "@/lib/services/material-requests";
+import { cancelMaterialRequest, cancelMaterialRequests, createMaterialRequest, reviewMaterialRequest } from "@/lib/services/material-requests";
 
 export async function getMaterialPricesAction(materialId: string): Promise<{ errorCode?: string; prices?: PricePoint[] }> {
   const c = await ctx();
@@ -144,7 +145,7 @@ export async function createMaterialRequestAction(payload: RequestPayload): Prom
       const category = l.category && CATEGORY_CODES.includes(l.category) ? l.category : null;
       let materialId = l.materialId && UUID.test(l.materialId) ? l.materialId : null;
       // A standard-catalog pick joins the company library (reusing an item with the same name); without library permission it stays a named free-text line.
-      const fromCatalog = !materialId && l.catalogId ? getCatalogItem(String(l.catalogId)) : undefined;
+      const fromCatalog = !materialId && l.catalogId ? await getCatalogItem(String(l.catalogId)) : undefined;
       if (fromCatalog && c.perms.can_manage_library) materialId = await ensureMaterialFromCatalog(c.companyId, c.userId, fromCatalog);
       else if (!materialId && l.saveToLibrary && c.perms.can_manage_library) {
         materialId = await createMaterial(c.companyId, c.userId, { description, unit, category });
@@ -209,7 +210,7 @@ export async function saveListAction(payload: { name: string; lines: { materialI
       if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 1_000_000) continue;
       let materialId = l.materialId && UUID.test(l.materialId) ? l.materialId : null;
       const description = String(l.description ?? "").trim();
-      const fromCatalog = !materialId && l.catalogId ? getCatalogItem(String(l.catalogId)) : undefined;
+      const fromCatalog = !materialId && l.catalogId ? await getCatalogItem(String(l.catalogId)) : undefined;
       if (fromCatalog) materialId = await ensureMaterialFromCatalog(c.companyId, c.userId, fromCatalog);
       else if (!materialId && description) {
         const category = l.category && CATEGORY_CODES.includes(l.category) ? l.category : null;
@@ -233,10 +234,57 @@ export async function addCatalogItemsAction(ids: string[]): Promise<MaterialResu
   try {
     let added = 0;
     for (const id of ids) {
-      const item = typeof id === "string" ? getCatalogItem(id) : undefined;
+      const item = typeof id === "string" ? await getCatalogItem(id) : undefined;
       if (item) { await ensureMaterialFromCatalog(c.companyId, c.userId, item); added++; }
     }
     revalidatePath("/materials");
     return { success: true, added };
   } catch (e) { return fail(e); }
+}
+
+/** Search the shared standard catalog while somebody types. Nothing is listed until they type; the answer is at most a few hundred candidates. */
+export async function searchCatalogAction(query: string): Promise<{ items: CatalogItem[] }> {
+  const c = await ctx();
+  if (!c || typeof query !== "string" || query.trim().length < 2) return { items: [] };
+  try { return { items: await searchCatalog(query, 200) }; } catch { return { items: [] }; }
+}
+
+/** Archives the chosen library items (select several and remove them in one go). */
+export async function archiveMaterialsAction(ids: string[]): Promise<MaterialResult & { archived?: number }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 5000 || !ids.every((i) => typeof i === "string" && UUID.test(i))) return { errorCode: "errGeneric" };
+  try { const archived = await archiveMaterials(c.companyId, ids); revalidatePath("/materials"); return { success: true, archived }; } catch (e) { return fail(e); }
+}
+
+/** Empties the whole library (and the saved lists) so the company can start over, e.g. after an import it does not want. */
+export async function clearLibraryAction(alsoLists: boolean): Promise<MaterialResult & { archived?: number }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
+  try { const archived = await clearLibrary(c.companyId, Boolean(alsoLists)); revalidatePath("/materials"); revalidatePath("/projects"); return { success: true, archived }; } catch (e) { return fail(e); }
+}
+
+/** Cancels the chosen pending material lists in one go. */
+export async function cancelRequestsAction(ids: string[]): Promise<MaterialResult & { cancelled?: number }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000 || !ids.every((i) => typeof i === "string" && UUID.test(i))) return { errorCode: "errGeneric" };
+  try {
+    const cancelled = await cancelMaterialRequests(c.companyId, ids);
+    revalidatePath("/materials/requests");
+    revalidatePath("/projects");
+    revalidatePath("/dashboard");
+    return { success: true, cancelled };
+  } catch (e) { return fail(e); }
+}
+
+/** Deletes several saved lists (or all of them when no ids are given). */
+export async function deleteListsAction(ids: string[] | null): Promise<MaterialResult & { deleted?: number }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
+  if (ids !== null && (!Array.isArray(ids) || ids.length > 1000 || !ids.every((i) => typeof i === "string" && UUID.test(i)))) return { errorCode: "errGeneric" };
+  try { const deleted = await deleteSavedLists(c.companyId, ids); revalidatePath("/materials"); revalidatePath("/projects"); return { success: true, deleted }; } catch (e) { return fail(e); }
 }

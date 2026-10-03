@@ -150,6 +150,21 @@ export async function cancelMaterialRequest(companyId: string, requestId: string
   if (!data || data.length === 0) throw new Error("request_not_pending");
 }
 
+/** Cancels several pending requests at once (only those still waiting; RLS decides which ones the caller may touch). Returns how many were cancelled. */
+export async function cancelMaterialRequests(companyId: string, ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("material_requests")
+    .update({ status: "cancelled", waiting_on: "none", updated_at: new Date().toISOString() })
+    .eq("company_id", companyId)
+    .eq("status", "requested")
+    .in("id", ids)
+    .select("id");
+  if (error) throw error;
+  return data?.length ?? 0;
+}
+
 /** Project id + name if the caller can see it (RLS decides), else null. */
 export async function getProjectBasic(projectId: string, companyId: string) {
   const supabase = await createClient();

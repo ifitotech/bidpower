@@ -44,7 +44,7 @@ export function FloatingCreateButton() {
   let hidden = false;
   const detail = pathname.match(new RegExp(`^/projects/(${UUID_PATH})/?$`));
   const projectLists = pathname.match(new RegExp(`^/projects/(${UUID_PATH})/materials/?$`));
-  if (/\/(new|edit|invite)\/?$/.test(pathname) || /^\/(settings|feedback|accounting|reports|more|notifications|supply)/.test(pathname)) hidden = true;
+  if (/\/(new|edit|invite)\/?$/.test(pathname) || /^\/(settings|feedback|accounting|reports|more|notifications|supply|admin)/.test(pathname)) hidden = true;
   if (hidden) actions = [];
   else if (detail) actions = pick([[can.material, { href: `/projects/${detail[1]}/materials/new`, label: t("newMaterialRequest"), icon: ShoppingCart }], [can.expense, A.expense]]);
   else if (projectLists) actions = pick([[can.material, { href: `/projects/${projectLists[1]}/materials/new`, label: t("newMaterialRequest"), icon: ShoppingCart }]]);
