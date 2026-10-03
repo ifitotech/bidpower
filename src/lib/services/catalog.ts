@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { searchPatterns } from "@/lib/materials";
+import { canonicalText, searchPatterns } from "@/lib/materials";
 import type { CatalogItem } from "@/lib/catalog/types";
 
 type Row = { id: string; name: string; unit: string; category: string; manufacturer: string | null; aliases: string[] | null };
@@ -11,7 +11,7 @@ export async function searchCatalog(query: string, limit = 200): Promise<Catalog
   const patterns = searchPatterns(query.slice(0, 120));
   if (patterns.length === 0) return [];
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("catalog_search", { p_patterns: patterns, p_limit: limit });
+  const { data, error } = await supabase.rpc("catalog_search", { p_patterns: patterns, p_query: canonicalText(query.slice(0, 120)), p_limit: limit });
   if (error) throw error;
   return ((data ?? []) as Row[]).map(toItem);
 }

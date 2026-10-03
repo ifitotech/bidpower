@@ -46,10 +46,10 @@ async function phase3(browser) {
     require("child_process").execSync(`su postgres -c "psql -q -d e2e -c \\"insert into platform_admins select id from auth.users where email='cat-${RUN}@bidpower-smoke.test'\\""`);
     await fresh.goto(`${B}/admin/catalog`);
     await fresh.locator("input[type=file]").setInputFiles(require("path").join(__dirname, "../../data/bidpower_materials.csv"));
-    await fresh.getByText(/2641 ítems listos|2641 items ready/).waitFor({ timeout: 60000 });
+    await fresh.getByText(/6585 ítems listos|6585 items ready/).waitFor({ timeout: 60000 });
     await fresh.getByRole("button", { name: /^Cargar catálogo$|^Load catalog$/ }).click();
-    await fresh.getByText(/Catálogo cargado: 2641|Catalog loaded: 2641/).waitFor({ timeout: 180000 });
-    ok("catalog admin: the CSV (2641 items) loads from the app", true);
+    await fresh.getByText(/Catálogo cargado: 6585|Catalog loaded: 6585/).waitFor({ timeout: 180000 });
+    ok("catalog admin: the CSV (6585 items) loads from the app", true);
     const pid = await createProject(fresh, "Catalog job", "Cat Client");
     const box = () => fresh.getByPlaceholder(/Busca un ítem|Search an item/);
     for (let round = 1; round <= 2; round++) {

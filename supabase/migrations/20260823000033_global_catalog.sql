@@ -45,7 +45,7 @@ CREATE POLICY "Signed-in users read the catalog" ON catalog_materials FOR SELECT
 -- No insert/update/delete policies: changes only go through catalog_import / catalog_prune below.
 
 -- Search: every pattern must match (regular expressions the app builds from what was typed). Capped so it stays cheap.
-CREATE OR REPLACE FUNCTION catalog_search(p_patterns TEXT[], p_limit INTEGER DEFAULT 200)
+CREATE OR REPLACE FUNCTION catalog_search(p_patterns TEXT[], p_query TEXT, p_limit INTEGER DEFAULT 200)
 RETURNS TABLE (id UUID, name TEXT, unit TEXT, category TEXT, manufacturer TEXT, aliases TEXT[])
 LANGUAGE plpgsql STABLE SET search_path = public AS $$
 BEGIN
@@ -55,11 +55,11 @@ BEGIN
     SELECT c.id, c.name, c.unit, c.category, c.manufacturer, c.aliases
     FROM catalog_materials c
     WHERE c.is_active AND c.search_text ~ ALL (p_patterns)
-    ORDER BY length(c.name), c.name
+    ORDER BY word_similarity(COALESCE(p_query, ''), c.search_text) DESC, length(c.name), c.name
     LIMIT LEAST(GREATEST(COALESCE(p_limit, 200), 1), 300);
 END $$;
-REVOKE ALL ON FUNCTION catalog_search(TEXT[], INTEGER) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION catalog_search(TEXT[], INTEGER) TO authenticated;
+REVOKE ALL ON FUNCTION catalog_search(TEXT[], TEXT, INTEGER) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION catalog_search(TEXT[], TEXT, INTEGER) TO authenticated;
 
 -- Load or update rows (platform admin only). Rows are an array of {id,name,unit,category,manufacturer,aliases,search_text}.
 CREATE OR REPLACE FUNCTION catalog_import(p_rows JSONB, p_batch UUID) RETURNS INTEGER
