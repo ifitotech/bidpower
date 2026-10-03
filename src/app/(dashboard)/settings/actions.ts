@@ -15,7 +15,7 @@ export async function updateCompanyAction(formData: FormData) {
     let logoUrl: string | undefined;
     if (logo instanceof File && logo.size > 0) {
       if (logo.size > 5 * 1024 * 1024) return { errorCode: "errLogoSize" };
-      if (!logo.type.startsWith("image/")) return { errorCode: "errLogoType" };
+      if (!["image/jpeg", "image/png", "image/webp"].includes(logo.type)) return { errorCode: "errLogoType" };
       const extension = logo.name.split(".").pop()?.toLowerCase() || "png";
       const path = `${companyId}/company-logo-${Date.now()}.${extension}`;
       const upload = await client.storage.from("documents").upload(path, logo, { upsert: true, contentType: logo.type });

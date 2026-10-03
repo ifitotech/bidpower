@@ -96,6 +96,34 @@ ok("an employee sees only their own purchase orders", others === 0 || ownerPOs =
 const otherExp = Number(asUser(employee.user, `select count(*) from expenses where created_by <> '${employee.user}';`).n);
 ok("an employee sees only their own expenses", otherExp === 0, String(otherExp));
 
+
+// 4b. The server-side functions that take a company or object id: another company's ids must be refused.
+const one = (q) => sql(q).out.split("\n")[0] || "";
+const bQuote = one(`select id from quotes where company_id='${B.company}' limit 1`);
+const bPO = one(`select id from purchase_orders where company_id='${B.company}' limit 1`);
+const bMember = one(`select id from company_members where company_id='${B.company}' and role<>'owner' limit 1`) || one(`select id from company_members where company_id='${B.company}' limit 1`);
+const aMember = one(`select id from company_members where company_id='${A.company}' and role='employee' limit 1`);
+const refused = (user, call) => { const r = asUser(user, `select ${call};`); return /ERROR/.test(r.err) || r.out.trim() === "" || /^(f|false|0)$/i.test(r.out.trim()); };
+const attacks = [
+  ["create a team invitation in another company", `create_member_invitation('${B.company}', 'x@y.test', 'X', 'employee', 'employee_basic')`],
+  ["read another company's supply inbox", `count(*) from supply_inbox('${B.company}')`],
+  ["generate a supply connect code for another company", `create_supply_connect_code('${B.company}', 'x')`],
+  ["take a number from another company's counter", `next_invoice_number('${B.company}')`],
+  ["take a purchase order number from another company", `next_purchase_order_number('${B.company}')`],
+];
+if (bQuote) attacks.push(["version another company's proposal", `new_proposal_version('${bQuote}')`]);
+if (bPO) attacks.push(["complete another company's purchase order", `complete_purchase_order('${bPO}', 1, 0)`]);
+if (bMember) attacks.push(["deactivate a member of another company", `set_member_active('${bMember}', false)`]);
+const slipped = [];
+for (const [name, call] of attacks) {
+  const r = asUser(A.user, `select ${call};`);
+  const failedAsExpected = /ERROR/.test(r.err) || r.out.trim() === "" || /^0$/.test(r.out.trim());
+  if (!failedAsExpected) slipped.push(`${name} -> ${r.out.slice(0, 40)}`);
+}
+ok("functions refuse another company's ids (invitations, supply, numbers, proposals, purchase orders, members)", slipped.length === 0, slipped.join(" | "));
+const stillActive = one(`select is_active from company_members where id='${bMember}'`);
+ok("another company's member is still active after the attempt", !bMember || stillActive === "t");
+
 // A customer with no project of the employee's is invisible to them; the owner still sees it.
 sql(`insert into clients(company_id, name) values ('${A.company}', 'RLS-Hidden-Client')`);
 const hiddenForEmployee = asUser(employee.user, `select count(*) from clients where name='RLS-Hidden-Client';`).n;

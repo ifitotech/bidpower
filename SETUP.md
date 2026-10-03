@@ -311,3 +311,5 @@ The detail of a quote request shows a strip with four steps (what you ask, to wh
 - "Today" for reminders and the overdue status uses the company's time zone.
 - Known and accepted: the price list (`plans`, `plan_limits`) is public on purpose; every member can read the team roster and the material library; a project's money columns (contract value, budgets) are readable through the API by employees assigned to that project even though the screens hide them. Fixing the last one means moving those columns to their own table, a data change that needs approval.
 - Supabase through the assistant: `DROP ...` statements wait for a human confirmation and time out, so policies are changed with `ALTER POLICY` and the old ones are left in place when identical.
+- Receipt and attachment inputs list the accepted image types explicitly (not `image/*`): iPhones then convert HEIC photos to JPEG on their own instead of sending a format the app refuses.
+- Migration `20260821000031_storage_limits.sql`: the file store itself accepts only PDF/JPEG/PNG/WEBP up to 10 MB (SVG is excluded because it can carry scripts).
