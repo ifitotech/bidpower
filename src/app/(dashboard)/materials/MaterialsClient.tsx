@@ -12,8 +12,8 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import type { PricePoint } from "@/lib/services/materials";
 import { IMPORT_TEMPLATE, MAX_IMPORT_ROWS, parseMaterialImport } from "@/lib/material-import";
 import { readSheetText } from "@/lib/read-sheet";
-import { catalogToLibrary, type CatalogItem } from "@/lib/catalog/types";
-import { loadCatalog } from "@/lib/catalog/client";
+import { catalogToLibrary } from "@/lib/catalog/types";
+import { useCatalogSearch } from "@/lib/catalog/use-catalog-search";
 import { addCatalogItemsAction, importMaterialsAction, getMaterialPricesAction, archiveMaterialAction, deleteListAction, saveMaterialAction, toggleFavoriteAction } from "./actions";
 
 type Item = LibraryItem & { notes?: string | null; allow_substitution?: boolean };
@@ -49,8 +49,7 @@ export default function MaterialsClient({ items, lists, error = false, canViewCo
     return () => { live = false; };
   }, [draft?.id, canViewCosts]);
   // Standard-catalog suggestions for what is being searched (downloaded the first time somebody searches).
-  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
-  useEffect(() => { if (query.trim().length >= 2 && catalog.length === 0) void loadCatalog().then(setCatalog); }, [query, catalog.length]);
+  const { items: catalog } = useCatalogSearch(query);
   const catalogMatches = useMemo(() => {
     if (query.trim().length < 2 || catalog.length === 0) return [];
     const own = new Set(items.map((i) => i.description.toLowerCase()));

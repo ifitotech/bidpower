@@ -1117,6 +1117,17 @@ const pt: Dictionary = {
   catalogSection: "Do catálogo padrão",
   catalogAddToLibrary: "Adicionar à minha biblioteca",
   catalogAdded: "{count} item(ns) adicionado(s) à sua biblioteca",
+  catalogSearching: "Buscando no catálogo…",
+  adminCatalogTitle: "Catálogo padrão (administrador)",
+  adminCatalogHint: "Envie o CSV do catálogo: fica no servidor para todos os empreiteiros, que só veem o que buscam. Enviar o mesmo arquivo de novo atualiza sem duplicar.",
+  adminCatalogCurrent: "Itens ativos agora",
+  adminCatalogReady: "{count} itens prontos para carregar",
+  adminCatalogSkipped: "{count} omitidos",
+  adminCatalogPrune: "Ocultar o que não estiver mais neste arquivo",
+  adminCatalogLoad: "Carregar catálogo",
+  adminCatalogLoading: "Carregando",
+  adminCatalogDone: "Catálogo carregado: {count} itens ({hidden} ocultados).",
+  adminCatalogLink: "Catálogo padrão (administrador)",
 };
 
 export default pt;

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getActionContext } from "@/lib/action-context";
 import { createClient } from "@/lib/supabase/server";
+import { isPlatformAdmin } from "@/lib/services/catalog";
 import SettingsClient from "./SettingsClient";
 import { logged } from "@/lib/log";
 
@@ -15,5 +16,6 @@ export default async function SettingsPage() {
     supabase.from("companies").select("name,phone,email,address,currency,timezone").eq("id", c.companyId).maybeSingle(),
     supabase.from("profiles").select("full_name,phone").eq("id", c.userId).maybeSingle(),
   ]);
-  return <SettingsClient isOwner={c.role === "owner"} company={company.data ?? null} profile={profile.data ?? null} />;
+  const admin = await isPlatformAdmin().catch(() => false);
+  return <SettingsClient isPlatformAdmin={admin} isOwner={c.role === "owner"} company={company.data ?? null} profile={profile.data ?? null} />;
 }

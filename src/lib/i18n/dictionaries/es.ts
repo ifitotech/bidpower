@@ -1130,6 +1130,17 @@ const es = {
   catalogSection: "Del catálogo estándar",
   catalogAddToLibrary: "Agregar a mi biblioteca",
   catalogAdded: "{count} ítem(s) agregados a tu biblioteca",
+  catalogSearching: "Buscando en el catálogo…",
+  adminCatalogTitle: "Catálogo estándar (administrador)",
+  adminCatalogHint: "Sube el CSV del catálogo: queda en el servidor para todos los contratistas, que solo ven lo que buscan. Subir el mismo archivo de nuevo actualiza sin duplicar.",
+  adminCatalogCurrent: "Ítems activos ahora",
+  adminCatalogReady: "{count} ítems listos para cargar",
+  adminCatalogSkipped: "{count} omitidos",
+  adminCatalogPrune: "Ocultar lo que ya no esté en este archivo",
+  adminCatalogLoad: "Cargar catálogo",
+  adminCatalogLoading: "Cargando",
+  adminCatalogDone: "Catálogo cargado: {count} ítems ({hidden} ocultados).",
+  adminCatalogLink: "Catálogo estándar (administrador)",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

@@ -13,7 +13,7 @@ type Company = { name: string | null; phone: string | null; email: string | null
 type Profile = { full_name: string | null; phone: string | null };
 const field = "w-full mt-1 border border-slate-200 rounded-lg px-3 py-2.5 text-base md:text-sm";
 
-export default function SettingsClient({ isOwner, company, profile }: { isOwner: boolean; company: Company | null; profile: Profile | null }) {
+export default function SettingsClient({ isOwner, isPlatformAdmin = false, company, profile }: { isOwner: boolean; isPlatformAdmin?: boolean; company: Company | null; profile: Profile | null }) {
   const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -120,6 +120,8 @@ export default function SettingsClient({ isOwner, company, profile }: { isOwner:
             {isOwner && <Button type="submit" size="sm" loading={saving}>{t("save")}</Button>}
           </form>
         </div>
+
+        {isPlatformAdmin && <div className="bg-white rounded-xl border border-slate-200 p-5"><a href="/admin/catalog" className="font-semibold text-brand-700 underline">{t("adminCatalogLink")}</a></div>}
 
         <div>
           <h3 className="font-semibold mb-3">{t("planAndBilling")}</h3>

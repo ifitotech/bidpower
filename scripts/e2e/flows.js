@@ -40,6 +40,16 @@ async function phase3(browser) {
   {
     const fresh = await page(browser);
     await register(fresh, "Cat Owner", `cat-${RUN}@bidpower-smoke.test`, "Cat Electric");
+    // The catalog lives on the server: a platform admin loads the CSV from the app, everybody else only searches it.
+    const denied = await o.goto(`${B}/admin/catalog`);
+    ok("catalog admin: a normal owner cannot open the admin screen", denied && denied.status() === 404, String(denied && denied.status()));
+    require("child_process").execSync(`su postgres -c "psql -q -d e2e -c \\"insert into platform_admins select id from auth.users where email='cat-${RUN}@bidpower-smoke.test'\\""`);
+    await fresh.goto(`${B}/admin/catalog`);
+    await fresh.locator("input[type=file]").setInputFiles(require("path").join(__dirname, "../../data/bidpower_materials.csv"));
+    await fresh.getByText(/2641 ítems listos|2641 items ready/).waitFor({ timeout: 60000 });
+    await fresh.getByRole("button", { name: /^Cargar catálogo$|^Load catalog$/ }).click();
+    await fresh.getByText(/Catálogo cargado: 2641|Catalog loaded: 2641/).waitFor({ timeout: 180000 });
+    ok("catalog admin: the CSV (2641 items) loads from the app", true);
     const pid = await createProject(fresh, "Catalog job", "Cat Client");
     const box = () => fresh.getByPlaceholder(/Busca un ítem|Search an item/);
     for (let round = 1; round <= 2; round++) {

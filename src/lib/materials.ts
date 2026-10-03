@@ -74,6 +74,19 @@ function canonical(text: string): string {
     .join(" ");
 }
 
+/** Text in the form the search compares: lowercase, no accents, shorthand unified ("thhn8blk" and "THHN #8 negro" read alike). */
+export function canonicalText(value: string): string { return canonical(normalizeText(value)); }
+
+/** The same matching rules as the in-memory search, as regular expressions (Postgres ~) for the server-side catalog. */
+export function searchPatterns(query: string): string[] {
+  const esc = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return canonical(normalizeText(query)).split(" ").filter(Boolean).slice(0, 8).map((token) => {
+    if (/^\d+$/.test(token)) return `(^|[^0-9.])${token}(?![0-9])`;
+    if (/^\d+\/\d+$/.test(token)) return `(^|[^0-9/~])${token}(?![0-9/])`;
+    return esc(token);
+  });
+}
+
 /** A plain number must match a whole number ("8" must not match "18" or "80"); other words match as text. */
 function tokenMatches(haystack: string, token: string): boolean {
   if (/^\d+$/.test(token)) return new RegExp(`(^|[^0-9.])${token}(?![0-9])`).test(haystack);

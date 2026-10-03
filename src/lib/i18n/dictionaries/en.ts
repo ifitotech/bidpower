@@ -1116,6 +1116,17 @@ const en: Dictionary = {
   catalogSection: "From the standard catalog",
   catalogAddToLibrary: "Add to my library",
   catalogAdded: "{count} item(s) added to your library",
+  catalogSearching: "Searching the catalog…",
+  adminCatalogTitle: "Standard catalog (administrator)",
+  adminCatalogHint: "Upload the catalog CSV: it stays on the server for every contractor, who only see what they search. Uploading the same file again updates without duplicating.",
+  adminCatalogCurrent: "Active items now",
+  adminCatalogReady: "{count} items ready to load",
+  adminCatalogSkipped: "{count} skipped",
+  adminCatalogPrune: "Hide what is no longer in this file",
+  adminCatalogLoad: "Load catalog",
+  adminCatalogLoading: "Loading",
+  adminCatalogDone: "Catalog loaded: {count} items ({hidden} hidden).",
+  adminCatalogLink: "Standard catalog (administrator)",
 };
 
 export default en;

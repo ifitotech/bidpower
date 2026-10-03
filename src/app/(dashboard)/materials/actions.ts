@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getActionContext } from "@/lib/action-context";
 import { parseMaterialImport } from "@/lib/material-import";
-import { getCatalogItem } from "@/lib/catalog/server";
+import { getCatalogItem, searchCatalog } from "@/lib/services/catalog";
+import type { CatalogItem } from "@/lib/catalog/types";
 import { CATEGORY_CODES, normalizeText, normalizeUnit, type RequestLineInput } from "@/lib/materials";
 import {
   getMaterials, ensureMaterialFromCatalog, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
@@ -144,7 +145,7 @@ export async function createMaterialRequestAction(payload: RequestPayload): Prom
       const category = l.category && CATEGORY_CODES.includes(l.category) ? l.category : null;
       let materialId = l.materialId && UUID.test(l.materialId) ? l.materialId : null;
       // A standard-catalog pick joins the company library (reusing an item with the same name); without library permission it stays a named free-text line.
-      const fromCatalog = !materialId && l.catalogId ? getCatalogItem(String(l.catalogId)) : undefined;
+      const fromCatalog = !materialId && l.catalogId ? await getCatalogItem(String(l.catalogId)) : undefined;
       if (fromCatalog && c.perms.can_manage_library) materialId = await ensureMaterialFromCatalog(c.companyId, c.userId, fromCatalog);
       else if (!materialId && l.saveToLibrary && c.perms.can_manage_library) {
         materialId = await createMaterial(c.companyId, c.userId, { description, unit, category });
@@ -209,7 +210,7 @@ export async function saveListAction(payload: { name: string; lines: { materialI
       if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 1_000_000) continue;
       let materialId = l.materialId && UUID.test(l.materialId) ? l.materialId : null;
       const description = String(l.description ?? "").trim();
-      const fromCatalog = !materialId && l.catalogId ? getCatalogItem(String(l.catalogId)) : undefined;
+      const fromCatalog = !materialId && l.catalogId ? await getCatalogItem(String(l.catalogId)) : undefined;
       if (fromCatalog) materialId = await ensureMaterialFromCatalog(c.companyId, c.userId, fromCatalog);
       else if (!materialId && description) {
         const category = l.category && CATEGORY_CODES.includes(l.category) ? l.category : null;
@@ -233,10 +234,17 @@ export async function addCatalogItemsAction(ids: string[]): Promise<MaterialResu
   try {
     let added = 0;
     for (const id of ids) {
-      const item = typeof id === "string" ? getCatalogItem(id) : undefined;
+      const item = typeof id === "string" ? await getCatalogItem(id) : undefined;
       if (item) { await ensureMaterialFromCatalog(c.companyId, c.userId, item); added++; }
     }
     revalidatePath("/materials");
     return { success: true, added };
   } catch (e) { return fail(e); }
+}
+
+/** Search the shared standard catalog while somebody types. Nothing is listed until they type; the answer is at most a few hundred candidates. */
+export async function searchCatalogAction(query: string): Promise<{ items: CatalogItem[] }> {
+  const c = await ctx();
+  if (!c || typeof query !== "string" || query.trim().length < 2) return { items: [] };
+  try { return { items: await searchCatalog(query, 200) }; } catch { return { items: [] }; }
 }
