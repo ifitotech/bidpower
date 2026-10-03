@@ -15,6 +15,8 @@ async function phase3(browser) {
   await o.getByLabel(/Unidad|Unit/).selectOption("FT");
   await o.getByRole("button", { name: /^Guardar$|^Save$/ }).click();
   await o.waitForTimeout(1500);
+  ok("library: with nothing typed it shows no product list, only a prompt to search", (await o.getByText("3/4 in EMT conduit").count()) === 0 && (await o.getByText(/Escribe arriba para buscar|Type above to search/).count()) > 0);
+  await o.getByPlaceholder(/^Buscar|^Search/).first().fill("emt");
   ok("library: item saved and listed", (await o.getByText("3/4 in EMT conduit").count()) > 0);
   await o.getByRole("button", { name: /Favorito|Favorite/ }).first().click();
   await o.waitForFunction(() => document.querySelector("button[aria-pressed]")?.getAttribute("aria-pressed") === "true", null, { timeout: 15000 }).catch(() => {});
@@ -66,6 +68,12 @@ async function phase3(browser) {
     await fresh.waitForTimeout(800);
     const copies = await fresh.getByText("THHN/THWN-2 Copper #8 AWG Black Stranded", { exact: true }).count();
     ok("catalog: a catalog item used twice appears once in the company library", copies >= 1 && copies <= 2, String(copies)); // one in the library list; the catalog suggestion is hidden once it is there
+    // delete everything at once: the library can be emptied in one go (and starts over)
+    await fresh.goto(`${B}/materials`);
+    await fresh.getByPlaceholder(/^Buscar|^Search/).first().fill("");
+    await fresh.getByRole("button", { name: /Vaciar biblioteca|Empty library/ }).click();
+    await fresh.getByText(/Biblioteca vaciada|Library emptied/).waitFor({ timeout: 20000 });
+    ok("library: everything can be deleted in one tap", (await fresh.getByText(/Aún no hay ítems en la biblioteca|No items in your library yet|Ainda não há itens/).count()) > 0 || (await fresh.getByRole("button", { name: /Vaciar biblioteca|Empty library/ }).count()) === 0);
     await fresh.context().close();
   }
 
@@ -679,6 +687,7 @@ async function phaseLang(browser) {
   ok("import: an Excel (.xlsx) file is read and imported", (await o.getByText(/Importados: 2|Imported: 2/).count()) > 0);
   // price history comes only from real POs and quotes; an empty history says so
   await o.goto(B + "/materials");
+  await o.getByPlaceholder(/^Buscar|^Search/).first().fill("emt");
   if (await o.locator("ul li button.flex-1").count()) {
     await o.locator("ul li button.flex-1").first().click();
     await o.waitForTimeout(1500);

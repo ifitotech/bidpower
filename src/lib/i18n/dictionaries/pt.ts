@@ -1128,6 +1128,19 @@ const pt: Dictionary = {
   adminCatalogLoading: "Carregando",
   adminCatalogDone: "Catálogo carregado: {count} itens ({hidden} ocultados).",
   adminCatalogLink: "Catálogo padrão (administrador)",
+  libSelect: "Selecionar",
+  libSelectDone: "Pronto",
+  libSelectAll: "Selecionar tudo ({count})",
+  libSelectNone: "Limpar seleção",
+  libArchiveSelected: "Excluir selecionados ({count})",
+  libArchiveSelectedConfirm: "Excluir {count} itens da sua biblioteca? Os pedidos anteriores não mudam.",
+  libClearAll: "Esvaziar biblioteca",
+  libClearConfirm: "Excluir TODOS os {count} itens da sua biblioteca e suas listas salvas? Os pedidos anteriores não mudam e o catálogo padrão continua disponível ao buscar.",
+  libCleared: "Biblioteca esvaziada: {count} itens excluídos.",
+  libArchived: "{count} itens excluídos.",
+  libTypeToSearch: "Digite acima para buscar um material",
+  libCount: "Sua biblioteca tem {count} itens. Eles aparecem quando você digita, por nome, medida, apelido ou número de peça.",
+  builderTypeHint: "Digite o que você precisa (ex.: thhn 8 vermelho, emt 3/4, disjuntor 20a) e toque em + para adicionar.",
 };
 
 export default pt;

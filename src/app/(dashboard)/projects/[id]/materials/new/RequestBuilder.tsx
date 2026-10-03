@@ -57,7 +57,7 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
   const results = useMemo(() => searchLibrary(typed.text ? everything : items, typed.text, typed.text ? 8 : 5), [everything, items, typed.text]);
   const byId = useMemo(() => new Map(everything.map((i) => [i.id, i])), [everything]);
   const frequent = useMemo(() => (typed.text ? [] : [...items].filter((i) => i.use_count > 1 && !i.is_favorite).sort((a, b) => b.use_count - a.use_count).slice(0, 5)), [items, typed.text]);
-  const favorites = useMemo(() => (typed.text ? [] : items.filter((i) => i.is_favorite).slice(0, 8)), [items, typed.text]);
+  const favorites = useMemo(() => (typed.text ? [] : items.filter((i) => i.is_favorite).slice(0, 5)), [items, typed.text]);
   const qtyIn = useMemo(() => {
     const m = new Map<string, number>();
     for (const l of lines) { const r = refOf(l); if (r) m.set(r, round2((m.get(r) ?? 0) + l.quantity)); }
@@ -239,7 +239,7 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
       </> : <>
         {group(t("favorites"), favorites)}
         {group(t("mbFrequent"), frequent)}
-        {group(t("recentItems"), results.filter((i) => !favorites.includes(i) && !frequent.includes(i)))}
+        {favorites.length === 0 && frequent.length === 0 && items.length > 0 && <p className="px-4 py-4 text-sm text-slate-500">{t("builderTypeHint")}</p>}
         {items.length === 0 && <p className="px-4 py-3 text-sm text-slate-400">{t("noItemsYet")}</p>}
       </>}
     </div>

@@ -117,6 +117,31 @@ export async function updateMaterial(companyId: string, materialId: string, inpu
   await replaceAliases(companyId, materialId, cleanAliases(input.aliases, description));
 }
 
+/** Archives (hides) several library items at once; earlier requests and lists keep their text. Returns how many were archived. */
+export async function archiveMaterials(companyId: string, ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const supabase = await createClient();
+  let n = 0;
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data, error } = await supabase.from("company_materials").update({ is_active: false }).eq("company_id", companyId).eq("is_active", true).in("id", ids.slice(i, i + 200)).select("id");
+    if (error) throw error;
+    n += data?.length ?? 0;
+  }
+  return n;
+}
+
+/** Empties the library: archives every active item and, if asked, deletes the saved lists. */
+export async function clearLibrary(companyId: string, alsoLists: boolean): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("company_materials").update({ is_active: false }).eq("company_id", companyId).eq("is_active", true).select("id");
+  if (error) throw error;
+  if (alsoLists) {
+    const del = await supabase.from("material_assemblies").delete().eq("company_id", companyId);
+    if (del.error) throw del.error;
+  }
+  return data?.length ?? 0;
+}
+
 export async function setMaterialFavorite(companyId: string, materialId: string, favorite: boolean) {
   const supabase = await createClient();
   const { data, error } = await supabase.from("company_materials").update({ is_favorite: favorite }).eq("id", materialId).eq("company_id", companyId).select("id");

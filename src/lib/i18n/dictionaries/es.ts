@@ -1141,6 +1141,19 @@ const es = {
   adminCatalogLoading: "Cargando",
   adminCatalogDone: "Catálogo cargado: {count} ítems ({hidden} ocultados).",
   adminCatalogLink: "Catálogo estándar (administrador)",
+  libSelect: "Seleccionar",
+  libSelectDone: "Listo",
+  libSelectAll: "Seleccionar todo ({count})",
+  libSelectNone: "Quitar selección",
+  libArchiveSelected: "Borrar seleccionados ({count})",
+  libArchiveSelectedConfirm: "¿Borrar {count} ítems de tu biblioteca? Los pedidos anteriores no cambian.",
+  libClearAll: "Vaciar biblioteca",
+  libClearConfirm: "¿Borrar TODOS los {count} ítems de tu biblioteca y tus listas guardadas? Los pedidos anteriores no cambian y el catálogo estándar sigue disponible al buscar.",
+  libCleared: "Biblioteca vaciada: {count} ítems borrados.",
+  libArchived: "{count} ítems borrados.",
+  libTypeToSearch: "Escribe arriba para buscar un material",
+  libCount: "Tu biblioteca tiene {count} ítems. Aparecen cuando escribes, por nombre, medida, apodo o número de parte.",
+  builderTypeHint: "Escribe lo que necesitas (ej. thhn 8 rojo, emt 3/4, breaker 20a) y toca + para agregarlo.",
 } as const;
 
 // Keep the Spanish dictionary as the source of keys while allowing each

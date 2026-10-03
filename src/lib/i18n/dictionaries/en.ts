@@ -1127,6 +1127,19 @@ const en: Dictionary = {
   adminCatalogLoading: "Loading",
   adminCatalogDone: "Catalog loaded: {count} items ({hidden} hidden).",
   adminCatalogLink: "Standard catalog (administrator)",
+  libSelect: "Select",
+  libSelectDone: "Done",
+  libSelectAll: "Select all ({count})",
+  libSelectNone: "Clear selection",
+  libArchiveSelected: "Delete selected ({count})",
+  libArchiveSelectedConfirm: "Delete {count} items from your library? Earlier requests do not change.",
+  libClearAll: "Empty library",
+  libClearConfirm: "Delete ALL {count} items of your library and your saved lists? Earlier requests do not change and the standard catalog stays available when searching.",
+  libCleared: "Library emptied: {count} items deleted.",
+  libArchived: "{count} items deleted.",
+  libTypeToSearch: "Type above to search for a material",
+  libCount: "Your library has {count} items. They appear as you type, by name, size, nickname or part number.",
+  builderTypeHint: "Type what you need (e.g. thhn 8 red, emt 3/4, breaker 20a) and tap + to add it.",
 };
 
 export default en;

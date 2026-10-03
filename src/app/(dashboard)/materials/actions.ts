@@ -7,7 +7,7 @@ import { getCatalogItem, searchCatalog } from "@/lib/services/catalog";
 import type { CatalogItem } from "@/lib/catalog/types";
 import { CATEGORY_CODES, normalizeText, normalizeUnit, type RequestLineInput } from "@/lib/materials";
 import {
-  getMaterials, ensureMaterialFromCatalog, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
+  getMaterials, ensureMaterialFromCatalog, archiveMaterials, clearLibrary, archiveMaterial, createMaterial, importMaterials, getMaterialPriceHistory, type PricePoint, createSavedList, upsertSavedList, deleteSavedList, setMaterialFavorite, updateMaterial,
 } from "@/lib/services/materials";
 import { cancelMaterialRequest, createMaterialRequest, reviewMaterialRequest } from "@/lib/services/material-requests";
 
@@ -247,4 +247,21 @@ export async function searchCatalogAction(query: string): Promise<{ items: Catal
   const c = await ctx();
   if (!c || typeof query !== "string" || query.trim().length < 2) return { items: [] };
   try { return { items: await searchCatalog(query, 200) }; } catch { return { items: [] }; }
+}
+
+/** Archives the chosen library items (select several and remove them in one go). */
+export async function archiveMaterialsAction(ids: string[]): Promise<MaterialResult & { archived?: number }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 5000 || !ids.every((i) => typeof i === "string" && UUID.test(i))) return { errorCode: "errGeneric" };
+  try { const archived = await archiveMaterials(c.companyId, ids); revalidatePath("/materials"); return { success: true, archived }; } catch (e) { return fail(e); }
+}
+
+/** Empties the whole library (and the saved lists) so the company can start over, e.g. after an import it does not want. */
+export async function clearLibraryAction(alsoLists: boolean): Promise<MaterialResult & { archived?: number }> {
+  const c = await ctx();
+  if (!c) return { errorCode: "errGeneric" };
+  if (!c.perms.can_manage_library) return { errorCode: "errForbidden" };
+  try { const archived = await clearLibrary(c.companyId, Boolean(alsoLists)); revalidatePath("/materials"); revalidatePath("/projects"); return { success: true, archived }; } catch (e) { return fail(e); }
 }
