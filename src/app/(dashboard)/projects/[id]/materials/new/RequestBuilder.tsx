@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ClipboardPaste, FileSpreadsheet, History, ListChecks, Minus, Plus, Save, Search, Star, Trash2, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/provider";
@@ -10,6 +10,7 @@ import { parseMaterialImport } from "@/lib/material-import";
 import { readSheetText } from "@/lib/read-sheet";
 import { MATERIAL_UNITS, findExact, normalizeUnit, parsePastedList, searchLibrary, splitQuantity, type LibraryItem } from "@/lib/materials";
 import { createMaterialRequestAction, saveListAction } from "@/app/(dashboard)/materials/actions";
+import { createPricingRequestAction, createSupplierLinkAction } from "@/app/(dashboard)/pricing/actions";
 import { confirmAsk } from "@/lib/confirm";
 import { CATALOG_PREFIX, catalogToLibrary } from "@/lib/catalog/types";
 import { useCatalogSearch } from "@/lib/catalog/use-catalog-search";
@@ -18,6 +19,7 @@ import type { RepeatableRequest } from "@/lib/services/material-requests";
 type Line = { key: string; catalogId?: string | null; materialId: string | null; description: string; quantity: number; unit: string; category: string | null; notes: string; allowSubstitution: boolean; saveToLibrary: boolean };
 type LibItem = LibraryItem & { allow_substitution?: boolean };
 type SavedList = { id: string; name: string; items: { materialId: string; quantity: number }[] };
+type QuoteSupplier = { id: string; name: string; connected: boolean; email: string | null };
 
 let counter = 0;
 const nextKey = () => `l${++counter}`;
@@ -25,19 +27,24 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 /** What a line points at: the company library item, or a standard-catalog item not yet in the library. */
 const refOf = (l: { materialId: string | null; catalogId?: string | null }) => l.materialId ?? (l.catalogId ? CATALOG_PREFIX + l.catalogId : null);
 
+const DRAFT_VERSION = 1;
+const draftKey = (projectId: string) => `bidpower:material-request-draft:${projectId}`;
+
 /**
  * Building a material list should feel like filling a cart: tap + to add, tap again for one more, type a number for many.
  * Lists you saved and orders you made before add many lines in one tap.
  */
-export default function RequestBuilder({ projectId, projectName, items, lists, repeatable = [] }: { projectId: string; projectName: string; items: LibItem[]; lists: SavedList[]; repeatable?: RepeatableRequest[] }) {
+export default function RequestBuilder({ projectId, projectName, items, lists, repeatable = [], suppliers = [] }: { projectId: string; projectName: string; items: LibItem[]; lists: SavedList[]; repeatable?: RepeatableRequest[]; suppliers?: QuoteSupplier[] }) {
   const { t } = useI18n();
   const router = useRouter();
   const { permissions } = usePermissions();
   const canLibrary = permissions.can_manage_library;
+  const canAskForQuotes = permissions.can_create_pricing_request;
   const [query, setQuery] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [neededBy, setNeededBy] = useState("");
   const [notes, setNotes] = useState("");
+  const [quoteSupplierId, setQuoteSupplierId] = useState("");
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [saving, setSaving] = useState<string | null>(null); // list name being typed; null = closed
@@ -45,6 +52,42 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
   const searchRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // Keep an unfinished cart on the device. This is intentionally local-only:
+  // it never becomes shared project data until the user submits the request.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(draftKey(projectId));
+      if (raw) {
+        const parsed = JSON.parse(raw) as { version?: number; lines?: Line[]; neededBy?: string; notes?: string };
+        if (parsed.version === DRAFT_VERSION && Array.isArray(parsed.lines) && parsed.lines.length > 0) {
+          setLines(parsed.lines.map((line) => ({ ...line, key: line.key || nextKey() })));
+          setNeededBy(parsed.neededBy ?? "");
+          setNotes(parsed.notes ?? "");
+          setDraftRestored(true);
+        }
+      }
+    } catch {
+      // A blocked or malformed localStorage entry must not prevent ordering.
+    } finally {
+      setDraftReady(true);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    try {
+      if (lines.length === 0 && !neededBy && !notes) {
+        window.localStorage.removeItem(draftKey(projectId));
+      } else {
+        window.localStorage.setItem(draftKey(projectId), JSON.stringify({ version: DRAFT_VERSION, lines, neededBy, notes }));
+      }
+    } catch {
+      // Storage can be unavailable in private browsing; the server flow still works.
+    }
+  }, [draftReady, lines, neededBy, notes, projectId]);
 
   const typed = useMemo(() => splitQuantity(query), [query]);
   // The shared catalog is searched on the server while typing (nothing is listed until then); the company's own items always rank first.
@@ -183,16 +226,52 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
   const patch = (key: string, p: Partial<Line>) => setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...p } : l)));
   const remove = (key: string) => setLines((prev) => prev.filter((l) => l.key !== key));
 
-  async function submit() {
+  async function submit(mode: "office" | "quote" = canAskForQuotes ? "quote" : "office") {
     setError(null);
     if (lines.length === 0) { setError(t("errRequestEmpty")); return; }
+    const selectedSupplier = suppliers.find((supplier) => supplier.id === quoteSupplierId);
+    if (mode === "quote" && suppliers.length > 0 && !selectedSupplier) { setError(t("selectSupplierForQuote")); return; }
     setBusy(true);
     const result = await createMaterialRequestAction({
       projectId, neededBy: neededBy || null, notes: notes || null,
       lines: lines.map((l) => ({ materialId: l.materialId, catalogId: l.catalogId ?? null, description: l.description, quantity: l.quantity, unit: l.unit, category: l.category, notes: l.notes, allowSubstitution: l.allowSubstitution, saveToLibrary: l.saveToLibrary })),
     }).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string; id?: string }));
     if (result.errorCode) { setError(t(result.errorCode as keyof Dictionary)); setBusy(false); return; }
-    router.push(`/projects/${projectId}/materials/${result.id}`);
+    try { window.localStorage.removeItem(draftKey(projectId)); } catch { /* best effort */ }
+    if (mode === "quote") {
+      const pricing = await createPricingRequestAction({
+        projectId,
+        requestType: "material",
+        title: projectName,
+        notes: notes || null,
+        deliveryMethod: "delivery",
+        materialRequestId: result.id,
+        lines: [],
+      }).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string; id?: string }));
+      if (pricing.errorCode || !pricing.id) {
+        setError(t(pricing.errorCode as keyof Dictionary));
+        setBusy(false);
+        router.push(`/projects/${projectId}/materials/${result.id}`);
+        return;
+      }
+      if (selectedSupplier?.connected) {
+        const sent = await createSupplierLinkAction(pricing.id, {
+          supplierId: selectedSupplier.id,
+          supplierName: selectedSupplier.name,
+          supplierEmail: selectedSupplier.email,
+          viaAccount: true,
+        }).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string }));
+        if (sent.errorCode) {
+          setError(t(sent.errorCode as keyof Dictionary));
+          setBusy(false);
+          router.push(`/pricing/${pricing.id}`);
+          return;
+        }
+      }
+      router.push(`/pricing/${pricing.id}`);
+    } else {
+      router.push(`/projects/${projectId}/materials/${result.id}`);
+    }
     router.refresh();
   }
 
@@ -220,8 +299,18 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
   const group = (title: string, list: LibItem[]) => list.length > 0 && <div key={title}><p className="px-4 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{title}</p><div className="divide-y divide-slate-50">{list.map((i) => row(i))}</div></div>;
 
   return <div className="mx-auto max-w-3xl p-4 pb-32 md:p-8">
-    <h1 className="text-xl font-bold">{t("newMaterialRequest")}</h1>
-    <p className="mb-4 text-sm text-slate-500">{projectName}</p>
+    <h1 className="text-xl font-bold">{t("materialRequestBuilderTitle")}</h1>
+    <p className="mb-4 text-sm text-slate-500">{projectName} · {t("materialRequestBuilderHint")}</p>
+    {canAskForQuotes && <section className="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-3">
+      <label className="block text-sm font-semibold text-brand-900">{t("quoteSupplierLabel")}
+        {suppliers.length > 0 ? <select value={quoteSupplierId} onChange={(e) => setQuoteSupplierId(e.target.value)} className={`${input} mt-1 border-brand-200 bg-white`}><option value="">{t("chooseSupplierForQuote")}</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}{supplier.connected ? ` · ${t("supplyConnected")}` : ""}</option>)}</select> : <p className="mt-1 text-sm font-normal text-brand-800">{t("noSuppliersForQuote")}</p>}
+      </label>
+      <p className="mt-1 text-xs text-brand-800">{t("quoteSupplierHint")}</p>
+    </section>}
+    {draftRestored && <div role="status" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-800">
+      <span>{t("materialDraftRestored")}</span>
+      <button type="button" onClick={() => { setLines([]); setNeededBy(""); setNotes(""); setDraftRestored(false); }} className="min-h-9 rounded-lg border border-brand-300 px-2 text-xs font-semibold">{t("materialDraftClear")}</button>
+    </div>}
 
     <div className="sticky top-0 z-20 -mx-4 bg-slate-50/95 px-4 pb-2 pt-1 backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0">
       <div className="relative">
@@ -304,7 +393,10 @@ export default function RequestBuilder({ projectId, projectName, items, lists, r
 
     {error && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
     <div className="fixed inset-x-0 bottom-[calc(3.9rem+env(safe-area-inset-bottom,0px))] z-30 border-t md:bottom-0 border-t border-slate-200 bg-white/95 p-3 backdrop-blur md:left-64">
-      <div className="mx-auto max-w-3xl"><button type="button" disabled={busy || lines.length === 0} onClick={submit} className="min-h-12 w-full rounded-xl bg-brand-600 px-4 font-semibold text-white disabled:opacity-40">{t("sendRequest")}{lines.length > 0 ? ` · ${t("itemsCount", { count: String(lines.length) })}` : ""}</button></div>
+      <div className="mx-auto max-w-3xl space-y-2">
+        <button type="button" disabled={busy || lines.length === 0} onClick={() => void submit()} className="min-h-12 w-full rounded-xl bg-brand-600 px-4 font-semibold text-white disabled:opacity-40">{t(canAskForQuotes ? "requestSupplierQuote" : "sendRequest")}{lines.length > 0 ? ` · ${t("itemsCount", { count: String(lines.length) })}` : ""}</button>
+        {canAskForQuotes && <button type="button" disabled={busy || lines.length === 0} onClick={() => void submit("office")} className="min-h-10 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:opacity-40">{t("sendToOfficeOnly")}</button>}
+      </div>
     </div>
   </div>;
 }
