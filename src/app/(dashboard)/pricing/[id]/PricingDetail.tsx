@@ -16,7 +16,7 @@ import { WaitingOn } from "@/components/shared/RequestStatusBadge";
 import type { InvitationView, QuestionView, getPricingRequestById } from "@/lib/services/pricing-requests";
 import {
   addAttachmentAction, answerQuestionAction, awardResponseAction, createSupplierLinkAction, revokeSupplierLinkAction, cancelPricingAction, closeRequestAction, createSupplierAction,
-  getAttachmentUrlAction, markSentAction, recordResponseAction,
+  getAttachmentUrlAction, recordResponseAction,
 } from "../actions";
 
 type Request = NonNullable<Awaited<ReturnType<typeof getPricingRequestById>>>;
@@ -87,6 +87,9 @@ export default function PricingDetail({ request: r, suppliers, invitations = [],
       const labels = [t("prStep1"), t("prStep2"), t("prStep3"), t("prStep4")];
       return <ol className="mb-5 grid grid-cols-4 gap-1.5" aria-label={t("prSteps")}>{labels.map((label, i) => <li key={i} aria-current={i === current ? "step" : undefined} className={`rounded-lg px-2 py-2 text-center text-[11px] font-semibold leading-tight ${done[i] ? "bg-green-100 text-green-800" : i === current ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-500"}`}><span className="block text-sm">{done[i] ? "✓" : i + 1}</span>{label}</li>)}</ol>;
     })()}
+    <div role="status" className={`mb-5 rounded-xl border p-3 text-sm ${r.status === "draft" ? "border-brand-200 bg-brand-50 text-brand-900" : r.status === "responded" ? "border-amber-200 bg-amber-50 text-amber-900" : r.status === "awarded" ? "border-green-200 bg-green-50 text-green-900" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
+      <p className="font-semibold">{t(r.status === "draft" ? "prNextChooseSupplier" : r.status === "responded" ? "prNextCompareResponses" : r.status === "awarded" ? "prNextCreatePO" : r.status === "converted_to_po" ? "prNextPOCreated" : r.status === "closed" || r.status === "cancelled" ? "prNextClosed" : "prNextWaiting")}</p>
+    </div>
     {r.notes && <p className="mb-4 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-sm">{r.notes}</p>}
     <h2 className="mb-2 font-semibold">{t("prStep1Title")}</h2>
 
@@ -105,10 +108,8 @@ export default function PricingDetail({ request: r, suppliers, invitations = [],
     </section>}
 
     {canManage && isOpen && <div className="mt-5 space-y-2">
-      {r.status === "draft" && <p className="text-xs text-slate-500">{t("prMarkSentHint")}</p>}
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={copyText} className={`${btn} flex items-center gap-2 border border-slate-200`}><Copy className="h-4 w-4" />{copied ? t("prCopied") : t("prCopyText")}</button>
-        {r.status === "draft" && <button type="button" disabled={busy} onClick={() => run(() => markSentAction(r.id))} className={`${btn} bg-brand-600 text-white`}>{t("prMarkSent")}</button>}
         <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("prConfirmClose"))) run(() => closeRequestAction(r.id)); }} className={`${btn} border border-slate-200`}>{t("prClose")}</button>
         <button type="button" disabled={busy} onClick={async () => { if (await confirmAsk(t("confirmCancelRequest"))) run(() => cancelPricingAction(r.id)); }} className={`${btn} border border-red-100 bg-red-50 text-red-600`}>{t("prCancel")}</button>
       </div>
@@ -242,7 +243,9 @@ function SupplierLinks({ request: r, suppliers, invitations, questions, isOpen, 
     const res = await createSupplierLinkAction(r.id, { supplierId: supplierId || null, supplierName, supplierEmail: email || null, days: Number(days) || 14 }).catch(() => ({ errorCode: "errGeneric" } as { errorCode?: string; token?: string }));
     setBusy(false);
     if (res.errorCode || !res.token) { setError(t((res.errorCode ?? "errGeneric") as keyof Dictionary)); return; }
-    setFresh({ name: supplierName, url: `${window.location.origin}/supplier/${res.token}` });
+    const url = `${window.location.origin}/supplier/${res.token}`;
+    setFresh({ name: supplierName, url });
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch { /* The visible copy button remains available. */ }
     setName(""); setEmail(""); setSupplierId("");
     onChange();
   }
@@ -259,13 +262,14 @@ function SupplierLinks({ request: r, suppliers, invitations, questions, isOpen, 
 
   return <section className="mt-8">
     <h2 className="mb-2 font-semibold">{t("prStep2Title")}</h2>
+    <p className="mb-3 text-sm text-slate-500">{t("prStep2Hint")}</p>
     {error && <div role="alert" className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
     {sentInApp && <div role="status" className="mb-3 rounded-xl border border-green-300 bg-green-50 p-3 text-sm">{t("sentToSupplyAccount", { name: sentInApp })}</div>}
     {fresh && <div className="mb-3 rounded-xl border border-green-300 bg-green-50 p-3">
       <p className="text-sm font-semibold">{t("linkForSupplier", { name: fresh.name })}</p>
       <p className="mt-1 break-all rounded-lg bg-white p-2 text-xs">{fresh.url}</p>
       <p className="mt-1 text-xs text-slate-600">{t("linkShownOnce")}</p>
-      <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(fresh.url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { setError(t("errGeneric")); } }} className="mt-2 flex min-h-10 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white"><Copy className="h-4 w-4" />{copied ? t("prCopied") : t("copyLink")}</button>
+      <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(fresh.url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { setError(t("errGeneric")); } }} className="mt-2 flex min-h-10 items-center gap-2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white"><Copy className="h-4 w-4" />{copied ? t("linkCopiedReady") : t("copyLink")}</button>
     </div>}
     {isOpen && <div className="mb-3 grid gap-2 rounded-xl border border-slate-200 bg-white p-3 sm:grid-cols-2">
       <label className="block text-sm font-medium">{t("supplierName")}<select value={supplierId} onChange={(e) => { setSupplierId(e.target.value); const c = suppliers.find((s) => s.id === e.target.value)?.contacts?.[0]; setEmail(c?.email ?? ""); }} className={`${input} mt-1`}><option value="" />{suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
