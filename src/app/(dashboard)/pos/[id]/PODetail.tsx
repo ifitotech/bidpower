@@ -34,6 +34,7 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
   const [tax, setTax] = useState(po.tax_amount != null ? String(po.tax_amount) : "");
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const quickCameraRef = useRef<HTMLInputElement>(null);
   const money = (n: number | null | undefined) => (n == null ? "—" : formatCurrency(Number(n)));
   const num = (s: string) => (s.trim() === "" ? null : Number(s.replace(",", ".")));
 
@@ -66,6 +67,24 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
     form.set("poId", po.id); form.set("kind", kind); form.set("file", file);
     run(() => uploadPODocumentAction(form));
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function receiveAndUploadPhoto(file: File | undefined) {
+    if (!file) return;
+    setBusy(true); setError(null);
+    const receivedResult = await receivePOAction(po.id).catch(() => ({ errorCode: "errGeneric" }));
+    if (receivedResult.errorCode) {
+      setError(t(receivedResult.errorCode as keyof Dictionary));
+      setBusy(false);
+      return;
+    }
+    const form = new FormData();
+    form.set("poId", po.id); form.set("kind", "receipt"); form.set("file", file);
+    const uploadedResult = await uploadPODocumentAction(form).catch(() => ({ errorCode: "errGeneric" }));
+    if (uploadedResult.errorCode) setError(t(uploadedResult.errorCode as keyof Dictionary));
+    setBusy(false);
+    if (quickCameraRef.current) quickCameraRef.current.value = "";
+    router.refresh();
   }
 
   const receiving = status === "approved" || status === "sent";
@@ -109,6 +128,10 @@ export default function PODetail({ po, isReviewer, isCreator, canSend, canUpload
       {canSend && <div className="rounded-xl border border-slate-200 bg-white p-3"><label className="block text-xs font-medium text-slate-600">{t("poExpectedDelivery")}<input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className={`${field} mt-1`} /></label><p className="mt-1 text-xs text-slate-400">{t("poExpectedDeliveryHint")}</p>{status === "sent" && <div className="mt-2 flex gap-2"><button type="button" disabled={busy || deliveryDate === (po.expected_delivery ?? "")} onClick={() => run(() => setPOExpectedDeliveryAction(po.id, deliveryDate || null))} className={`${btn} flex-1 border border-slate-200`}>{deliveryDate ? t("poSaveDate") : t("poClearDate")}</button></div>}</div>}
       {status === "approved" && canSend && <button type="button" disabled={busy} onClick={() => run(() => sendPOAction(po.id, deliveryDate || null))} className={`${btn} w-full bg-brand-600 text-white`}>{t("poMarkSent")}</button>}
       <button type="button" disabled={busy} onClick={() => run(() => receivePOAction(po.id))} className={`${btn} w-full border border-slate-200`}>{t("poMarkReceived")}</button>
+      {canUpload && !isReviewer && <>
+        <input ref={quickCameraRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={(e) => receiveAndUploadPhoto(e.target.files?.[0])} />
+        <button type="button" disabled={busy} onClick={() => quickCameraRef.current?.click()} className={`${btn} flex w-full items-center justify-center gap-2 bg-brand-50 text-brand-800`}><Camera className="h-5 w-5" />{t("receiveAndTakeReceipt")}</button>
+      </>}
     </div>}
 
     {showDocs && <section className="mb-4 rounded-xl border border-slate-200 bg-white p-5">
